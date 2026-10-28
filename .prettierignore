@@ -1,0 +1,13 @@
+node_modules
+dist
+public/renderer.*
+src-tauri/target
+src-tauri/gen
+src-tauri/Cargo.lock
+flake.lock
+package-lock.json
+result
+playwright-report
+test-results
+
+public/diagrams.js

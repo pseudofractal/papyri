@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>mdview monochrome cat bookmark</title>
+    <style>
+      :root {
+        --background: #181818;
+        --foreground: #ededed;
+        --muted: #a3a3a3;
+        --card: #232323;
+        --border: #444;
+        --primary: #ededed;
+        --radius: 16px;
+        --font-sans: ui-sans-serif, system-ui, sans-serif;
+        --demo-accent: #cba6f7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        font-family: var(--font-sans);
+        color: var(--foreground);
+      }
+      .samples {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .sample {
+        padding: 24px 16px 20px;
+        border-radius: var(--radius);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+      .dark {
+        background: #202020;
+        color: #f5f5f5;
+      }
+      .light {
+        background: #f2f2f2;
+        color: #242424;
+      }
+      .hero svg {
+        width: 140px;
+        height: 140px;
+        display: block;
+      }
+      .sizes {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        height: 32px;
+      }
+      .sizes svg {
+        display: block;
+      }
+      .size16 svg {
+        width: 16px;
+        height: 16px;
+      }
+      .size24 svg {
+        width: 24px;
+        height: 24px;
+      }
+      .size32 svg {
+        width: 32px;
+        height: 32px;
+      }
+      .label {
+        font-size: 12px;
+      }
+      .controls {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 16px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .controls label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+      }
+      input[type='color'] {
+        width: 32px;
+        height: 28px;
+        padding: 2px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--card);
+      }
+      body.accent .mark {
+        color: var(--demo-accent);
+      }
+      input:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="samples">
+      <div class="sample dark">
+        <div class="hero mark">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="16 14 96 96"
+            role="img"
+            aria-label="mdview cat bookmark"
+          >
+            <title>mdview cat bookmark</title>
+            <path
+              fill="currentColor"
+              fill-rule="evenodd"
+              d="M40 34 48 24 59 34H64L79 24 88 42V100L64 88 40 100ZM52.06 51.304 57.06 54.304A2 2 0 0 1 54.94 57.696L49.94 54.696A2 2 0 0 1 52.06 51.304ZM70.94 54.304 75.94 51.304A2 2 0 0 1 78.06 54.696L73.06 57.696A2 2 0 0 1 70.94 54.304ZM58.83 65.94Q64 72.4 69.17 65.94A1.5 1.5 0 0 0 66.83 64.06Q64 67.6 61.17 64.06A1.5 1.5 0 0 0 58.83 65.94Z"
+            />
+          </svg>
+        </div>
+        <div class="sizes mark" aria-label="16, 24, and 32 pixel previews">
+          <span class="size16"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="16 14 96 96"
+              role="img"
+              aria-label="mdview cat bookmark"
+            >
+              <title>mdview cat bookmark</title>
+              <path
+                fill="currentColor"
+                fill-rule="evenodd"
+                d="M40 34 48 24 59 34H64L79 24 88 42V100L64 88 40 100ZM52.06 51.304 57.06 54.304A2 2 0 0 1 54.94 57.696L49.94 54.696A2 2 0 0 1 52.06 51.304ZM70.94 54.304 75.94 51.304A2 2 0 0 1 78.06 54.696L73.06 57.696A2 2 0 0 1 70.94 54.304ZM58.83 65.94Q64 72.4 69.17 65.94A1.5 1.5 0 0 0 66.83 64.06Q64 67.6 61.17 64.06A1.5 1.5 0 0 0 58.83 65.94Z"
+              />
+            </svg> </span
+          ><span class="size24"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="16 14 96 96"
+              role="img"
+              aria-label="mdview cat bookmark"
+            >
+              <title>mdview cat bookmark</title>
+              <path
+                fill="currentColor"
+                fill-rule="evenodd"
+                d="M40 34 48 24 59 34H64L79 24 88 42V100L64 88 40 100ZM52.06 51.304 57.06 54.304A2 2 0 0 1 54.94 57.696L49.94 54.696A2 2 0 0 1 52.06 51.304ZM70.94 54.304 75.94 51.304A2 2 0 0 1 78.06 54.696L73.06 57.696A2 2 0 0 1 70.94 54.304ZM58.83 65.94Q64 72.4 69.17 65.94A1.5 1.5 0 0 0 66.83 64.06Q64 67.6 61.17 64.06A1.5 1.5 0 0 0 58.83 65.94Z"
+              />
+            </svg> </span
+          ><span class="size32"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="16 14 96 96"
+              role="img"
+              aria-label="mdview cat bookmark"
+            >
+              <title>mdview cat bookmark</title>
+              <path
+                fill="currentColor"
+                fill-rule="evenodd"
+                d="M40 34 48 24 59 34H64L79 24 88 42V100L64 88 40 100ZM52.06 51.304 57.06 54.304A2 2 0 0 1 54.94 57.696L49.94 54.696A2 2 0 0 1 52.06 51.304ZM70.94 54.304 75.94 51.304A2 2 0 0 1 78.06 54.696L73.06 57.696A2 2 0 0 1 70.94 54.304ZM58.83 65.94Q64 72.4 69.17 65.94A1.5 1.5 0 0 0 66.83 64.06Q64 67.6 61.17 64.06A1.5 1.5 0 0 0 58.83 65.94Z"
+              />
+            </svg>
+          </span>
+        </div>
+        <span class="label">Light mark · transparent cutouts</span>
+      </div>
+      <div class="sample light">
+        <div class="hero mark">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="16 14 96 96"
+            role="img"
+            aria-label="mdview cat bookmark"
+          >
+            <title>mdview cat bookmark</title>
+            <path
+              fill="currentColor"
+              fill-rule="evenodd"
+              d="M40 34 48 24 59 34H64L79 24 88 42V100L64 88 40 100ZM52.06 51.304 57.06 54.304A2 2 0 0 1 54.94 57.696L49.94 54.696A2 2 0 0 1 52.06 51.304ZM70.94 54.304 75.94 51.304A2 2 0 0 1 78.06 54.696L73.06 57.696A2 2 0 0 1 70.94 54.304ZM58.83 65.94Q64 72.4 69.17 65.94A1.5 1.5 0 0 0 66.83 64.06Q64 67.6 61.17 64.06A1.5 1.5 0 0 0 58.83 65.94Z"
+            />
+          </svg>
+        </div>
+        <div class="sizes mark" aria-label="16, 24, and 32 pixel previews">
+          <span class="size16"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="16 14 96 96"
+              role="img"
+              aria-label="mdview cat bookmark"
+            >
+              <title>mdview cat bookmark</title>
+              <path
+                fill="currentColor"
+                fill-rule="evenodd"
+                d="M40 34 48 24 59 34H64L79 24 88 42V100L64 88 40 100ZM52.06 51.304 57.06 54.304A2 2 0 0 1 54.94 57.696L49.94 54.696A2 2 0 0 1 52.06 51.304ZM70.94 54.304 75.94 51.304A2 2 0 0 1 78.06 54.696L73.06 57.696A2 2 0 0 1 70.94 54.304ZM58.83 65.94Q64 72.4 69.17 65.94A1.5 1.5 0 0 0 66.83 64.06Q64 67.6 61.17 64.06A1.5 1.5 0 0 0 58.83 65.94Z"
+              />
+            </svg> </span
+          ><span class="size24"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="16 14 96 96"
+              role="img"
+              aria-label="mdview cat bookmark"
+            >
+              <title>mdview cat bookmark</title>
+              <path
+                fill="currentColor"
+                fill-rule="evenodd"
+                d="M40 34 48 24 59 34H64L79 24 88 42V100L64 88 40 100ZM52.06 51.304 57.06 54.304A2 2 0 0 1 54.94 57.696L49.94 54.696A2 2 0 0 1 52.06 51.304ZM70.94 54.304 75.94 51.304A2 2 0 0 1 78.06 54.696L73.06 57.696A2 2 0 0 1 70.94 54.304ZM58.83 65.94Q64 72.4 69.17 65.94A1.5 1.5 0 0 0 66.83 64.06Q64 67.6 61.17 64.06A1.5 1.5 0 0 0 58.83 65.94Z"
+              />
+            </svg> </span
+          ><span class="size32"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="16 14 96 96"
+              role="img"
+              aria-label="mdview cat bookmark"
+            >
+              <title>mdview cat bookmark</title>
+              <path
+                fill="currentColor"
+                fill-rule="evenodd"
+                d="M40 34 48 24 59 34H64L79 24 88 42V100L64 88 40 100ZM52.06 51.304 57.06 54.304A2 2 0 0 1 54.94 57.696L49.94 54.696A2 2 0 0 1 52.06 51.304ZM70.94 54.304 75.94 51.304A2 2 0 0 1 78.06 54.696L73.06 57.696A2 2 0 0 1 70.94 54.304ZM58.83 65.94Q64 72.4 69.17 65.94A1.5 1.5 0 0 0 66.83 64.06Q64 67.6 61.17 64.06A1.5 1.5 0 0 0 58.83 65.94Z"
+              />
+            </svg>
+          </span>
+        </div>
+        <span class="label">Dark mark · transparent cutouts</span>
+      </div>
+    </div>
+    <div class="controls">
+      <label><input type="checkbox" id="accent" />Simulate app accent</label
+      ><input
+        type="color"
+        id="color"
+        value="#cba6f7"
+        aria-label="Simulated app accent color"
+      /><span>Same SVG in every preview</span>
+    </div>
+    <script>
+      const checkbox = document.querySelector('#accent');
+      const color = document.querySelector('#color');
+      checkbox.addEventListener('change', () =>
+        document.body.classList.toggle('accent', checkbox.checked),
+      );
+      color.addEventListener('input', () => {
+        document.documentElement.style.setProperty('--demo-accent', color.value);
+        checkbox.checked = true;
+        document.body.classList.add('accent');
+      });
+    </script>
+  </body>
+</html>

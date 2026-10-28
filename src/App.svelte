@@ -1,0 +1,639 @@
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { openDialog } from './lib/dialog';
+  import {
+    FolderOpen,
+    Search,
+    Settings as SettingsIcon,
+    PanelLeft,
+    PanelRight,
+    Columns2,
+    Sun,
+    Moon,
+    X,
+    ChevronRight,
+    ArrowUp,
+    RefreshCw,
+    Shield,
+    FileText,
+    Upload,
+    CircleHelp,
+    Maximize2,
+  } from '@lucide/svelte';
+  import ZoomControls from './components/ZoomControls.svelte';
+  import SidebarResize from './components/SidebarResize.svelte';
+  import {
+    changeZoom,
+    viewShortcut,
+    MIN_SIDEBAR_WIDTH,
+    MAX_SIDEBAR_WIDTH,
+    type ZoomCommand,
+    type ViewCommand,
+  } from './lib/view';
+  import Explorer from './components/Explorer.svelte';
+  import Preview from './components/Preview.svelte';
+  import Settings from './components/Settings.svelte';
+  import { invokeHost } from './lib/native';
+  import { Workspace } from './lib/workspace.svelte';
+  import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
+  import { demoSource } from './lib/demo';
+  import { loadPreferences } from './lib/preferences';
+  import { basename, dirname, isMarkdown, normalize, resolveLink } from './lib/paths';
+  import type { Heading, Preferences, Source } from './lib/types';
+  const workspace = new Workspace();
+  let preferences = $state(loadPreferences());
+  let sidebar = $state(window.innerWidth >= 760);
+  let outline = $state(window.innerWidth >= 1100);
+  let settings = $state(false);
+  let help = $state(false);
+  let searchOpen = $state(false);
+  let query = $state('');
+  let pathInput = $derived(workspace.directory);
+  let headings = $state<Heading[]>([]);
+  let trustedPath = $state('');
+  let trustedRevision = $state(-1);
+  let trustedSource = $state.raw<Source | null>(null);
+  let trustDialog = $state(false);
+  let fileInput: HTMLInputElement;
+  let folderInput: HTMLInputElement;
+  let searchInput = $state<HTMLInputElement>();
+  let refreshing = false;
+  let viewportWidth = $state(window.innerWidth);
+  const uiScale = $derived(preferences.uiZoom / 100);
+  const maximumSidebarWidth = $derived(
+    Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, viewportWidth / uiScale - 360)),
+  );
+  const sidebarWidth = $derived(Math.min(preferences.sidebarWidth, maximumSidebarWidth));
+  $effect(() => {
+    document.documentElement.dataset.theme = preferences.theme;
+    document.documentElement.style.zoom = String(uiScale);
+    document.documentElement.style.setProperty('--ui-scale', String(uiScale));
+  });
+  function viewCommand(command: ViewCommand) {
+    if (command.target === 'tabs') {
+      if (!workspace.tabs.length) return;
+      const current = workspace.tabs.findIndex((tab) => tab.path === workspace.active);
+      const direction = command.action === 'next' ? 1 : -1;
+      const next = (current + direction + workspace.tabs.length) % workspace.tabs.length;
+      void workspace.open(workspace.tabs[next].path);
+      return;
+    }
+    if (command.action === 'fit-width') {
+      updatePreferences({ ...preferences, fitWidth: !preferences.fitWidth });
+      return;
+    }
+    zoom(command);
+  }
+  function zoom(command: ZoomCommand) {
+    const key = command.target === 'document' ? 'documentZoom' : 'uiZoom';
+    updatePreferences({ ...preferences, [key]: changeZoom(preferences[key], command.action) });
+  }
+  const trusted = $derived(
+    trustedPath === workspace.active &&
+      trustedRevision === workspace.activeTab?.revision &&
+      trustedSource === workspace.source &&
+      !!trustedPath,
+  );
+  $effect(() => {
+    if (workspace.active !== trustedPath) trustedPath = '';
+  });
+  function updatePreferences(value: Preferences) {
+    preferences = value;
+    try {
+      localStorage.setItem('mdview.preferences', JSON.stringify({ ...value, version: 2 }));
+    } catch {
+      workspace.error = 'Preferences could not be persisted; browser storage is unavailable.';
+    }
+  }
+  async function chooseFolder() {
+    try {
+      if (native) {
+        const selected = await invokeHost<string | null>('pick_path', { directory: true });
+        if (typeof selected === 'string') {
+          workspace.directory = selected;
+          workspace.treeRevision++;
+        }
+      } else await workspace.selectSource(await browserDirectory());
+    } catch (error) {
+      workspace.error = String(error);
+    }
+  }
+  async function chooseFile() {
+    try {
+      if (native) {
+        const selected = await invokeHost<string | null>('pick_path', { directory: false });
+        if (typeof selected === 'string') {
+          workspace.directory = dirname(selected);
+          await workspace.open(selected);
+        }
+      } else fileInput.click();
+    } catch (error) {
+      workspace.error = String(error);
+    }
+  }
+  async function importFiles(event: Event) {
+    const files = [...((event.target as HTMLInputElement).files || [])];
+    try {
+      if (files.length) await workspace.selectSource(importedSource(files));
+    } catch (error) {
+      workspace.error = String(error);
+    }
+    (event.target as HTMLInputElement).value = '';
+  }
+  async function openDocument(path: string) {
+    await workspace.open(path);
+    if (window.innerWidth < 760) sidebar = false;
+  }
+  async function follow(href: string, documentPath = workspace.active) {
+    const target = resolveLink(documentPath, href);
+    if (target.kind === 'anchor') {
+      workspace.navigateAnchor(target.anchor);
+    }
+    if (target.kind === 'local') {
+      if (!isMarkdown(target.path)) {
+        workspace.error =
+          'This link points to a non-Markdown file. Only Markdown documents open here.';
+        return;
+      }
+      await workspace.open(target.path, target.anchor);
+    }
+    if (target.kind === 'external') {
+      try {
+        if (native) {
+          await invokeHost('open_external', { url: target.url });
+        } else window.open(target.url, '_blank', 'noopener,noreferrer');
+      } catch (error) {
+        workspace.error = String(error);
+      }
+    }
+    if (target.kind === 'blocked')
+      workspace.error = 'This link uses an unsupported or unsafe URL scheme.';
+  }
+  async function refresh() {
+    if (refreshing) return;
+    refreshing = true;
+    try {
+      await workspace.refresh();
+    } finally {
+      refreshing = false;
+    }
+  }
+  function split() {
+    workspace.secondary = workspace.secondary
+      ? ''
+      : workspace.tabs.find((tab) => tab.path !== workspace.active)?.path || workspace.active;
+  }
+  function keyboard(event: KeyboardEvent) {
+    const command = viewShortcut(event);
+    if (command) {
+      event.preventDefault();
+      viewCommand(command);
+      return;
+    }
+    const modifier = event.ctrlKey || event.metaKey;
+    if (event.key === 'Escape') {
+      settings = false;
+      help = false;
+      trustDialog = false;
+      searchOpen = false;
+      query = '';
+      return;
+    }
+    if (!modifier) return;
+    const key = event.key.toLowerCase();
+    if (!['o', 'b', 'f', 'w', '\\', ','].includes(key)) return;
+    event.preventDefault();
+    if (key === 'o') void (event.shiftKey ? chooseFolder() : chooseFile());
+    if (key === 'b') sidebar = !sidebar;
+    if (key === 'f') {
+      searchOpen = true;
+      setTimeout(() => searchInput?.focus());
+    }
+    if (key === 'w') workspace.close(workspace.active);
+    if (key === '\\') split();
+    if (key === ',') settings = !settings;
+  }
+  onMount(() => {
+    let disposed = false;
+    (async () => {
+      try {
+        if (native) {
+          const { source, initial } = await desktopSource();
+          if (disposed) return;
+          await workspace.changeSource(source);
+          if (initial.directory) workspace.directory = initial.path;
+          else {
+            workspace.directory = dirname(initial.path);
+            await workspace.open(initial.path);
+          }
+        } else {
+          await workspace.changeSource(demoSource());
+          await workspace.open('/welcome.md');
+        }
+      } catch (error) {
+        workspace.error = String(error);
+      }
+    })();
+    const timer = setInterval(() => {
+      if (!document.hidden && workspace.source?.live) void refresh();
+    }, 2000);
+    return () => {
+      disposed = true;
+      clearInterval(timer);
+    };
+  });
+</script>
+
+<svelte:window onkeydown={keyboard} bind:innerWidth={viewportWidth} />
+<div class="app-shell" data-theme={preferences.theme}>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><span class="app-logo"></span></span><strong
+        >mdview</strong
+      >
+    </div>
+    <div class="header-actions">
+      <button
+        class="btn btn-ghost btn-sm open-folder"
+        aria-label="Open folder"
+        onclick={chooseFolder}><FolderOpen size={16} /><span>Open folder</span></button
+      >
+      <button
+        class="icon-button"
+        aria-label="Toggle color theme"
+        onclick={() =>
+          updatePreferences({
+            ...preferences,
+            theme: preferences.theme === 'mocha' ? 'latte' : 'mocha',
+          })}
+        >{#if preferences.theme === 'mocha'}<Sun size={18} />{:else}<Moon size={18} />{/if}</button
+      >
+      <button class="icon-button" aria-label="Settings" onclick={() => (settings = true)}
+        ><SettingsIcon size={18} /></button
+      >
+    </div>
+  </header>
+  <div class="workspace">
+    {#if sidebar}
+      <aside
+        id="file-explorer"
+        class="sidebar"
+        style:--sidebar-width="{sidebarWidth}px"
+        aria-label="File explorer"
+      >
+        <div class="section-label">
+          <span>EXPLORER</span>
+          <div>
+            <button class="icon-button small" aria-label="Open Markdown files" onclick={chooseFile}
+              ><FileText size={15} /></button
+            ><button class="icon-button small" aria-label="Refresh files" onclick={refresh}
+              ><RefreshCw size={14} /></button
+            >
+          </div>
+        </div>
+        <div class="folder-label">
+          <FolderOpen size={15} /><span>{workspace.source?.label || 'Files'}</span>
+        </div>
+        <form
+          class="path-form"
+          onsubmit={(event) => {
+            event.preventDefault();
+            workspace.directory = normalize(pathInput);
+            workspace.treeRevision++;
+          }}
+        >
+          <input aria-label="Directory path" bind:value={pathInput} spellcheck="false" /><button
+            class="icon-button small"
+            aria-label="Go to directory"><ChevronRight size={14} /></button
+          >
+        </form>
+        <button
+          class="parent-folder"
+          onclick={() => {
+            workspace.directory = dirname(workspace.directory);
+            workspace.treeRevision++;
+          }}
+          disabled={workspace.directory === workspace.source?.root || workspace.directory === '/'}
+          ><ArrowUp size={14} /> Parent folder</button
+        >
+        <div class="explorer-scroll">
+          {#if workspace.source}<Explorer
+              source={workspace.source}
+              path={workspace.directory}
+              revision={workspace.treeRevision}
+              active={workspace.active}
+              onopen={openDocument}
+            />{/if}
+        </div>
+        <div class="sidebar-footer">
+          <span class="status-dot" class:live={workspace.source?.live}></span><span
+            >{workspace.source?.live
+              ? 'Live · checks every 2 seconds'
+              : 'Snapshot · import again to update'}</span
+          >
+        </div>
+        {#if !native}<div class="import-actions">
+            <button class="btn btn-ghost btn-xs" onclick={() => folderInput.click()}
+              ><Upload size={13} />Import folder</button
+            ><button class="btn btn-ghost btn-xs" onclick={chooseFile}>Open files</button>
+          </div>{/if}
+      </aside>
+      <SidebarResize
+        width={sidebarWidth}
+        maximum={maximumSidebarWidth}
+        scale={uiScale}
+        onresize={(width) => (preferences = { ...preferences, sidebarWidth: width })}
+        oncommit={() => updatePreferences(preferences)}
+      />
+    {/if}
+    <main class="main-workspace">
+      <div class="tab-bar">
+        <button
+          class="icon-button sidebar-toggle"
+          aria-label="Toggle explorer"
+          onclick={() => (sidebar = !sidebar)}><PanelLeft size={17} /></button
+        >
+        <div class="tabs-scroll" role="group" aria-label="Open documents">
+          {#each workspace.tabs as tab (tab.path)}<div
+              class="tab-item"
+              class:selected={workspace.active === tab.path}
+            >
+              <button
+                aria-pressed={workspace.active === tab.path}
+                class="tab-select"
+                onclick={() => workspace.open(tab.path)}
+                ><FileText size={14} /><span>{basename(tab.path)}</span></button
+              ><button
+                class="tab-close"
+                aria-label="Close {basename(tab.path)}"
+                onclick={() => workspace.close(tab.path)}><X size={12} /></button
+              >
+            </div>{/each}
+        </div>
+        <div class="view-actions">
+          <button
+            class="icon-button"
+            class:enabled={searchOpen}
+            aria-label="Search document"
+            onclick={() => {
+              searchOpen = !searchOpen;
+              if (!searchOpen) query = '';
+            }}><Search size={17} /></button
+          ><button
+            class="icon-button"
+            class:enabled={!!workspace.secondary}
+            aria-label="Toggle split view"
+            onclick={split}><Columns2 size={17} /></button
+          ><button
+            class="icon-button"
+            class:enabled={outline}
+            aria-label="Toggle table of contents"
+            onclick={() => (outline = !outline)}><PanelRight size={17} /></button
+          >
+        </div>
+      </div>
+      <div class="document-toolbar">
+        <div class="document-path">
+          <span title={dirname(workspace.active || workspace.directory)}
+            >{dirname(workspace.active || workspace.directory)}</span
+          ><ChevronRight size={12} /><strong title={workspace.active || undefined}
+            >{basename(workspace.active) === '/'
+              ? 'No document selected'
+              : basename(workspace.active)}</strong
+          >
+        </div>
+        <ZoomControls
+          label="document"
+          value={preferences.documentZoom}
+          onchange={(action) => zoom({ target: 'document', action })}
+        />
+        <button
+          class="icon-button"
+          class:enabled={preferences.fitWidth}
+          aria-label="Fit document to width"
+          aria-pressed={preferences.fitWidth}
+          title="Fit document to width (Ctrl =)"
+          onclick={() => viewCommand({ target: 'document', action: 'fit-width' })}
+          ><Maximize2 size={16} /></button
+        >
+        <button
+          class="trust-button"
+          class:trusted
+          aria-label={trusted
+            ? 'Scripts enabled: disable document scripts'
+            : 'Safe preview: trust current document for scripts'}
+          disabled={!workspace.active}
+          onclick={() => (trusted ? (trustedPath = '') : (trustDialog = true))}
+          ><Shield size={13} /><span>{trusted ? 'Scripts enabled' : 'Safe preview'}</span></button
+        >
+      </div>
+      {#if searchOpen}<div class="search-bar">
+          <Search size={16} /><input
+            bind:this={searchInput}
+            bind:value={query}
+            placeholder="Find in document…"
+            aria-label="Find in document"
+          /><span class="hint">Highlights up to 2,000 matches</span><button
+            class="icon-button small"
+            aria-label="Close search"
+            onclick={() => {
+              searchOpen = false;
+              query = '';
+            }}><X size={15} /></button
+          >
+        </div>{/if}
+      {#if workspace.error}<div class="error-banner" role="alert">
+          <span>{workspace.error}</span><button
+            class="icon-button small"
+            aria-label="Dismiss error"
+            onclick={() => (workspace.error = '')}><X size={14} /></button
+          >
+        </div>{/if}
+      {#if workspace.activeTab?.error}<div class="error-banner" role="alert">
+          {workspace.activeTab.error}
+        </div>{/if}
+      <div class="reading-layout">
+        <div class="panes" class:split={!!workspace.secondary}>
+          {#if workspace.activeTab && workspace.source}
+            {#key workspace.active}<Preview
+                tab={workspace.activeTab}
+                source={workspace.source}
+                {preferences}
+                {trusted}
+                {query}
+                anchor={workspace.anchor}
+                onanchorconsumed={(request) => workspace.consumeAnchor(request)}
+                onlink={(href) => follow(href, workspace.activeTab!.path)}
+                oncommand={viewCommand}
+                onscroll={(path, y) => workspace.setScroll(path, y)}
+                onheadings={(value) => (headings = value)}
+              />{/key}
+            {#if workspace.secondaryTab}<div class="secondary-pane">
+                <div class="secondary-heading">
+                  {basename(workspace.secondaryTab.path)}<button
+                    class="icon-button small"
+                    aria-label="Close split view"
+                    onclick={() => (workspace.secondary = '')}><X size={14} /></button
+                  >
+                </div>
+                {#if workspace.secondaryTab.error}<div class="error-banner" role="alert">
+                    {workspace.secondaryTab.error}
+                  </div>{/if}
+                <Preview
+                  tab={workspace.secondaryTab}
+                  source={workspace.source}
+                  {preferences}
+                  trusted={false}
+                  {query}
+                  anchor={null}
+                  onlink={(href) => follow(href, workspace.secondaryTab!.path)}
+                  oncommand={viewCommand}
+                  onscroll={(path, y) => workspace.setScroll(path, y)}
+                  onheadings={() => {}}
+                />
+              </div>{/if}
+          {:else}<div class="empty-state">
+              <span class="empty-icon" aria-hidden="true"><span class="app-logo"></span></span>
+              <h1>No document open</h1>
+              <p>Open a Markdown file or choose a folder.</p>
+              <button class="btn btn-primary" onclick={chooseFile}
+                ><FileText size={17} />Open a document</button
+              ><button class="btn btn-ghost btn-sm" onclick={chooseFolder}>Browse a folder</button>
+            </div>{/if}
+        </div>
+        {#if outline && workspace.activeTab}<aside class="outline" aria-label="Table of contents">
+            <div class="section-label">ON THIS PAGE</div>
+            <nav>
+              {#each headings.slice(0, 1000) as heading (heading.id)}<button
+                  class="outline-link"
+                  style:padding-left="{Math.max(0, heading.level - 1) * 10 + 14}px"
+                  onclick={() => workspace.navigateAnchor(heading.id)}>{heading.text}</button
+                >{/each}
+            </nav>
+            {#if headings.length > 1000}<p class="tree-note">
+                Showing the first 1,000 headings. Search can find the rest.
+              </p>{/if}
+            <div class="reading-tip">
+              <p><kbd>Ctrl B</kbd> toggles the explorer.</p>
+            </div>
+          </aside>{/if}
+      </div>
+    </main>
+  </div>
+  <footer class="status-bar">
+    <div>
+      <span class="status-dot live"></span><span>{workspace.busy ? 'Opening…' : 'Read-only'}</span
+      ><span class="footer-separator">/</span><span
+        >{native ? 'Linux' : 'Web · selected files only'}</span
+      >
+    </div>
+    <div>
+      <span class="offline-label"
+        >{preferences.network ? 'External content allowed' : 'Network resources blocked'}</span
+      ><button aria-label="Keyboard shortcuts and help" onclick={() => (help = true)}
+        ><CircleHelp size={14} /><span>Shortcuts</span></button
+      >
+    </div>
+  </footer>
+</div>
+<input
+  class="hidden-input"
+  type="file"
+  multiple
+  bind:this={fileInput}
+  onchange={importFiles}
+  aria-label="Import selected files"
+/>
+<input
+  class="hidden-input"
+  type="file"
+  webkitdirectory
+  multiple
+  bind:this={folderInput}
+  onchange={importFiles}
+  aria-label="Import selected folder"
+/>
+{#if settings}<Settings
+    {preferences}
+    onclose={() => (settings = false)}
+    onchange={updatePreferences}
+  />{/if}
+{#if trustDialog}<dialog
+    use:openDialog
+    class="modal modal-open"
+    aria-labelledby="trust-title"
+    oncancel={() => (trustDialog = false)}
+  >
+    <div class="modal-box">
+      <Shield size={28} />
+      <h2 id="trust-title">Trust this document?</h2>
+      <p>
+        Its JavaScript will run inside an isolated frame. It can read everything in this document
+        and its embedded images, consume resources, and contact the network by navigating its frame.
+        It cannot access mdview’s filesystem API.
+      </p>
+      <p>
+        Trust only documents you understand. Document links cannot request host navigation while
+        scripts run. Trust resets when you switch documents; changed trusted files must be trusted
+        again.
+      </p>
+      <div class="modal-action">
+        <button class="btn btn-ghost" onclick={() => (trustDialog = false)}
+          >Keep safe preview</button
+        ><button
+          class="btn btn-primary"
+          onclick={() => {
+            trustedPath = workspace.active;
+            trustedRevision = workspace.activeTab?.revision ?? -1;
+            trustedSource = workspace.source;
+            trustDialog = false;
+          }}>Enable scripts for this document</button
+        >
+      </div>
+    </div>
+  </dialog>{/if}
+{#if help}<dialog
+    use:openDialog
+    class="modal modal-open"
+    aria-labelledby="help-title"
+    oncancel={() => (help = false)}
+  >
+    <div class="modal-box">
+      <h2 id="help-title">Keyboard shortcuts</h2>
+      <dl class="shortcuts">
+        <dt>Open file</dt>
+        <dd>Ctrl O</dd>
+        <dt>Open folder</dt>
+        <dd>Ctrl Shift O</dd>
+        <dt>Find in document</dt>
+        <dd>Ctrl F</dd>
+        <dt>Toggle explorer</dt>
+        <dd>Ctrl B</dd>
+        <dt>Split preview</dt>
+        <dd>Ctrl \</dd>
+        <dt>Next / previous tab</dt>
+        <dd>Ctrl Tab / Ctrl Shift Tab</dd>
+        <dt>Fit document to width</dt>
+        <dd>Ctrl =</dd>
+        <dt>Close tab</dt>
+        <dd>Ctrl W</dd>
+        <dt>Zoom document in / out / reset</dt>
+        <dd>Ctrl + / − / 0</dd>
+        <dt>Zoom UI in / out / reset</dt>
+        <dd>Ctrl Alt + / − / 0</dd>
+        <dt>Resize explorer</dt>
+        <dd>Drag divider; arrows when focused</dd>
+        <dt>Preferences</dt>
+        <dd>Ctrl ,</dd>
+        <dt>Dismiss panels</dt>
+        <dd>Esc</dd>
+      </dl>
+      <p>
+        Zoom shortcuts work while the document has focus too. All essential actions have toolbar
+        buttons; UI zoom controls are also in Settings.
+      </p>
+      <div class="modal-action">
+        <button class="btn btn-primary" onclick={() => (help = false)}>Close</button>
+      </div>
+    </div>
+  </dialog>{/if}

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=mdview
+GenericName=Markdown Viewer
+Comment=Read Markdown with local diagrams and mathematics
+Exec=mdview %f
+TryExec=mdview
+Icon=mdview
+Terminal=false
+Type=Application
+Categories=Office;Viewer;
+MimeType=text/markdown;text/x-markdown;
+Keywords=Markdown;Preview;Reader;Math;Diagrams;
+StartupWMClass=mdview

@@ -1,0 +1,27 @@
+name: Bug report
+description: Report a reproducible problem with reading or navigating Markdown.
+body:
+  - type: markdown
+    attributes:
+      value: For suspected vulnerabilities, follow SECURITY.md. Use non-sensitive examples.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: App version or revision, Linux distribution, Nix app or browser, and browser/WebKitGTK version if known.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction and expected behavior
+      description: Include steps and a minimal Markdown example when relevant. Mention zoom, delimiters, theme, scripts and network settings if they affect the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include errors or screenshots without private document contents or credentials.
+    validations:
+      required: true

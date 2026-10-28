@@ -1,0 +1,109 @@
+:root {
+  --syntax-keyword: #cba6f7;
+  --syntax-title: #89b4fa;
+  --syntax-constant: #fab387;
+  --syntax-string: #a6e3a1;
+  --syntax-builtin: #f9e2af;
+  --syntax-comment: #a6adc8;
+  --syntax-tag: #94e2d5;
+  --syntax-text: #cdd6f4;
+  --syntax-bullet: #f9e2af;
+  --syntax-addition: #a6e3a1;
+  --syntax-addition-background: #203528;
+  --syntax-deletion: #f38ba8;
+  --syntax-deletion-background: #412735;
+}
+:root[data-theme='latte'] {
+  --syntax-keyword: #7c2bdc;
+  --syntax-title: #1455d5;
+  --syntax-constant: #9f4b0a;
+  --syntax-string: #216d19;
+  --syntax-builtin: #775b00;
+  --syntax-comment: #5c5f77;
+  --syntax-tag: #216d19;
+  --syntax-text: #4c4f69;
+  --syntax-bullet: #775b00;
+  --syntax-addition: #216d19;
+  --syntax-addition-background: #dce9db;
+  --syntax-deletion: #b51a36;
+  --syntax-deletion-background: #f2dce1;
+}
+.hljs {
+  color: var(--syntax-text);
+}
+.hljs-doctag,
+.hljs-keyword,
+.hljs-meta .hljs-keyword,
+.hljs-template-tag,
+.hljs-template-variable,
+.hljs-type,
+.hljs-variable.language_ {
+  color: var(--syntax-keyword);
+}
+.hljs-title {
+  color: var(--syntax-title);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-literal,
+.hljs-meta,
+.hljs-number,
+.hljs-operator,
+.hljs-variable,
+.hljs-selector-attr,
+.hljs-selector-class,
+.hljs-selector-id {
+  color: var(--syntax-constant);
+}
+.hljs-regexp,
+.hljs-string,
+.hljs-meta .hljs-string {
+  color: var(--syntax-string);
+}
+.hljs-built_in,
+.hljs-symbol {
+  color: var(--syntax-builtin);
+}
+.hljs-comment,
+.hljs-code,
+.hljs-formula {
+  color: var(--syntax-comment);
+}
+.hljs-name,
+.hljs-quote,
+.hljs-selector-tag,
+.hljs-selector-pseudo {
+  color: var(--syntax-tag);
+}
+.hljs-section {
+  color: var(--syntax-title);
+  font-weight: bold;
+}
+.hljs-bullet {
+  color: var(--syntax-bullet);
+}
+.hljs-subst,
+.hljs-emphasis,
+.hljs-strong,
+.hljs-char,
+.hljs-link,
+.hljs-params,
+.hljs-property,
+.hljs-punctuation,
+.hljs-tag {
+  color: var(--syntax-text);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: bold;
+}
+.hljs-addition {
+  color: var(--syntax-addition);
+  background: var(--syntax-addition-background);
+}
+.hljs-deletion {
+  color: var(--syntax-deletion);
+  background: var(--syntax-deletion-background);
+}

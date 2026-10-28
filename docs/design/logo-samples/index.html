@@ -1,0 +1,1841 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mdview — 20 logo options</title>
+    <style>
+      :root {
+        --logo-base: #1e1e2e;
+        --logo-mauve: #cba6f7;
+        --logo-lavender: #b4befe;
+        --logo-teal: #94e2d5;
+        --logo-pink: #f5c2e7;
+        --logo-peach: #fab387;
+        --logo-text: #cdd6f4;
+        --logo-surface: #313244;
+        --background: #181825;
+        --foreground: #cdd6f4;
+        --muted: #a6adc8;
+        --card: #1e1e2e;
+        --border: #45475a;
+        --primary: #cba6f7;
+        --radius: 16px;
+        --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+      }
+      :root[data-palette='latte'] {
+        --logo-base: #eff1f5;
+        --logo-mauve: #8839ef;
+        --logo-lavender: #7287fd;
+        --logo-teal: #179299;
+        --logo-pink: #ea76cb;
+        --logo-peach: #fe640b;
+        --logo-text: #4c4f69;
+        --logo-surface: #ccd0da;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        color: var(--foreground);
+        font-family: var(--font-sans);
+      }
+      button {
+        font: inherit;
+      }
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .switch {
+        display: flex;
+        gap: 5px;
+      }
+      .switch button,
+      .close {
+        padding: 7px 14px;
+        border-radius: 9px;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--foreground);
+        cursor: pointer;
+      }
+      .switch button[aria-pressed='true'] {
+        background: var(--primary);
+        color: var(--logo-base);
+        border-color: transparent;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .sample {
+        padding: 16px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        cursor: pointer;
+        color: var(--foreground);
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        gap: 11px;
+        min-width: 0;
+        transition: border-color 0.15s;
+      }
+      .sample:hover {
+        border-color: var(--primary);
+      }
+      button:focus-visible {
+        outline: 3px solid var(--primary);
+        outline-offset: 3px;
+      }
+      .main-icon svg {
+        display: block;
+        width: 88px;
+        height: 88px;
+      }
+      .label {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .label b {
+        color: var(--muted);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
+      .sizes {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        height: 24px;
+      }
+      .small svg {
+        display: block;
+        width: 24px;
+        height: 24px;
+      }
+      .tiny svg {
+        display: block;
+        width: 16px;
+        height: 16px;
+      }
+      dialog {
+        width: min(430px, calc(100% - 32px));
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--card);
+        color: var(--foreground);
+      }
+      dialog::backdrop {
+        background: #11111bcc;
+      }
+      .detail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+      }
+      .detail > svg {
+        width: 224px;
+        height: 224px;
+        max-width: 100%;
+      }
+      .detail strong {
+        font-size: 18px;
+      }
+      .close {
+        display: block;
+        margin-left: auto;
+        margin-bottom: 12px;
+      }
+      .download {
+        color: var(--primary);
+        font-size: 13px;
+      }
+      @media (max-width: 520px) {
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .label {
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="toolbar">
+      <span class="hint">Click to enlarge · small previews at 24px / 16px</span>
+      <div class="switch" aria-label="Catppuccin palette">
+        <button data-theme="mocha" aria-pressed="true">Mocha</button
+        ><button data-theme="latte" aria-pressed="false">Latte</button>
+      </div>
+    </div>
+    <div class="grid">
+      <button class="sample" data-number="01" aria-label="Enlarge option 01: Open book">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Open book"
+          >
+            <title>mdview — Open book</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path d="M25 34Q45 29 60 41V96Q44 84 25 88Z" fill="var(--logo-mauve, #cba6f7)" />
+            <path d="M68 41Q83 29 103 34V88Q84 84 68 96Z" fill="var(--logo-lavender, #b4befe)" />
+            <path
+              d="M36 49Q44 49 49 53M36 62Q44 62 49 66"
+              fill="none"
+              stroke="var(--logo-base, #1e1e2e)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>01</b>Open book</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Open book"
+            >
+              <title>mdview — Open book</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M25 34Q45 29 60 41V96Q44 84 25 88Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M68 41Q83 29 103 34V88Q84 84 68 96Z" fill="var(--logo-lavender, #b4befe)" />
+              <path
+                d="M36 49Q44 49 49 53M36 62Q44 62 49 66"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Open book"
+            >
+              <title>mdview — Open book</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M25 34Q45 29 60 41V96Q44 84 25 88Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M68 41Q83 29 103 34V88Q84 84 68 96Z" fill="var(--logo-lavender, #b4befe)" />
+              <path
+                d="M36 49Q44 49 49 53M36 62Q44 62 49 66"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="02" aria-label="Enlarge option 02: Folded M">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Folded M"
+          >
+            <title>mdview — Folded M</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M23 88V37Q23 32 28 35L64 61V96L39 77V94H29Q23 94 23 88Z"
+              fill="var(--logo-mauve, #cba6f7)"
+            />
+            <path
+              d="M64 61L100 35Q105 32 105 37V88Q105 94 99 94H89V77L64 96Z"
+              fill="var(--logo-teal, #94e2d5)"
+            /></svg></span
+        ><span class="label"><b>02</b>Folded M</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Folded M"
+            >
+              <title>mdview — Folded M</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M23 88V37Q23 32 28 35L64 61V96L39 77V94H29Q23 94 23 88Z"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <path
+                d="M64 61L100 35Q105 32 105 37V88Q105 94 99 94H89V77L64 96Z"
+                fill="var(--logo-teal, #94e2d5)"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Folded M"
+            >
+              <title>mdview — Folded M</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M23 88V37Q23 32 28 35L64 61V96L39 77V94H29Q23 94 23 88Z"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <path
+                d="M64 61L100 35Q105 32 105 37V88Q105 94 99 94H89V77L64 96Z"
+                fill="var(--logo-teal, #94e2d5)"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="03" aria-label="Enlarge option 03: Cat bookmark">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Cat bookmark"
+          >
+            <title>mdview — Cat bookmark</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M40 34L48 24L59 34H80Q88 34 88 42V100L64 88L40 100Z"
+              fill="var(--logo-mauve, #cba6f7)"
+            />
+            <path d="M64 34L79 24L88 42H64Z" fill="var(--logo-pink, #f5c2e7)" />
+            <path
+              d="M51 53L56 56M72 56L77 53"
+              fill="none"
+              stroke="var(--logo-base, #1e1e2e)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M60 65Q64 70 68 65"
+              fill="none"
+              stroke="var(--logo-base, #1e1e2e)"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>03</b>Cat bookmark</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Cat bookmark"
+            >
+              <title>mdview — Cat bookmark</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M40 34L48 24L59 34H80Q88 34 88 42V100L64 88L40 100Z"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <path d="M64 34L79 24L88 42H64Z" fill="var(--logo-pink, #f5c2e7)" />
+              <path
+                d="M51 53L56 56M72 56L77 53"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M60 65Q64 70 68 65"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Cat bookmark"
+            >
+              <title>mdview — Cat bookmark</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M40 34L48 24L59 34H80Q88 34 88 42V100L64 88L40 100Z"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <path d="M64 34L79 24L88 42H64Z" fill="var(--logo-pink, #f5c2e7)" />
+              <path
+                d="M51 53L56 56M72 56L77 53"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M60 65Q64 70 68 65"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="04" aria-label="Enlarge option 04: Reading eye">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Reading eye"
+          >
+            <title>mdview — Reading eye</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path d="M18 64Q64 16 110 64Q64 112 18 64Z" fill="var(--logo-lavender, #b4befe)" />
+            <path
+              d="M42 51Q54 48 64 56Q74 48 86 51V77Q74 74 64 82Q54 74 42 77Z"
+              fill="var(--logo-base, #1e1e2e)"
+            />
+            <path
+              d="M64 56V81"
+              fill="none"
+              stroke="var(--logo-teal, #94e2d5)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>04</b>Reading eye</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Reading eye"
+            >
+              <title>mdview — Reading eye</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M18 64Q64 16 110 64Q64 112 18 64Z" fill="var(--logo-lavender, #b4befe)" />
+              <path
+                d="M42 51Q54 48 64 56Q74 48 86 51V77Q74 74 64 82Q54 74 42 77Z"
+                fill="var(--logo-base, #1e1e2e)"
+              />
+              <path
+                d="M64 56V81"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Reading eye"
+            >
+              <title>mdview — Reading eye</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M18 64Q64 16 110 64Q64 112 18 64Z" fill="var(--logo-lavender, #b4befe)" />
+              <path
+                d="M42 51Q54 48 64 56Q74 48 86 51V77Q74 74 64 82Q54 74 42 77Z"
+                fill="var(--logo-base, #1e1e2e)"
+              />
+              <path
+                d="M64 56V81"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="05" aria-label="Enlarge option 05: Page turn">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Page turn"
+          >
+            <title>mdview — Page turn</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M35 24H76L97 45V94Q97 104 87 104H41Q31 104 31 94V34Q31 24 41 24Z"
+              fill="var(--logo-lavender, #b4befe)"
+            />
+            <path d="M76 24V44Q76 48 80 48H97Z" fill="var(--logo-mauve, #cba6f7)" />
+            <path
+              d="M45 65H81M45 77H72"
+              fill="none"
+              stroke="var(--logo-base, #1e1e2e)"
+              stroke-width="5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M71 104Q87 87 97 86V94Q97 104 87 104Z"
+              fill="var(--logo-teal, #94e2d5)"
+            /></svg></span
+        ><span class="label"><b>05</b>Page turn</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Page turn"
+            >
+              <title>mdview — Page turn</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M35 24H76L97 45V94Q97 104 87 104H41Q31 104 31 94V34Q31 24 41 24Z"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <path d="M76 24V44Q76 48 80 48H97Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path
+                d="M45 65H81M45 77H72"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M71 104Q87 87 97 86V94Q97 104 87 104Z"
+                fill="var(--logo-teal, #94e2d5)"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Page turn"
+            >
+              <title>mdview — Page turn</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M35 24H76L97 45V94Q97 104 87 104H41Q31 104 31 94V34Q31 24 41 24Z"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <path d="M76 24V44Q76 48 80 48H97Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path
+                d="M45 65H81M45 77H72"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M71 104Q87 87 97 86V94Q97 104 87 104Z"
+                fill="var(--logo-teal, #94e2d5)"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="06" aria-label="Enlarge option 06: Brackets">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Brackets"
+          >
+            <title>mdview — Brackets</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M43 36H29V92H43M85 36H99V92H85"
+              fill="none"
+              stroke="var(--logo-lavender, #b4befe)"
+              stroke-width="7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M48 78V52L64 67L80 52V78"
+              fill="none"
+              stroke="var(--logo-mauve, #cba6f7)"
+              stroke-width="7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>06</b>Brackets</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Brackets"
+            >
+              <title>mdview — Brackets</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M43 36H29V92H43M85 36H99V92H85"
+                fill="none"
+                stroke="var(--logo-lavender, #b4befe)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M48 78V52L64 67L80 52V78"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Brackets"
+            >
+              <title>mdview — Brackets</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M43 36H29V92H43M85 36H99V92H85"
+                fill="none"
+                stroke="var(--logo-lavender, #b4befe)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M48 78V52L64 67L80 52V78"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="07" aria-label="Enlarge option 07: Ribbon">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Ribbon"
+          >
+            <title>mdview — Ribbon</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path d="M36 25H92V104L64 86L36 104Z" fill="var(--logo-mauve, #cba6f7)" />
+            <path d="M49 44L64 57L79 44V73H49Z" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M53 67L64 76L75 67"
+              fill="none"
+              stroke="var(--logo-teal, #94e2d5)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>07</b>Ribbon</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Ribbon"
+            >
+              <title>mdview — Ribbon</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M36 25H92V104L64 86L36 104Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M49 44L64 57L79 44V73H49Z" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M53 67L64 76L75 67"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Ribbon"
+            >
+              <title>mdview — Ribbon</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M36 25H92V104L64 86L36 104Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M49 44L64 57L79 44V73H49Z" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M53 67L64 76L75 67"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="08" aria-label="Enlarge option 08: Soft M">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Soft M"
+          >
+            <title>mdview — Soft M</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M25 89V54Q25 36 44 36Q64 36 64 55V89M64 55Q64 36 84 36Q103 36 103 54V89"
+              fill="none"
+              stroke="var(--logo-mauve, #cba6f7)"
+              stroke-width="12"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <circle cx="103" cy="89" r="6" fill="var(--logo-teal, #94e2d5)" /></svg></span
+        ><span class="label"><b>08</b>Soft M</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Soft M"
+            >
+              <title>mdview — Soft M</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M25 89V54Q25 36 44 36Q64 36 64 55V89M64 55Q64 36 84 36Q103 36 103 54V89"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="12"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <circle cx="103" cy="89" r="6" fill="var(--logo-teal, #94e2d5)" /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Soft M"
+            >
+              <title>mdview — Soft M</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M25 89V54Q25 36 44 36Q64 36 64 55V89M64 55Q64 36 84 36Q103 36 103 54V89"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="12"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <circle cx="103" cy="89" r="6" fill="var(--logo-teal, #94e2d5)" /></svg></span
+        ></span></button
+      ><button class="sample" data-number="09" aria-label="Enlarge option 09: Paper stack">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Paper stack"
+          >
+            <title>mdview — Paper stack</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <rect x="25" y="43" width="62" height="61" rx="10" fill="var(--logo-teal, #94e2d5)" />
+            <rect
+              x="34"
+              y="33"
+              width="62"
+              height="61"
+              rx="10"
+              fill="var(--logo-lavender, #b4befe)"
+            />
+            <rect x="43" y="23" width="62" height="61" rx="10" fill="var(--logo-mauve, #cba6f7)" />
+            <path
+              d="M56 43H91M56 56H82"
+              fill="none"
+              stroke="var(--logo-base, #1e1e2e)"
+              stroke-width="5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>09</b>Paper stack</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Paper stack"
+            >
+              <title>mdview — Paper stack</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <rect x="25" y="43" width="62" height="61" rx="10" fill="var(--logo-teal, #94e2d5)" />
+              <rect
+                x="34"
+                y="33"
+                width="62"
+                height="61"
+                rx="10"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <rect
+                x="43"
+                y="23"
+                width="62"
+                height="61"
+                rx="10"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <path
+                d="M56 43H91M56 56H82"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Paper stack"
+            >
+              <title>mdview — Paper stack</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <rect x="25" y="43" width="62" height="61" rx="10" fill="var(--logo-teal, #94e2d5)" />
+              <rect
+                x="34"
+                y="33"
+                width="62"
+                height="61"
+                rx="10"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <rect
+                x="43"
+                y="23"
+                width="62"
+                height="61"
+                rx="10"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <path
+                d="M56 43H91M56 56H82"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="10" aria-label="Enlarge option 10: Preview">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Preview"
+          >
+            <title>mdview — Preview</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <rect
+              x="22"
+              y="28"
+              width="84"
+              height="72"
+              rx="13"
+              fill="var(--logo-lavender, #b4befe)"
+            />
+            <rect x="29" y="35" width="70" height="58" rx="7" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M39 47V81H50V64L59 73L68 64V81H79V47L59 64Z"
+              fill="var(--logo-mauve, #cba6f7)"
+            />
+            <circle cx="91" cy="87" r="11" fill="var(--logo-teal, #94e2d5)" />
+            <circle cx="91" cy="87" r="4" fill="var(--logo-base, #1e1e2e)" /></svg></span
+        ><span class="label"><b>10</b>Preview</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Preview"
+            >
+              <title>mdview — Preview</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <rect
+                x="22"
+                y="28"
+                width="84"
+                height="72"
+                rx="13"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <rect x="29" y="35" width="70" height="58" rx="7" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M39 47V81H50V64L59 73L68 64V81H79V47L59 64Z"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <circle cx="91" cy="87" r="11" fill="var(--logo-teal, #94e2d5)" />
+              <circle cx="91" cy="87" r="4" fill="var(--logo-base, #1e1e2e)" /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Preview"
+            >
+              <title>mdview — Preview</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <rect
+                x="22"
+                y="28"
+                width="84"
+                height="72"
+                rx="13"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <rect x="29" y="35" width="70" height="58" rx="7" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M39 47V81H50V64L59 73L68 64V81H79V47L59 64Z"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <circle cx="91" cy="87" r="11" fill="var(--logo-teal, #94e2d5)" />
+              <circle cx="91" cy="87" r="4" fill="var(--logo-base, #1e1e2e)" /></svg></span
+        ></span></button
+      ><button class="sample" data-number="11" aria-label="Enlarge option 11: Book cat">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Book cat"
+          >
+            <title>mdview — Book cat</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M31 48L34 24L53 39Q64 35 75 39L94 24L97 48V82Q97 100 64 100Q31 100 31 82Z"
+              fill="var(--logo-lavender, #b4befe)"
+            />
+            <path
+              d="M40 60Q53 56 64 65Q75 56 88 60V87Q75 83 64 91Q53 83 40 87Z"
+              fill="var(--logo-base, #1e1e2e)"
+            />
+            <path
+              d="M64 65V91"
+              fill="none"
+              stroke="var(--logo-mauve, #cba6f7)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <circle cx="48" cy="49" r="3" fill="var(--logo-base, #1e1e2e)" />
+            <circle cx="80" cy="49" r="3" fill="var(--logo-base, #1e1e2e)" /></svg></span
+        ><span class="label"><b>11</b>Book cat</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Book cat"
+            >
+              <title>mdview — Book cat</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M31 48L34 24L53 39Q64 35 75 39L94 24L97 48V82Q97 100 64 100Q31 100 31 82Z"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <path
+                d="M40 60Q53 56 64 65Q75 56 88 60V87Q75 83 64 91Q53 83 40 87Z"
+                fill="var(--logo-base, #1e1e2e)"
+              />
+              <path
+                d="M64 65V91"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <circle cx="48" cy="49" r="3" fill="var(--logo-base, #1e1e2e)" />
+              <circle cx="80" cy="49" r="3" fill="var(--logo-base, #1e1e2e)" /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Book cat"
+            >
+              <title>mdview — Book cat</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M31 48L34 24L53 39Q64 35 75 39L94 24L97 48V82Q97 100 64 100Q31 100 31 82Z"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <path
+                d="M40 60Q53 56 64 65Q75 56 88 60V87Q75 83 64 91Q53 83 40 87Z"
+                fill="var(--logo-base, #1e1e2e)"
+              />
+              <path
+                d="M64 65V91"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <circle cx="48" cy="49" r="3" fill="var(--logo-base, #1e1e2e)" />
+              <circle cx="80" cy="49" r="3" fill="var(--logo-base, #1e1e2e)" /></svg></span
+        ></span></button
+      ><button class="sample" data-number="12" aria-label="Enlarge option 12: Page leaf">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Page leaf"
+          >
+            <title>mdview — Page leaf</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M34 24H79L96 41V94Q96 104 86 104H42Q32 104 32 94V34Q32 24 42 24Z"
+              fill="var(--logo-mauve, #cba6f7)"
+            />
+            <path d="M79 24V41H96Z" fill="var(--logo-lavender, #b4befe)" />
+            <path d="M48 82Q43 55 79 52Q83 85 48 82Z" fill="var(--logo-teal, #94e2d5)" />
+            <path
+              d="M47 87L69 65"
+              fill="none"
+              stroke="var(--logo-base, #1e1e2e)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>12</b>Page leaf</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Page leaf"
+            >
+              <title>mdview — Page leaf</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M34 24H79L96 41V94Q96 104 86 104H42Q32 104 32 94V34Q32 24 42 24Z"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <path d="M79 24V41H96Z" fill="var(--logo-lavender, #b4befe)" />
+              <path d="M48 82Q43 55 79 52Q83 85 48 82Z" fill="var(--logo-teal, #94e2d5)" />
+              <path
+                d="M47 87L69 65"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Page leaf"
+            >
+              <title>mdview — Page leaf</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M34 24H79L96 41V94Q96 104 86 104H42Q32 104 32 94V34Q32 24 42 24Z"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <path d="M79 24V41H96Z" fill="var(--logo-lavender, #b4befe)" />
+              <path d="M48 82Q43 55 79 52Q83 85 48 82Z" fill="var(--logo-teal, #94e2d5)" />
+              <path
+                d="M47 87L69 65"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="13" aria-label="Enlarge option 13: Focus">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Focus"
+          >
+            <title>mdview — Focus</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M25 45V30H43M85 30H103V45M103 83V98H85M43 98H25V83"
+              fill="none"
+              stroke="var(--logo-lavender, #b4befe)"
+              stroke-width="6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path d="M42 43H73L85 55V85H42Z" fill="var(--logo-mauve, #cba6f7)" />
+            <path d="M73 43V55H85Z" fill="var(--logo-pink, #f5c2e7)" />
+            <path
+              d="M52 65H74M52 75H67"
+              fill="none"
+              stroke="var(--logo-base, #1e1e2e)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>13</b>Focus</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Focus"
+            >
+              <title>mdview — Focus</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M25 45V30H43M85 30H103V45M103 83V98H85M43 98H25V83"
+                fill="none"
+                stroke="var(--logo-lavender, #b4befe)"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path d="M42 43H73L85 55V85H42Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M73 43V55H85Z" fill="var(--logo-pink, #f5c2e7)" />
+              <path
+                d="M52 65H74M52 75H67"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Focus"
+            >
+              <title>mdview — Focus</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M25 45V30H43M85 30H103V45M103 83V98H85M43 98H25V83"
+                fill="none"
+                stroke="var(--logo-lavender, #b4befe)"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path d="M42 43H73L85 55V85H42Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M73 43V55H85Z" fill="var(--logo-pink, #f5c2e7)" />
+              <path
+                d="M52 65H74M52 75H67"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="14" aria-label="Enlarge option 14: Horizon">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Horizon"
+          >
+            <title>mdview — Horizon</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M24 74Q44 57 64 74Q84 57 104 74V94Q84 77 64 94Q44 77 24 94Z"
+              fill="var(--logo-lavender, #b4befe)"
+            />
+            <circle cx="64" cy="45" r="16" fill="var(--logo-peach, #fab387)" />
+            <path
+              d="M64 76V94"
+              fill="none"
+              stroke="var(--logo-base, #1e1e2e)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>14</b>Horizon</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Horizon"
+            >
+              <title>mdview — Horizon</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M24 74Q44 57 64 74Q84 57 104 74V94Q84 77 64 94Q44 77 24 94Z"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <circle cx="64" cy="45" r="16" fill="var(--logo-peach, #fab387)" />
+              <path
+                d="M64 76V94"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Horizon"
+            >
+              <title>mdview — Horizon</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M24 74Q44 57 64 74Q84 57 104 74V94Q84 77 64 94Q44 77 24 94Z"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <circle cx="64" cy="45" r="16" fill="var(--logo-peach, #fab387)" />
+              <path
+                d="M64 76V94"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="15" aria-label="Enlarge option 15: Monoline book">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Monoline book"
+          >
+            <title>mdview — Monoline book</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M25 92V40Q44 30 64 44Q84 30 103 40V92Q84 82 64 96Q44 82 25 92ZM64 44V96"
+              fill="none"
+              stroke="var(--logo-mauve, #cba6f7)"
+              stroke-width="6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M39 53L50 57M78 57L89 53"
+              fill="none"
+              stroke="var(--logo-teal, #94e2d5)"
+              stroke-width="5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>15</b>Monoline book</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Monoline book"
+            >
+              <title>mdview — Monoline book</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M25 92V40Q44 30 64 44Q84 30 103 40V92Q84 82 64 96Q44 82 25 92ZM64 44V96"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M39 53L50 57M78 57L89 53"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Monoline book"
+            >
+              <title>mdview — Monoline book</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M25 92V40Q44 30 64 44Q84 30 103 40V92Q84 82 64 96Q44 82 25 92ZM64 44V96"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M39 53L50 57M78 57L89 53"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="16" aria-label="Enlarge option 16: Paper wings">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Paper wings"
+          >
+            <title>mdview — Paper wings</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path d="M24 30Q54 35 61 62V99Q52 80 24 77Z" fill="var(--logo-mauve, #cba6f7)" />
+            <path d="M104 30Q74 35 67 62V99Q76 80 104 77Z" fill="var(--logo-pink, #f5c2e7)" />
+            <path
+              d="M35 49Q49 55 53 68M93 49Q79 55 75 68"
+              fill="none"
+              stroke="var(--logo-base, #1e1e2e)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>16</b>Paper wings</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Paper wings"
+            >
+              <title>mdview — Paper wings</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M24 30Q54 35 61 62V99Q52 80 24 77Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M104 30Q74 35 67 62V99Q76 80 104 77Z" fill="var(--logo-pink, #f5c2e7)" />
+              <path
+                d="M35 49Q49 55 53 68M93 49Q79 55 75 68"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Paper wings"
+            >
+              <title>mdview — Paper wings</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M24 30Q54 35 61 62V99Q52 80 24 77Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M104 30Q74 35 67 62V99Q76 80 104 77Z" fill="var(--logo-pink, #f5c2e7)" />
+              <path
+                d="M35 49Q49 55 53 68M93 49Q79 55 75 68"
+                fill="none"
+                stroke="var(--logo-base, #1e1e2e)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="17" aria-label="Enlarge option 17: Markdown">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Markdown"
+          >
+            <title>mdview — Markdown</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M27 85V43L46 64L65 43V85"
+              fill="none"
+              stroke="var(--logo-mauve, #cba6f7)"
+              stroke-width="9"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M91 43V83M77 70L91 84L105 70"
+              fill="none"
+              stroke="var(--logo-teal, #94e2d5)"
+              stroke-width="7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>17</b>Markdown</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Markdown"
+            >
+              <title>mdview — Markdown</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M27 85V43L46 64L65 43V85"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M91 43V83M77 70L91 84L105 70"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Markdown"
+            >
+              <title>mdview — Markdown</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M27 85V43L46 64L65 43V85"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M91 43V83M77 70L91 84L105 70"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="18" aria-label="Enlarge option 18: Book heart">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Book heart"
+          >
+            <title>mdview — Book heart</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path d="M24 43Q44 35 60 48V96Q44 83 24 91Z" fill="var(--logo-mauve, #cba6f7)" />
+            <path d="M68 48Q84 35 104 43V91Q84 83 68 96Z" fill="var(--logo-lavender, #b4befe)" />
+            <path
+              d="M64 59C42 46 46 29 57 30Q64 30 64 36Q64 30 71 30C82 29 86 46 64 59Z"
+              fill="var(--logo-pink, #f5c2e7)"
+            /></svg></span
+        ><span class="label"><b>18</b>Book heart</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Book heart"
+            >
+              <title>mdview — Book heart</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M24 43Q44 35 60 48V96Q44 83 24 91Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M68 48Q84 35 104 43V91Q84 83 68 96Z" fill="var(--logo-lavender, #b4befe)" />
+              <path
+                d="M64 59C42 46 46 29 57 30Q64 30 64 36Q64 30 71 30C82 29 86 46 64 59Z"
+                fill="var(--logo-pink, #f5c2e7)"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Book heart"
+            >
+              <title>mdview — Book heart</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path d="M24 43Q44 35 60 48V96Q44 83 24 91Z" fill="var(--logo-mauve, #cba6f7)" />
+              <path d="M68 48Q84 35 104 43V91Q84 83 68 96Z" fill="var(--logo-lavender, #b4befe)" />
+              <path
+                d="M64 59C42 46 46 29 57 30Q64 30 64 36Q64 30 71 30C82 29 86 46 64 59Z"
+                fill="var(--logo-pink, #f5c2e7)"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="19" aria-label="Enlarge option 19: Curled page">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Curled page"
+          >
+            <title>mdview — Curled page</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M29 30Q29 24 36 24H82Q89 24 89 31V77H55Q42 77 42 90Q42 103 55 103H93V94H55Q51 94 51 90Q51 86 55 86H99V35Q99 14 81 14H36Q19 14 19 31V88Q19 112 43 112H93V103H43Q29 103 29 88Z"
+              fill="var(--logo-lavender, #b4befe)"
+            />
+            <path
+              d="M43 43H74M43 57H66"
+              fill="none"
+              stroke="var(--logo-teal, #94e2d5)"
+              stroke-width="5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            /></svg></span
+        ><span class="label"><b>19</b>Curled page</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Curled page"
+            >
+              <title>mdview — Curled page</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M29 30Q29 24 36 24H82Q89 24 89 31V77H55Q42 77 42 90Q42 103 55 103H93V94H55Q51 94 51 90Q51 86 55 86H99V35Q99 14 81 14H36Q19 14 19 31V88Q19 112 43 112H93V103H43Q29 103 29 88Z"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <path
+                d="M43 43H74M43 57H66"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Curled page"
+            >
+              <title>mdview — Curled page</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M29 30Q29 24 36 24H82Q89 24 89 31V77H55Q42 77 42 90Q42 103 55 103H93V94H55Q51 94 51 90Q51 86 55 86H99V35Q99 14 81 14H36Q19 14 19 31V88Q19 112 43 112H93V103H43Q29 103 29 88Z"
+                fill="var(--logo-lavender, #b4befe)"
+              />
+              <path
+                d="M43 43H74M43 57H66"
+                fill="none"
+                stroke="var(--logo-teal, #94e2d5)"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg></span
+        ></span></button
+      ><button class="sample" data-number="20" aria-label="Enlarge option 20: Split view">
+        <span class="main-icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="128"
+            height="128"
+            viewBox="0 0 128 128"
+            role="img"
+            aria-label="mdview — Split view"
+          >
+            <title>mdview — Split view</title>
+            <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+            <rect x="21" y="27" width="86" height="74" rx="12" fill="var(--logo-mauve, #cba6f7)" />
+            <rect x="29" y="35" width="70" height="58" rx="5" fill="var(--logo-base, #1e1e2e)" />
+            <path
+              d="M59 35V93"
+              fill="none"
+              stroke="var(--logo-mauve, #cba6f7)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M39 49H49M39 61H49M39 73H46"
+              fill="none"
+              stroke="var(--logo-lavender, #b4befe)"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path d="M69 73V52L78 61L87 52V73Z" fill="var(--logo-teal, #94e2d5)" /></svg></span
+        ><span class="label"><b>20</b>Split view</span
+        ><span class="sizes" aria-hidden="true"
+          ><span class="small"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Split view"
+            >
+              <title>mdview — Split view</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <rect
+                x="21"
+                y="27"
+                width="86"
+                height="74"
+                rx="12"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <rect x="29" y="35" width="70" height="58" rx="5" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M59 35V93"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M39 49H49M39 61H49M39 73H46"
+                fill="none"
+                stroke="var(--logo-lavender, #b4befe)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path d="M69 73V52L78 61L87 52V73Z" fill="var(--logo-teal, #94e2d5)" /></svg></span
+          ><span class="tiny"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="128"
+              height="128"
+              viewBox="0 0 128 128"
+              role="img"
+              aria-label="mdview — Split view"
+            >
+              <title>mdview — Split view</title>
+              <rect x="0" y="0" width="128" height="128" rx="28" fill="var(--logo-base, #1e1e2e)" />
+              <rect
+                x="21"
+                y="27"
+                width="86"
+                height="74"
+                rx="12"
+                fill="var(--logo-mauve, #cba6f7)"
+              />
+              <rect x="29" y="35" width="70" height="58" rx="5" fill="var(--logo-base, #1e1e2e)" />
+              <path
+                d="M59 35V93"
+                fill="none"
+                stroke="var(--logo-mauve, #cba6f7)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M39 49H49M39 61H49M39 73H46"
+                fill="none"
+                stroke="var(--logo-lavender, #b4befe)"
+                stroke-width="4"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path d="M69 73V52L78 61L87 52V73Z" fill="var(--logo-teal, #94e2d5)" /></svg></span
+        ></span>
+      </button>
+    </div>
+    <dialog aria-label="Logo preview">
+      <button class="close" autofocus>Close</button>
+      <div class="detail"></div>
+    </dialog>
+    <script>
+      const dialog = document.querySelector('dialog');
+      const detail = document.querySelector('.detail');
+      let lastTrigger;
+      document.querySelectorAll('[data-theme]').forEach((button) =>
+        button.addEventListener('click', () => {
+          document.documentElement.dataset.palette = button.dataset.theme;
+          document
+            .querySelectorAll('[data-theme]')
+            .forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+        }),
+      );
+      document.querySelectorAll('.sample').forEach((button) =>
+        button.addEventListener('click', () => {
+          lastTrigger = button;
+          const icon = button.querySelector('svg').cloneNode(true);
+          const title = document.createElement('strong');
+          title.textContent = button.querySelector('.label').textContent;
+          detail.replaceChildren(icon, title);
+          dialog.showModal();
+        }),
+      );
+      document.querySelector('.close').addEventListener('click', () => dialog.close());
+      dialog.addEventListener('close', () => lastTrigger?.focus());
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) {
+          const bounds = dialog.getBoundingClientRect();
+          if (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+          )
+            dialog.close();
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "identifier": "main",
+  "description": "Host UI only; document frames have opaque origins and no IPC permissions.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-initial-path",
+    "allow-list-directory",
+    "allow-read-document",
+    "allow-read-asset",
+    "allow-document-stamp",
+    "allow-pick-path",
+    "allow-open-external"
+  ]
+}

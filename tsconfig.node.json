@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"],
+    "noEmit": true
+  },
+  "include": [
+    "vite.config.ts",
+    "playwright.config.ts",
+    "tests/**/*.ts",
+    "e2e/**/*.ts",
+    "src/vendor.d.ts"
+  ]
+}

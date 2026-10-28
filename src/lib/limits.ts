@@ -1,0 +1,2 @@
+export const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
+export const MAX_DIAGRAM_CHARACTERS = 50_000;
