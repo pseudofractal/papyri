@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Papyri
+GenericName=Document Viewer
+Comment=Read Markdown, PDF, and Typst documents
+Exec=papyri %f
+TryExec=papyri
+Icon=papyri
+Terminal=false
+Type=Application
+Categories=Office;Viewer;
+MimeType=text/markdown;text/x-markdown;application/pdf;text/vnd.typst;
+Keywords=Markdown;PDF;Typst;Preview;Reader;Math;Diagrams;
+StartupWMClass=papyri

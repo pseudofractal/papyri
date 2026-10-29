@@ -3,7 +3,7 @@
   import { openDialog } from '../lib/dialog';
   import { X, ShieldCheck, Braces } from '@lucide/svelte';
   import ZoomControls from './ZoomControls.svelte';
-  import { changeZoom } from '../lib/view';
+  import { changeZoom, MIN_PDF_ZOOM, MAX_PDF_ZOOM } from '../lib/view';
   import type { Delimiter, Preferences } from '../lib/types';
   import { validateDelimiters } from '../lib/preferences';
   let {
@@ -59,11 +59,25 @@
     </p>
     <h3>Magnification</h3>
     <div class="setting-row">
-      <span>Document</span><ZoomControls
+      <span>Markdown text</span><ZoomControls
         label="document"
         value={preferences.documentZoom}
         onchange={(action) =>
           onchange({ ...preferences, documentZoom: changeZoom(preferences.documentZoom, action) })}
+      />
+    </div>
+    <div class="setting-row">
+      <span>PDF and Typst pages</span><ZoomControls
+        label="PDF"
+        value={preferences.pdfZoom}
+        minimum={MIN_PDF_ZOOM}
+        maximum={MAX_PDF_ZOOM}
+        onchange={(action) =>
+          onchange({
+            ...preferences,
+            pdfZoom: changeZoom(preferences.pdfZoom, action, MIN_PDF_ZOOM, MAX_PDF_ZOOM),
+            fitWidth: false,
+          })}
       />
     </div>
     <div class="setting-row">

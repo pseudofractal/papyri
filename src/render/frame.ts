@@ -77,8 +77,8 @@ function loadDiagrams() {
       if (runtimeNonce) script.nonce = runtimeNonce;
       script.textContent = source;
       document.head.append(script);
-      const runtime = (window as unknown as { mdviewDiagrams?: typeof import('./diagrams') })
-        .mdviewDiagrams;
+      const runtime = (window as unknown as { papyriDiagrams?: typeof import('./diagrams') })
+        .papyriDiagrams;
       if (!runtime) throw new Error('The diagram runtime could not start.');
       resolve(runtime);
     } catch (error) {

@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="16 16 96 96" role="img" aria-label="mdview">
-  <title>mdview</title>
-  <g fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M43 36H29V92H43M85 36H99V92H85"/>
-    <path d="M48 78V52L64 67L80 52V78"/>
-  </g>
-</svg>

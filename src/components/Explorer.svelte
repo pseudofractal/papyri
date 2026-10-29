@@ -3,7 +3,7 @@
   import { listDirectory } from '../lib/directories';
   import { ChevronRight, ChevronDown, Folder, FileText, File } from '@lucide/svelte';
   import type { Entry, Source } from '../lib/types';
-  import { isMarkdown } from '../lib/paths';
+  import { isDocument } from '../lib/paths';
   let {
     source,
     path,
@@ -67,10 +67,10 @@
     <li>
       <button
         class:active={active === entry.path}
-        class:muted={!entry.directory && !isMarkdown(entry.path)}
+        class:muted={!entry.directory && !isDocument(entry.path)}
         class="file-row"
         style:padding-left="{12 + depth * 16}px"
-        disabled={!entry.directory && !isMarkdown(entry.path)}
+        disabled={!entry.directory && !isDocument(entry.path)}
         aria-expanded={entry.directory ? expanded.includes(entry.path) : undefined}
         onclick={() =>
           entry.directory
@@ -83,7 +83,7 @@
               size={13}
             />{:else}<ChevronRight size={13} />{/if}<Folder size={16} />{:else}<span
             class="tree-spacer"
-          ></span>{#if isMarkdown(entry.path)}<FileText size={16} />{:else}<File
+          ></span>{#if isDocument(entry.path)}<FileText size={16} />{:else}<File
               size={16}
             />{/if}{/if}
         <span>{entry.name}</span>

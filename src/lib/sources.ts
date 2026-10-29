@@ -1,7 +1,7 @@
-import { sortEntries, normalize, dirname, basename } from './paths';
+import { sortEntries, normalize, dirname, basename, isPdf, isTypst } from './paths';
 import type { Source, Entry, FileData } from './types';
 import { invokeHost } from './native';
-import { MAX_DOCUMENT_BYTES } from './limits';
+import { MAX_DOCUMENT_BYTES, MAX_PDF_BYTES } from './limits';
 const MAX_ASSET_BYTES = 16 * 1024 * 1024;
 function decode(bytes: Uint8Array): string {
   if (bytes.length > MAX_DOCUMENT_BYTES)
@@ -9,6 +9,14 @@ function decode(bytes: Uint8Array): string {
   return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
 }
 async function readBrowserDocument(file: File): Promise<FileData> {
+  if (isTypst(file.name))
+    throw new Error('Typst compilation requires the Linux app. Open an exported PDF in web mode.');
+  if (isPdf(file.name)) {
+    if (file.size > MAX_PDF_BYTES) throw new Error('This PDF exceeds the 64 MiB preview limit.');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (bytes.length > MAX_PDF_BYTES) throw new Error('This PDF exceeds the 64 MiB preview limit.');
+    return { text: '', bytes, stamp: `${file.lastModified}:${file.size}` };
+  }
   if (file.size > MAX_DOCUMENT_BYTES)
     throw new Error('This document exceeds the 8 MiB preview limit.');
   return {
@@ -70,7 +78,13 @@ export async function desktopSource(): Promise<{
       live: true,
       stamp: (path) => invokeHost<string>('document_stamp', { path }),
       list: (path) => invokeHost<Entry[]>('list_directory', { path }),
-      read: (path) => invokeHost<FileData>('read_document', { path }),
+      async read(path) {
+        if (!isPdf(path) && !isTypst(path)) return invokeHost<FileData>('read_document', { path });
+        let stamp = await invokeHost<string>('document_stamp', { path });
+        const bytes = new Uint8Array(await invokeHost<ArrayBuffer>('read_pdf', { path }));
+        if (isTypst(path)) stamp = await invokeHost<string>('document_stamp', { path });
+        return { text: '', bytes, stamp };
+      },
       asset: async (path) => new Uint8Array(await invokeHost<number[]>('read_asset', { path })),
     },
   };

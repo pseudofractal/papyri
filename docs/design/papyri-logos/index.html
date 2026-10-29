@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Papyri logo studies</title>
+    <style>
+      :root {
+        font-family: var(--font-sans, system-ui, sans-serif);
+        color: var(--foreground);
+      }
+      body {
+        margin: 0;
+      }
+      .spotlight {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        flex-wrap: wrap;
+        padding: 8px 0 24px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+      }
+      .identity {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        min-width: 0;
+      }
+      .large-mark {
+        width: 100px;
+        height: 100px;
+        flex-shrink: 0;
+      }
+      .large-mark svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      h1 {
+        font-size: 34px;
+        font-weight: 500;
+        letter-spacing: -0.045em;
+        margin: 0 0 8px;
+      }
+      .selected-label {
+        font-size: 13px;
+        color: var(--muted-foreground);
+        margin: 0;
+      }
+      .sizes {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .sample {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .sample .mini {
+        display: block;
+      }
+      .mini svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .sample small {
+        font: 11px var(--font-mono, monospace);
+        color: var(--muted-foreground);
+      }
+      .inverse {
+        width: 48px;
+        height: 48px;
+        display: grid;
+        place-items: center;
+        border-radius: var(--radius, 10px);
+        background: var(--foreground);
+        color: var(--background);
+      }
+      .inverse .mini {
+        width: 36px;
+        height: 36px;
+      }
+      .gallery {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .tile {
+        position: relative;
+        min-width: 0;
+        min-height: 140px;
+        padding: 17px 12px 13px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: var(--radius, 10px);
+        color: var(--foreground);
+        font: inherit;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+      .tile:hover {
+        background: var(--secondary);
+        color: var(--secondary-foreground);
+      }
+      .tile[aria-pressed='true'] {
+        border-color: var(--foreground);
+      }
+      .tile:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 3px;
+      }
+      .tile > svg {
+        display: block;
+        width: 76px;
+        height: 76px;
+      }
+      .tile-number {
+        align-self: flex-start;
+        font: 11px var(--font-mono, monospace);
+        color: var(--muted-foreground);
+      }
+      .tile-label {
+        font-size: 12px;
+        line-height: 1.4;
+        text-align: center;
+      }
+      @media (max-width: 540px) {
+        .gallery {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+        .tile {
+          min-height: 138px;
+        }
+        .spotlight {
+          gap: 14px;
+          padding-bottom: 18px;
+        }
+        .identity {
+          gap: 12px;
+        }
+        .large-mark {
+          width: 84px;
+          height: 84px;
+        }
+        h1 {
+          font-size: 30px;
+        }
+        .sizes {
+          width: 100%;
+          justify-content: flex-end;
+          gap: 20px;
+        }
+        .inverse {
+          margin-left: 8px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="papyri-studies">
+      <section class="spotlight" aria-label="Selected logo">
+        <div class="identity">
+          <div class="large-mark">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 96 96"
+              width="96"
+              height="96"
+              role="img"
+              aria-label="Papyri 01: Unfurled scroll"
+            >
+              <title>Papyri — Unfurled scroll</title>
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="5.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M25 18H68C75 18 80 23 80 30V34H62M62 28V68C62 74 57 79 51 79H25C18 79 14 74 14 67V63H42V67C42 74 47 79 54 79M25 63V28C25 22 21 18 15 18M62 28C62 22 66 18 72 18"
+                />
+              </g>
+            </svg>
+          </div>
+          <div>
+            <h1>Papyri</h1>
+            <p class="selected-label" role="status" aria-live="polite">01 · Unfurled scroll</p>
+          </div>
+        </div>
+        <div class="sizes">
+          <span class="sample"
+            ><span class="mini" style="width: 16px; height: 16px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                role="img"
+                aria-label="Papyri 01: Unfurled scroll"
+              >
+                <title>Papyri — Unfurled scroll</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="5.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M25 18H68C75 18 80 23 80 30V34H62M62 28V68C62 74 57 79 51 79H25C18 79 14 74 14 67V63H42V67C42 74 47 79 54 79M25 63V28C25 22 21 18 15 18M62 28C62 22 66 18 72 18"
+                  />
+                </g></svg></span
+            ><small>16</small></span
+          ><span class="sample"
+            ><span class="mini" style="width: 24px; height: 24px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                role="img"
+                aria-label="Papyri 01: Unfurled scroll"
+              >
+                <title>Papyri — Unfurled scroll</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="5.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M25 18H68C75 18 80 23 80 30V34H62M62 28V68C62 74 57 79 51 79H25C18 79 14 74 14 67V63H42V67C42 74 47 79 54 79M25 63V28C25 22 21 18 15 18M62 28C62 22 66 18 72 18"
+                  />
+                </g></svg></span
+            ><small>24</small></span
+          ><span class="sample"
+            ><span class="mini" style="width: 32px; height: 32px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                role="img"
+                aria-label="Papyri 01: Unfurled scroll"
+              >
+                <title>Papyri — Unfurled scroll</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="5.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M25 18H68C75 18 80 23 80 30V34H62M62 28V68C62 74 57 79 51 79H25C18 79 14 74 14 67V63H42V67C42 74 47 79 54 79M25 63V28C25 22 21 18 15 18M62 28C62 22 66 18 72 18"
+                  />
+                </g></svg></span
+            ><small>32</small></span
+          ><span class="inverse" aria-label="Inverse monochrome"
+            ><span class="mini"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                role="img"
+                aria-label="Papyri 01: Unfurled scroll"
+              >
+                <title>Papyri — Unfurled scroll</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="5.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path
+                    d="M25 18H68C75 18 80 23 80 30V34H62M62 28V68C62 74 57 79 51 79H25C18 79 14 74 14 67V63H42V67C42 74 47 79 54 79M25 63V28C25 22 21 18 15 18M62 28C62 22 66 18 72 18"
+                  />
+                </g></svg></span
+          ></span>
+        </div>
+      </section>
+      <div class="gallery" role="group" aria-label="Papyri logo concepts">
+        <button
+          type="button"
+          class="tile"
+          data-number="01"
+          data-label="Unfurled scroll"
+          aria-label="01: Unfurled scroll"
+          aria-pressed="true"
+        >
+          <span class="tile-number">01</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Unfurled scroll</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M25 18H68C75 18 80 23 80 30V34H62M62 28V68C62 74 57 79 51 79H25C18 79 14 74 14 67V63H42V67C42 74 47 79 54 79M25 63V28C25 22 21 18 15 18M62 28C62 22 66 18 72 18"
+              />
+            </g></svg
+          ><span class="tile-label">Unfurled scroll</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="02"
+          data-label="Written scroll"
+          aria-label="02: Written scroll"
+          aria-pressed="false"
+        >
+          <span class="tile-number">02</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Written scroll</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M25 18H68C75 18 80 23 80 30V34H62M62 28V68C62 74 57 79 51 79H25C18 79 14 74 14 67V63H42V67C42 74 47 79 54 79M25 63V28C25 22 21 18 15 18M62 28C62 22 66 18 72 18"
+              />
+              <path d="M36 38H51M36 49H51" />
+            </g></svg
+          ><span class="tile-label">Written scroll</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="03"
+          data-label="Leaning scroll"
+          aria-label="03: Leaning scroll"
+          aria-pressed="false"
+        >
+          <span class="tile-number">03</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Leaning scroll</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <g transform="rotate(-14 48 48)">
+                <path
+                  d="M25 18H68C75 18 80 23 80 30V34H62M62 28V68C62 74 57 79 51 79H25C18 79 14 74 14 67V63H42V67C42 74 47 79 54 79M25 63V28C25 22 21 18 15 18M62 28C62 22 66 18 72 18"
+                />
+              </g>
+            </g></svg
+          ><span class="tile-label">Leaning scroll</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="04"
+          data-label="Lower curl"
+          aria-label="04: Lower curl"
+          aria-pressed="false"
+        >
+          <span class="tile-number">04</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Lower curl</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M28 64V18H70V66C70 74 64 80 56 80H27C19 80 14 75 14 68V64H45V68C45 75 50 80 57 80"
+              />
+            </g></svg
+          ><span class="tile-label">Lower curl</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="05"
+          data-label="Twin rolls"
+          aria-label="05: Twin rolls"
+          aria-pressed="false"
+        >
+          <span class="tile-number">05</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Twin rolls</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M26 29H70M26 68H70M26 29C26 17 12 17 12 29V68C12 80 26 80 26 68ZM70 29C70 17 84 17 84 29V68C84 80 70 80 70 68Z"
+              />
+            </g></svg
+          ><span class="tile-label">Twin rolls</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="06"
+          data-label="Bracketed scroll"
+          aria-label="06: Bracketed scroll"
+          aria-pressed="false"
+        >
+          <span class="tile-number">06</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Bracketed scroll</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M27 20H15V76H27M69 20H81V76H69M38 65V29H58Q65 29 65 36V39H54M54 36V61Q54 69 46 69H37Q31 69 31 63V59H46"
+              />
+            </g></svg
+          ><span class="tile-label">Bracketed scroll</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="07"
+          data-label="Rolled P"
+          aria-label="07: Rolled P"
+          aria-pressed="false"
+        >
+          <span class="tile-number">07</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Rolled P</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M27 80V18H53C68 18 78 27 78 41S68 64 53 64H40V52H52C59 52 64 48 64 41S59 30 52 30H40V80"
+              />
+            </g></svg
+          ><span class="tile-label">Rolled P</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="08"
+          data-label="Curl monogram"
+          aria-label="08: Curl monogram"
+          aria-pressed="false"
+        >
+          <span class="tile-number">08</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Curl monogram</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M30 80V28C30 19 36 14 47 14H53C68 14 78 25 78 39S68 63 53 63H43M43 49H52C58 49 63 45 63 39S58 28 52 28H44V68C44 77 39 82 31 82H21"
+              />
+            </g></svg
+          ><span class="tile-label">Curl monogram</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="09"
+          data-label="Open leaves"
+          aria-label="09: Open leaves"
+          aria-pressed="false"
+        >
+          <span class="tile-number">09</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Open leaves</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M48 78V27C37 19 25 18 14 22V70C26 67 38 69 48 78ZM48 27C59 19 71 18 82 22V70C70 67 58 69 48 78"
+              />
+            </g></svg
+          ><span class="tile-label">Open leaves</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="10"
+          data-label="Soft scroll"
+          aria-label="10: Soft scroll"
+          aria-pressed="false"
+        >
+          <span class="tile-number">10</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Soft scroll</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M29 18H64Q77 18 77 31V35H60V30Q60 18 48 18M60 30V67Q60 79 48 79H29Q17 79 17 67V62H43V67Q43 79 55 79M29 62V30Q29 18 17 18"
+              />
+              <path d="M39 42H50" />
+            </g></svg
+          ><span class="tile-label">Soft scroll</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="11"
+          data-label="Papyrus stem"
+          aria-label="11: Papyrus stem"
+          aria-pressed="false"
+        >
+          <span class="tile-number">11</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Papyrus stem</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M48 82V41M48 41L20 29M48 41L31 18M48 41V13M48 41L65 18M48 41L76 29M18 31Q22 21 31 18M65 18Q74 21 78 31M31 65Q42 64 48 75M65 55Q54 55 48 67"
+              />
+            </g></svg
+          ><span class="tile-label">Papyrus stem</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="12"
+          data-label="Papyrus fan"
+          aria-label="12: Papyrus fan"
+          aria-pressed="false"
+        >
+          <span class="tile-number">12</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Papyrus fan</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M48 82V43M15 35Q48 9 81 35M48 43L15 35M48 43L29 24M48 43V18M48 43L67 24M48 43L81 35"
+              />
+            </g></svg
+          ><span class="tile-label">Papyrus fan</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="13"
+          data-label="Reed pair"
+          aria-label="13: Reed pair"
+          aria-pressed="false"
+        >
+          <span class="tile-number">13</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Reed pair</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M35 82V38M35 38L17 27M35 38L27 17M35 38L43 17M35 38L53 27M63 82V54M63 54L49 45M63 54V36M63 54L78 45"
+              />
+            </g></svg
+          ><span class="tile-label">Reed pair</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="14"
+          data-label="Reed on paper"
+          aria-label="14: Reed on paper"
+          aria-pressed="false"
+        >
+          <span class="tile-number">14</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Reed on paper</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="22" y="13" width="52" height="70" rx="10" />
+              <path d="M48 69V42M48 42L35 33M48 42V27M48 42L61 33" />
+            </g></svg
+          ><span class="tile-label">Reed on paper</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="15"
+          data-label="Solid P"
+          aria-label="15: Solid P"
+          aria-pressed="false"
+        >
+          <span class="tile-number">15</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Solid P</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                fill="currentColor"
+                stroke="none"
+                fill-rule="evenodd"
+                d="M24 14H53C71 14 82 25 82 41S70 67 54 67H38V82H24ZM38 28V53H53C63 53 68 48 68 41S63 28 53 28Z"
+              />
+            </g></svg
+          ><span class="tile-label">Solid P</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="16"
+          data-label="Paired P"
+          aria-label="16: Paired P"
+          aria-pressed="false"
+        >
+          <span class="tile-number">16</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Paired P</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M20 79V24H39C51 24 58 32 58 43S51 62 39 62H20M44 79V15H63C75 15 82 23 82 34S75 53 63 53H58"
+              />
+            </g></svg
+          ><span class="tile-label">Paired P</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="17"
+          data-label="Spiral base"
+          aria-label="17: Spiral base"
+          aria-pressed="false"
+        >
+          <span class="tile-number">17</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Spiral base</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M29 56V18H70V64Q70 79 55 79H29Q15 79 15 66Q15 55 28 55H46Q58 55 58 65Q58 73 50 73Q44 73 44 66V63"
+              />
+            </g></svg
+          ><span class="tile-label">Spiral base</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="18"
+          data-label="Reader’s eye"
+          aria-label="18: Reader’s eye"
+          aria-pressed="false"
+        >
+          <span class="tile-number">18</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Reader’s eye</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M25 18H68C75 18 80 23 80 30V34H62M62 28V68C62 74 57 79 51 79H25C18 79 14 74 14 67V63H42V67C42 74 47 79 54 79M25 63V28C25 22 21 18 15 18M62 28C62 22 66 18 72 18"
+              />
+              <path d="M33 45Q44 33 55 45Q44 57 33 45Z" />
+              <circle cx="44" cy="45" r="2" fill="currentColor" stroke="none" />
+            </g></svg
+          ><span class="tile-label">Reader’s eye</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="19"
+          data-label="Cartouche"
+          aria-label="19: Cartouche"
+          aria-pressed="false"
+        >
+          <span class="tile-number">19</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Cartouche</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="25" y="11" width="46" height="68" rx="23" />
+              <path d="M22 85H74M40 64V30H49Q59 30 59 40T49 50H40" />
+            </g></svg
+          ><span class="tile-label">Cartouche</span>
+        </button>
+        <button
+          type="button"
+          class="tile"
+          data-number="20"
+          data-label="Folded P"
+          aria-label="20: Folded P"
+          aria-pressed="false"
+        >
+          <span class="tile-number">20</span
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 96 96"
+            width="96"
+            height="96"
+            aria-hidden="true"
+          >
+            <title>Papyri — Folded P</title>
+            <g
+              fill="none"
+              stroke="currentColor"
+              stroke-width="5.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M26 80V17H58L76 35V49L59 65H26M58 17V35H76" />
+            </g></svg
+          ><span class="tile-label">Folded P</span>
+        </button>
+      </div>
+    </div>
+    <script>
+      (() => {
+        const root = document.getElementById('papyri-studies');
+        const buttons = [...root.querySelectorAll('.tile')];
+        const select = (button) => {
+          for (const tile of buttons) tile.setAttribute('aria-pressed', String(tile === button));
+          root.querySelector('.selected-label').textContent =
+            button.dataset.number + ' · ' + button.dataset.label;
+          for (const target of root.querySelectorAll('.large-mark, .mini')) {
+            const mark = button.querySelector('svg').cloneNode(true);
+            if (target.classList.contains('large-mark')) {
+              mark.removeAttribute('aria-hidden');
+              mark.setAttribute('role', 'img');
+              mark.setAttribute('aria-label', 'Papyri: ' + button.dataset.label);
+            }
+            target.replaceChildren(mark);
+          }
+        };
+        for (const button of buttons) button.addEventListener('click', () => select(button));
+        select(buttons[0]);
+      })();
+    </script>
+  </body>
+</html>

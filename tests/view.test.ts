@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { changeZoom, zoomShortcut, viewShortcut, clampSidebarWidth } from '../src/lib/view';
+import {
+  changeZoom,
+  zoomShortcut,
+  viewShortcut,
+  clampSidebarWidth,
+  MIN_PDF_ZOOM,
+  MAX_PDF_ZOOM,
+} from '../src/lib/view';
 import { RenderCache } from '../src/render/cache';
 import { defaults, loadPreferences } from '../src/lib/preferences';
 import { vi } from 'vitest';
@@ -21,6 +28,8 @@ describe('view preferences', () => {
     expect(changeZoom(200, 'in')).toBe(200);
     expect(changeZoom(50, 'out')).toBe(50);
     expect(changeZoom(160, 'reset')).toBe(100);
+    expect(changeZoom(250, 'in', MIN_PDF_ZOOM, MAX_PDF_ZOOM)).toBe(260);
+    expect(changeZoom(10, 'out', MIN_PDF_ZOOM, MAX_PDF_ZOOM)).toBe(10);
     expect(clampSidebarWidth(1)).toBe(180);
     expect(clampSidebarWidth(900)).toBe(600);
   });
@@ -35,6 +44,7 @@ describe('view preferences', () => {
     legacy.delimiters = [{ left: '%%', right: '%%', display: true }];
     expect(loadPreferences().delimiters).toEqual(legacy.delimiters);
     expect(loadPreferences().documentZoom).toBe(100);
+    expect(loadPreferences().pdfZoom).toBe(100);
     vi.unstubAllGlobals();
   });
 });

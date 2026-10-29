@@ -6,6 +6,7 @@ export interface Entry {
 export interface FileData {
   text: string;
   stamp: string;
+  bytes?: Uint8Array;
 }
 export interface Source {
   label: string;
@@ -25,6 +26,7 @@ export interface Preferences {
   theme: 'mocha' | 'latte';
   network: boolean;
   documentZoom: number;
+  pdfZoom: number;
   fitWidth: boolean;
   uiZoom: number;
   sidebarWidth: number;

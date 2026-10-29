@@ -1,6 +1,7 @@
 mod commands;
 mod files;
 mod security;
+mod typst;
 use tauri::Manager;
 pub fn run() {
   let mut bytes = [0u8; 32];
@@ -11,6 +12,7 @@ pub fn run() {
       commands::initial_path,
       commands::list_directory,
       commands::read_document,
+      commands::read_pdf,
       commands::read_asset,
       commands::document_stamp,
       commands::pick_path,
@@ -40,5 +42,5 @@ pub fn run() {
       handler(invoke)
     })
     .run(tauri::generate_context!())
-    .expect("Unable to start mdview");
+    .expect("Unable to start Papyri");
 }

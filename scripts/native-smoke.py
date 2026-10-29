@@ -1,7 +1,7 @@
 """Exercise the actual Linux WebKit app through Tauri's maintained WebDriver.
 
 Run under xvfb-run with tauri-driver and WebKitWebDriver on PATH.
-MDVIEW_BINARY selects a built release binary. Fixtures are temporary.
+PAPYRI_BINARY selects a built release binary. Fixtures are temporary.
 """
 import json
 import base64
@@ -50,7 +50,7 @@ def until(check, description, seconds=25):
     raise AssertionError("Timed out: " + description)
 
 
-with tempfile.TemporaryDirectory(prefix="mdview-native-") as directory:
+with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
     root = Path(directory)
     document = root / "hello world.md"
     (root / "sub").mkdir()
@@ -65,7 +65,10 @@ with tempfile.TemporaryDirectory(prefix="mdview-native-") as directory:
     document.write_text("# Native works" + body)
     (root / "sub" / "next.md").write_text("# Linked document\n\n[Back](../hello%20world.md)")
     (root / ".hidden.md").write_text("# Hidden")
-    log = open("/tmp/mdview-native-driver.log", "w")
+    (root / "paper.pdf").write_bytes(Path("e2e/fixtures/paged.pdf").read_bytes())
+    (root / "paper.typ").write_text('= Native Typst\n#include "part.typ"')
+    (root / "part.typ").write_text("Imported dependency")
+    log = open("/tmp/papyri-native-driver.log", "w")
     test_environment = {
         **os.environ,
         "XDG_DATA_HOME": str(root / "app-data"),
@@ -76,10 +79,11 @@ with tempfile.TemporaryDirectory(prefix="mdview-native-") as directory:
     session = None
     try:
         until(lambda: request("GET", "/status"), "WebDriver startup")
-        binary = os.environ.get("MDVIEW_BINARY", str(Path("src-tauri/target/debug/mdview").resolve()))
+        binary = os.environ.get("PAPYRI_BINARY") or str(Path("src-tauri/target/debug/papyri").resolve())
         options = {"capabilities": {"alwaysMatch": {"tauri:options": {"application": binary, "args": [str(root) + "/sub/../hello world.md"]}}}}
         session = request("POST", "/session", options)["sessionId"]
         prefix = "/session/" + session
+        until(lambda: request("GET", prefix + "/title") == "Papyri", "Papyri window title")
         request("POST", prefix + "/window/rect", {"width": 1280, "height": 860})
 
         def execute(script):
@@ -269,12 +273,12 @@ with tempfile.TemporaryDirectory(prefix="mdview-native-") as directory:
         ]}]})
         until(lambda: execute("return Math.abs(document.querySelector('.sidebar').getBoundingClientRect().width-" + str(divider["width"]) + ")>40"), "native mouse explorer resizing")
         execute("document.querySelector('[aria-label=\"Resize explorer\"]').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))")
-        assert execute("return JSON.parse(localStorage.getItem('mdview.preferences')).sidebarWidth>=180")
+        assert execute("return JSON.parse(localStorage.getItem('papyri.preferences')).sidebarWidth>=180")
         frame()
         assert execute("return !!document.querySelector('.katex-display') && !!document.querySelector('a[href=\"#equation-7-1\"]') && !!document.querySelector('a[href=\"#reference-1-1\"]')")
         assert execute("const ids=[...document.querySelectorAll('[id]')].map(node=>node.id);return ids.length===new Set(ids).size")
-        assert execute("return typeof window.__MDVIEW_HOST_TOKEN__") == "undefined"
-        assert execute("try { return parent.__MDVIEW_HOST_TOKEN__ || 'missing' } catch { return 'isolated' }") == "isolated"
+        assert execute("return typeof window.__PAPYRI_HOST_TOKEN__") == "undefined"
+        assert execute("try { return parent.__PAPYRI_HOST_TOKEN__ || 'missing' } catch { return 'isolated' }") == "isolated"
         execute("document.querySelector('img').scrollIntoView()")
         assert until(lambda: execute("return document.querySelector('img')?.naturalWidth === 1"), "local image resolution")
         denial = asynchronous("const done=arguments[arguments.length-1]; const api=window.__TAURI_INTERNALS__; if(!api) done('unavailable'); else api.invoke('read_document',{path:'/etc/passwd',hostToken:'forged'}).then(()=>done('BAD'),()=>done('denied'))")
@@ -301,12 +305,12 @@ with tempfile.TemporaryDirectory(prefix="mdview-native-") as directory:
         execute("document.querySelectorAll('.diagram')[1].querySelector('button').click()")
         until(lambda: execute("return document.querySelectorAll('.diagram svg').length === 2"), "native Graphviz WASM diagram")
         request("POST", prefix + "/frame", {"id": None})
-        execute("window.__mdviewScrollObserved=false;window.addEventListener('message',function observe(event){if(event.source===document.querySelector('iframe').contentWindow&&event.data?.type==='scroll'&&event.data.y>500){window.__mdviewScrollObserved=true;window.removeEventListener('message',observe)}})")
+        execute("window.__papyriScrollObserved=false;window.addEventListener('message',function observe(event){if(event.source===document.querySelector('iframe').contentWindow&&event.data?.type==='scroll'&&event.data.y>500){window.__papyriScrollObserved=true;window.removeEventListener('message',observe)}})")
         frame()
         execute("window.scrollTo(0, 600)")
         until(lambda: preview("return scrollY > 500"), "scroll position")
         request("POST", prefix + "/frame", {"id": None})
-        until(lambda: execute("return window.__mdviewScrollObserved"), "scroll bookmark delivered to host")
+        until(lambda: execute("return window.__papyriScrollObserved"), "scroll bookmark delivered to host")
         document.write_text("# Live update" + body)
         until(lambda: preview("return document.querySelector('h1')?.textContent === 'Live update'"), "live file update")
         until(lambda: preview("return scrollY > 500"), "scroll restored after refresh")
@@ -350,6 +354,48 @@ with tempfile.TemporaryDirectory(prefix="mdview-native-") as directory:
         until(lambda: execute("return document.body.textContent.includes('created.md')"), "directory live update")
         (root / "sub" / "next.md").unlink()
         until(lambda: execute("return document.body.textContent.includes('File unavailable')"), "deleted-file error")
+        execute("[...document.querySelectorAll('.file-row')].find(button=>button.textContent.trim()==='paper.pdf').click()")
+        until(lambda: execute("return document.querySelector('.document-path strong').title===" + json.dumps(str(root / "paper.pdf"))), "native PDF tab selected")
+        frame()
+        until(lambda: preview("return document.querySelector('#page-count')?.textContent==='of 2' && !!document.querySelector('.textLayer span')"), "native PDF rendering and text layer")
+        assert execute("try { return parent.document ? false : false } catch { return true }")
+        assert execute("return typeof window.__PAPYRI_HOST_TOKEN__") == "undefined"
+        request("POST", prefix + "/frame", {"id": None})
+        execute("document.querySelector('[aria-label=\"Fit document to width\"]').click()")
+        frame()
+        until(lambda: execute("const page=document.querySelector('.page'),width=page?.getBoundingClientRect().width;return width<=innerWidth+1&&width>=innerWidth-64"), "native PDF fit width")
+        for scale in [50, 140, 200]:
+            request("POST", prefix + "/frame", {"id": None})
+            execute("window.dispatchEvent(new KeyboardEvent('keydown',{key:'0',ctrlKey:true,altKey:true}))")
+            for _ in range(abs(scale - 100) // 10):
+                execute("window.dispatchEvent(new KeyboardEvent('keydown',{key:'" + ("-" if scale < 100 else "+") + "',ctrlKey:true,altKey:true}))")
+            frame()
+            until(lambda: execute("const container=document.querySelector('#viewer-container'),page=document.querySelector('.page'),width=page?.getBoundingClientRect().width;return width<=innerWidth+1&&width>=innerWidth-64&&container.scrollWidth<=container.clientWidth+1"), "native PDF stays fitted at each UI scale")
+        request("POST", prefix + "/frame", {"id": None})
+        execute("window.dispatchEvent(new KeyboardEvent('keydown',{key:'0',ctrlKey:true,altKey:true}))")
+        frame()
+        until(lambda: execute("return document.querySelector('.page').getBoundingClientRect().width>=innerWidth-64"), "native PDF refitted after resetting UI scale")
+        fitted_width = execute("return document.querySelector('.page').getBoundingClientRect().width")
+        execute("window.dispatchEvent(new KeyboardEvent('keydown',{key:'+',ctrlKey:true}))")
+        until(lambda: execute("return document.querySelector('.page').getBoundingClientRect().width>" + str(fitted_width)), "native PDF zoom increases fitted page width")
+        execute("document.querySelector('#next-page').click()")
+        until(lambda: execute("return document.querySelector('#page-number').value==='2'"), "native PDF page navigation")
+        request("POST", prefix + "/frame", {"id": None})
+        execute("[...document.querySelectorAll('.file-row')].find(button=>button.textContent.trim()==='paper.typ').click()")
+        until(lambda: execute("return document.querySelector('.document-path strong').title===" + json.dumps(str(root / "paper.typ"))), "native Typst tab selected")
+        frame()
+        until(lambda: preview("return document.querySelector('.textLayer')?.textContent.includes('Imported dependency')"), "native sandboxed Typst preview")
+        execute("document.documentElement.dataset.retained='yes'")
+        (root / "paper.typ").write_text("#let broken =")
+        request("POST", prefix + "/frame", {"id": None})
+        until(lambda: execute("return document.body.textContent.includes('Typst compilation failed')"), "native Typst syntax diagnostic")
+        frame()
+        assert execute("return document.documentElement.dataset.retained==='yes' && document.querySelector('.textLayer').textContent.includes('Imported dependency')"), "compile failure retains preview"
+        (root / "paper.typ").write_text('= Native Typst restored\n#include "part.typ"')
+        until(lambda: preview("return document.querySelector('.textLayer')?.textContent.includes('Native Typst restored')"), "native Typst correction")
+        (root / "part.typ").write_text("Changed imported dependency")
+        until(lambda: preview("return document.querySelector('.textLayer')?.textContent.includes('Changed imported dependency')"), "native Typst import live update")
+        request("POST", prefix + "/frame", {"id": None})
         request("DELETE", prefix)
         session = None
         for args, expected in [([], str(Path.cwd())), ([str(root)], str(root))]:
@@ -359,11 +405,11 @@ with tempfile.TemporaryDirectory(prefix="mdview-native-") as directory:
             until(lambda: execute("return document.querySelector('input[aria-label=\"Directory path\"]')?.value === " + json.dumps(expected)), "CLI default and directory arguments")
             request("DELETE", prefix)
             session = None
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh"]}, indent=2))
     except Exception:
         if session:
             try:
-                Path("/tmp/mdview-native-failure.png").write_bytes(base64.b64decode(request("GET", prefix + "/screenshot")))
+                Path("/tmp/papyri-native-failure.png").write_bytes(base64.b64decode(request("GET", prefix + "/screenshot")))
                 print("Native diagnostic:", execute("return {heading:document.querySelector('h1')?.textContent,trusted:document.getElementById('payload')?JSON.parse(document.getElementById('payload').textContent).trusted:null,dataset:{...document.body.dataset},image:document.querySelector('img')?{src:document.querySelector('img').src.slice(0,50),complete:document.querySelector('img').complete,top:document.querySelector('img').getBoundingClientRect().top,height:innerHeight,scroll:scrollY}:null,documentScripts:[...document.querySelectorAll('#document script')].map(s=>s.textContent)}"))
                 request("POST", prefix + "/frame", {"id": None})
                 print("Host layout:", execute("return {width:innerWidth,height:innerHeight,zoom:document.documentElement.style.zoom,sidebar:!!document.querySelector('.sidebar'),focus:document.activeElement?.tagName}"))

@@ -8,7 +8,7 @@ pub fn authorized(body: &InvokeBody, token: &str) -> bool {
 }
 pub fn initialization(token: &str) -> String {
   format!(
-    r#"if (window.top === window.self && (location.protocol === 'tauri:' || ['http://tauri.localhost', 'https://tauri.localhost', 'http://localhost:1420', 'http://127.0.0.1:1420'].includes(location.origin))) {{ Object.defineProperty(window, '__MDVIEW_HOST_TOKEN__', {{ value: '{token}', writable: false, configurable: false }}); }}"#
+    r#"if (window.top === window.self && (location.protocol === 'tauri:' || ['http://tauri.localhost', 'https://tauri.localhost', 'http://localhost:1420', 'http://127.0.0.1:1420'].includes(location.origin))) {{ Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', {{ value: '{token}', writable: false, configurable: false }}); }}"#
   )
 }
 #[cfg(test)]

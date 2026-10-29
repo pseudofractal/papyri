@@ -1,4 +1,4 @@
-# mdview logo options
+# papyri logo options
 
 Twenty original vector concepts for review. Open `index.html` to compare Catppuccin Mocha and Latte and enlarge each numbered option. The small previews show 24 px and 16 px sizes.
 

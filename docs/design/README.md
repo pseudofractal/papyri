@@ -1,19 +1,25 @@
 # App icon
 
-The selected mdview mark is option 06: a rounded M between brackets. Its source is [`packaging/mdview-symbolic.svg`](../../packaging/mdview-symbolic.svg). It has a transparent background and uses `currentColor`, with no fixed accent or theme colors.
+Papyri uses logo study **14: Reed on paper**, a papyrus stem inside a rounded page. Its canonical source is [`packaging/papyri-symbolic.svg`](../../packaging/papyri-symbolic.svg). It has a transparent background and uses `currentColor`, so the interface can recolor it with the selected accent.
 
-- The application header and empty state use that SVG as a CSS mask, inheriting text color. Changing their CSS color also changes the mark.
-- The web favicon, Linux window and desktop launcher use a generated neutral dark tile with a light mark. They remain legible on light and dark backgrounds without depending on the app's accent.
-- Tauri embeds the generated PNG and reapplies the configured native icon after webview creation, replacing the generic GTK startup fallback.
-- Nix installs both scalable SVGs and 32, 64, 128, 256 and 512 px PNGs in the hicolor icon theme. Desktop themes can recolor the `mdview-symbolic` variant; they control their own presentation and do not inherit application CSS.
+- The header and empty state use the source as a CSS mask and inherit text color.
+- The favicon, Linux window, and desktop launcher use a generated neutral dark tile with a light mark, independent of the app accent.
+- Tauri embeds the generated PNG and reapplies it after webview creation.
+- Nix installs scalable icons and 32, 64, 128, 256, and 512 px PNGs in the hicolor icon theme. Desktop themes can recolor `papyri-symbolic` themselves.
 
-After changing the source, regenerate with the locked development environment:
+Regenerate and check icons with the locked environment:
 
 ```sh
 nix develop -c npm run icons
 nix develop -c node scripts/build-icons.mjs --check
 ```
 
-The script uses librsvg's maintained SVG rasterizer, provided by the flake. Commit the generated `packaging/mdview.svg` and `src-tauri/icons/*.png` alongside the source. The flake's packaging check detects stale assets. No network access, font assets or image generation service is needed.
+The script uses librsvg from the flake. Commit the canonical source, generated `packaging/papyri.svg`, and `src-tauri/icons/*.png` together. The flake rejects stale generated assets.
 
-The original [20 options](logo-samples/index.html), [cat bookmark](cat-bookmark.html), and [monochrome bracket study](brackets.html) are retained as design history. They are not alternate application icons.
+## Application identity
+
+The executable, desktop entry, flake package, and NixOS option are `papyri` / `programs.papyri.enable`, with no alternate names. The application identifier is `io.github.pseudofractal.papyri`; preferences use `papyri.preferences`. This application identity starts with a fresh preference store.
+
+The repository is [pseudofractal/papyri](https://github.com/pseudofractal/papyri).
+
+The [Papyri studies](papyri-logos/index.html), [earlier name directions](brand-directions/index.html), [original icon options](logo-samples/index.html), [cat bookmark](cat-bookmark.html), and [bracket study](brackets.html) remain as design history.

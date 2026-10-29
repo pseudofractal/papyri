@@ -1,9 +1,16 @@
-import { clampZoom, clampSidebarWidth, DEFAULT_SIDEBAR_WIDTH } from './view';
+import {
+  clampZoom,
+  clampSidebarWidth,
+  DEFAULT_SIDEBAR_WIDTH,
+  MIN_PDF_ZOOM,
+  MAX_PDF_ZOOM,
+} from './view';
 import type { Delimiter, Preferences } from './types';
 export const defaults: Preferences = {
   theme: 'mocha',
   network: false,
   documentZoom: 100,
+  pdfZoom: 100,
   fitWidth: false,
   uiZoom: 100,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
@@ -41,13 +48,16 @@ export function validateDelimiters(value: unknown): Delimiter[] {
 }
 export function loadPreferences(): Preferences {
   try {
-    const stored = JSON.parse(localStorage.getItem('mdview.preferences') || 'null');
+    const stored = JSON.parse(localStorage.getItem('papyri.preferences') || 'null');
     if (!stored) return structuredClone(defaults);
     return {
       theme: stored.theme === 'latte' ? 'latte' : 'mocha',
       network: stored.network === true,
       fitWidth: stored.fitWidth === true,
       documentZoom: Number.isFinite(stored.documentZoom) ? clampZoom(stored.documentZoom) : 100,
+      pdfZoom: Number.isFinite(stored.pdfZoom)
+        ? clampZoom(stored.pdfZoom, MIN_PDF_ZOOM, MAX_PDF_ZOOM)
+        : 100,
       uiZoom: Number.isFinite(stored.uiZoom) ? clampZoom(stored.uiZoom) : 100,
       sidebarWidth: Number.isFinite(stored.sidebarWidth)
         ? clampSidebarWidth(stored.sidebarWidth)

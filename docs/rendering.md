@@ -1,5 +1,7 @@
 # Rendering support
 
+Markdown, PDF, and Typst documents open as viewer tabs. PDF.js renders PDF pages in both Linux and web modes; the official Typst compiler supplies PDF output in the Linux app. See [PDF and Typst support](documents.md) for page controls, live compilation, offline assets, project-root restrictions, and fixed-layout behavior. The sections below describe Markdown rendering.
+
 Markdown-it supplies CommonMark-style parsing with its enabled GFM features (tables, strikethrough, autolinking), plus established plugins for task lists and footnotes. Raw HTML is sanitized by DOMPurify before insertion into the isolated document frame. Highlight.js bundles its common language set with a theme-aware Catppuccin palette; unknown languages and code blocks above 100,000 characters remain plain code. The app intentionally does not implement its own Markdown, math, diagram or chart language.
 
 | Fence             | Renderer                                | Offline behavior                                                                                                             |

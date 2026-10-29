@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const temporary = await mkdtemp(join(tmpdir(), 'mdview-benchmark-'));
+const temporary = await mkdtemp(join(tmpdir(), 'papyri-benchmark-'));
 try {
   const bundle = join(temporary, 'render.mjs');
   await build({

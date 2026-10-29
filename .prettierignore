@@ -11,3 +11,6 @@ playwright-report
 test-results
 
 public/diagrams.js
+public/pdf.js
+public/pdf.css
+public/pdf-licenses/

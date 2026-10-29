@@ -18,7 +18,7 @@ export function configureMath(markdown: InstanceType<typeof MarkdownIt>, pairs: 
     const blockPattern = String.raw`${left}${blockContent}${right}(?=[ \t]*(?:\n|$))`;
     return { pair, bareBrackets, pattern, blockPattern, name: `math_${index}` };
   });
-  texmath.rules.mdview = {
+  texmath.rules.papyri = {
     inline: rules
       .filter((rule) => !rule.bareBrackets || !rule.pair.display)
       .map(({ pair, pattern, name }) => ({
@@ -57,7 +57,7 @@ export function configureMath(markdown: InstanceType<typeof MarkdownIt>, pairs: 
   };
   markdown.use(texmath, {
     engine: katex,
-    delimiters: 'mdview',
+    delimiters: 'papyri',
     katexOptions: {
       trust: false,
       strict: 'warn',
@@ -66,7 +66,7 @@ export function configureMath(markdown: InstanceType<typeof MarkdownIt>, pairs: 
       maxSize: 20,
     },
   });
-  for (const name of [...texmath.rules.mdview.inline, ...texmath.rules.mdview.block].map(
+  for (const name of [...texmath.rules.papyri.inline, ...texmath.rules.papyri.block].map(
     (rule) => rule.name,
   )) {
     const render = markdown.renderer.rules[name]!;
@@ -74,7 +74,7 @@ export function configureMath(markdown: InstanceType<typeof MarkdownIt>, pairs: 
       const html = render(tokens, index, options, env, renderer);
       const id = tokens[index].meta?.equationId;
       return typeof id === 'string'
-        ? `<span id="${markdown.utils.escapeHtml(id)}" data-mdview-target="${markdown.utils.escapeHtml(id)}" class="equation-target">${html}</span>`
+        ? `<span id="${markdown.utils.escapeHtml(id)}" data-papyri-target="${markdown.utils.escapeHtml(id)}" class="equation-target">${html}</span>`
         : html;
     };
   }

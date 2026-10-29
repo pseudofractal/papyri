@@ -9,6 +9,8 @@ export default ts.config(
       'node_modules/**',
       'public/renderer.*',
       'public/diagrams.js',
+      'public/pdf.js',
+      'public/pdf.css',
       'src-tauri/target/**',
       'src-tauri/gen/**',
       'test-results/**',

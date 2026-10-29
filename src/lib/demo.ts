@@ -1,7 +1,7 @@
 import { importedSource } from './sources';
-const welcome = `# mdview
+const welcome = `# Papyri
 
-**mdview** is a read-only Markdown viewer. Open a file or folder to get started.
+**Papyri** is a read-only Markdown, PDF, and Typst viewer. Open a file or folder to get started.
 
 > Core rendering works locally. No telemetry.
 
@@ -13,6 +13,8 @@ const welcome = `# mdview
 | Mathematics | KaTeX, configurable delimiters |
 | Diagrams | Mermaid, Graphviz, Vega & Vega-Lite |
 | Code | Offline syntax highlighting |
+| PDF documents | Text selection, search, links, page navigation |
+| Typst documents | Local compilation in the Linux app |
 
 ### Mathematics
 
@@ -81,7 +83,7 @@ digraph { rankdir=LR; Markdown -> Preview; Preview -> Display; }
 
 \`\`\`plantuml
 @startuml
-Reader -> mdview: Open document
+Reader -> Papyri: Open document
 @enduml
 \`\`\`
 `;

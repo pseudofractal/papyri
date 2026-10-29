@@ -1,4 +1,4 @@
-use crate::files;
+use crate::{files, typst};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
@@ -22,12 +22,31 @@ pub async fn read_document(path: String) -> Result<files::Document, String> {
   blocking(move || files::read_document(path)).await
 }
 #[tauri::command]
+pub async fn read_pdf(path: String) -> Result<tauri::ipc::Response, String> {
+  let bytes = blocking(move || {
+    if typst::is_typst(&path) {
+      typst::compile(path)
+    } else {
+      files::read_pdf(path)
+    }
+  })
+  .await?;
+  Ok(tauri::ipc::Response::new(bytes))
+}
+#[tauri::command]
 pub async fn read_asset(path: String) -> Result<Vec<u8>, String> {
   blocking(move || files::read_asset(path)).await
 }
 #[tauri::command]
 pub async fn document_stamp(path: String) -> Result<String, String> {
-  blocking(move || files::document_stamp(path)).await
+  blocking(move || {
+    if typst::is_typst(&path) {
+      typst::stamp(path)
+    } else {
+      files::document_stamp(path)
+    }
+  })
+  .await
 }
 #[tauri::command]
 pub async fn pick_path(app: tauri::AppHandle, directory: bool) -> Result<Option<String>, String> {
@@ -37,7 +56,10 @@ pub async fn pick_path(app: tauri::AppHandle, directory: bool) -> Result<Option<
       picker.blocking_pick_folder()
     } else {
       picker
-        .add_filter("Markdown", &["md", "markdown", "mdown", "mkd"])
+        .add_filter(
+          "Documents",
+          &["md", "markdown", "mdown", "mkd", "pdf", "typ"],
+        )
         .blocking_pick_file()
     };
     result

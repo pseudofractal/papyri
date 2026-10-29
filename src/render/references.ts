@@ -26,7 +26,7 @@ export function configureReferences(markdown: InstanceType<typeof MarkdownIt>) {
         const id = `reference-${number}`;
         if (!references.has(number)) {
           token.attrSet('id', id);
-          token.attrSet('data-mdview-target', id);
+          token.attrSet('data-papyri-target', id);
           references.set(number, id);
         }
       }
@@ -37,7 +37,7 @@ export function configureReferences(markdown: InstanceType<typeof MarkdownIt>) {
           const id = `reference-${number}`;
           if (!references.has(number)) {
             state.tokens[index - 1].attrSet('id', id);
-            state.tokens[index - 1].attrSet('data-mdview-target', id);
+            state.tokens[index - 1].attrSet('data-papyri-target', id);
             token.meta = { ...token.meta, referenceDefinition: true };
             references.set(number, id);
           }
@@ -82,7 +82,7 @@ export function configureReferences(markdown: InstanceType<typeof MarkdownIt>) {
           children.push(text);
           const open = new state.Token('link_open', 'a', 1);
           open.attrSet('href', `#${id}`);
-          open.attrSet('data-mdview-reference', id);
+          open.attrSet('data-papyri-reference', id);
           const label = new state.Token('text', '', 0);
           label.content = match[0];
           children.push(open, label, new state.Token('link_close', 'a', -1));

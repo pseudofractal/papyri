@@ -122,7 +122,7 @@ textarea:focus-visible {
   height: 28px;
   flex-shrink: 0;
   background: currentColor;
-  mask: url('../packaging/mdview-symbolic.svg') center / contain no-repeat;
+  mask: url('../packaging/papyri-symbolic.svg') center / contain no-repeat;
 }
 .header-actions {
   display: flex;
@@ -277,7 +277,7 @@ textarea:focus-visible {
 }
 .file-row.active {
   background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  color: var(--color-primary);
+  color: var(--color-base-content);
 }
 .file-row.active svg {
   color: var(--color-primary);
@@ -444,6 +444,9 @@ textarea:focus-visible {
 }
 .trust-button.trusted {
   color: var(--color-warning);
+}
+.trust-button.paged-status {
+  color: var(--muted);
 }
 .reading-layout {
   display: flex;

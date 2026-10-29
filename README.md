@@ -1,1 +1,1 @@
-mdview is a read-only Markdown viewer for Linux with offline math and diagram rendering.
+Papyri is a read-only Markdown, PDF, and Typst viewer for Linux with offline math and diagrams.

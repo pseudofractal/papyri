@@ -1,5 +1,7 @@
 export const MIN_ZOOM = 50;
 export const MAX_ZOOM = 200;
+export const MIN_PDF_ZOOM = 10;
+export const MAX_PDF_ZOOM = 1000;
 export const ZOOM_STEP = 10;
 export const DEFAULT_SIDEBAR_WIDTH = 254;
 export const MIN_SIDEBAR_WIDTH = 180;
@@ -28,11 +30,18 @@ export function viewShortcut(event: KeyboardEvent): ViewCommand | null {
   return zoomShortcut(event);
 }
 
-export function clampZoom(value: number): number {
-  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(value)));
+export function clampZoom(value: number, minimum = MIN_ZOOM, maximum = MAX_ZOOM): number {
+  return Math.max(minimum, Math.min(maximum, Math.round(value)));
 }
-export function changeZoom(value: number, action: ZoomAction): number {
-  return action === 'reset' ? 100 : clampZoom(value + (action === 'in' ? ZOOM_STEP : -ZOOM_STEP));
+export function changeZoom(
+  value: number,
+  action: ZoomAction,
+  minimum = MIN_ZOOM,
+  maximum = MAX_ZOOM,
+): number {
+  return action === 'reset'
+    ? 100
+    : clampZoom(value + (action === 'in' ? ZOOM_STEP : -ZOOM_STEP), minimum, maximum);
 }
 export function zoomShortcut(
   event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey'> &

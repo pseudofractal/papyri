@@ -1,11 +1,11 @@
 {
-  "name": "mdview",
+  "name": "papyri",
   "version": "0.1.0",
-  "description": "A local, read-only Markdown viewer with offline math and diagrams",
+  "description": "A read-only Markdown, PDF, and Typst viewer with offline math and diagrams",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pseudofractal/mdview.git"
+    "url": "https://github.com/pseudofractal/papyri.git"
   },
   "private": true,
   "type": "module",
@@ -34,6 +34,7 @@
     "markdown-it-task-lists": "2.1.1",
     "markdown-it-texmath": "1.0.0",
     "mermaid": "12.2.0",
+    "pdfjs-dist": "6.4.299",
     "svelte": "5.57.3",
     "vega": "6.4.0",
     "vega-embed": "7.3.0",

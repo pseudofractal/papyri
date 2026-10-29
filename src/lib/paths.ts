@@ -1,5 +1,8 @@
 import type { Entry } from './types';
 export const isMarkdown = (path: string) => /\.(md|markdown|mdown|mkd)$/i.test(path);
+export const isPdf = (path: string) => /\.pdf$/i.test(path);
+export const isTypst = (path: string) => /\.typ$/i.test(path);
+export const isDocument = (path: string) => isMarkdown(path) || isPdf(path) || isTypst(path);
 export function normalize(path: string): string {
   const segments: string[] = [];
   for (const segment of path.split('/')) {

@@ -1,6 +1,6 @@
 # Contributing
 
-mdview is a read-only Markdown viewer for Linux with a shared static web frontend. Keep changes focused on reading, navigation and supported embedded content. Android, document editing and general-purpose file viewing are outside the current scope.
+Papyri is a read-only Markdown, PDF, and Typst viewer for Linux with a shared static web frontend. Keep changes focused on these formats, navigation and supported embedded content. Android, document editing and general-purpose file viewing are outside the current scope. See [PDF and Typst support](docs/documents.md) for compiler requirements and deployment differences.
 
 ## Development
 

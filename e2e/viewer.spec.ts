@@ -135,7 +135,9 @@ test('bounds floating panels to the viewport and wraps controls at every UI zoom
 });
 test('uses the shared monochrome mark and themes host dialogs', async ({ page }) => {
   await page.goto('/');
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'mdview' })).toBeVisible();
+  await expect(page).toHaveTitle('Papyri');
+  await expect(page.locator('.brand strong')).toHaveText('Papyri');
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
   const brand = page.locator('.brand-mark .app-logo');
   await expect(brand).toBeVisible();
   const mask = await brand.evaluate((element) => getComputedStyle(element).maskImage);
@@ -149,7 +151,7 @@ test('uses the shared monochrome mark and themes host dialogs', async ({ page })
     return { ok: response.ok, source: await response.text() };
   });
   expect(favicon.ok).toBe(true);
-  expect(favicon.source).toContain('M43 36H29V92H43M85 36H99V92H85');
+  expect(favicon.source).toContain('M48 69V42M48 42L35 33M48 42V27M48 42L61 33');
   expect(favicon.source).not.toContain('#cba6f7');
   await page.getByRole('button', { name: 'Close welcome.md', exact: true }).click();
   const emptyMark = page.locator('.empty-icon .app-logo');
@@ -209,7 +211,7 @@ test('keeps long document names within the toolbar', async ({ page }) => {
 test('reads, navigates, searches, splits and renders offline diagrams', async ({ page }) => {
   await page.goto('/');
   const frame = page.frameLocator('iframe').first();
-  await expect(frame.getByRole('heading', { name: 'mdview' })).toBeVisible();
+  await expect(frame.getByRole('heading', { name: 'Papyri' })).toBeVisible();
   await expect(frame.locator('.katex')).toBeVisible();
   await frame.getByRole('button', { name: 'Render mermaid diagram' }).click();
   await expect(frame.locator('.diagram svg')).toBeVisible();
@@ -227,7 +229,7 @@ test('reads, navigates, searches, splits and renders offline diagrams', async ({
 });
 test('imports read-only files and enforces script and host isolation', async ({ page }) => {
   await page.goto('/');
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'mdview' })).toBeVisible();
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
   await page
     .getByLabel('Import selected files', { exact: true })
     .setInputFiles(
@@ -270,7 +272,7 @@ test('validates and persists math preferences', async ({ page }) => {
 });
 test('has no serious accessibility violations in the host shell', async ({ page }) => {
   await page.goto('/');
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'mdview' })).toBeVisible();
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
   const results = await new AxeBuilder({ page }).exclude('iframe').analyze();
   expect(
     results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
@@ -281,7 +283,7 @@ test('pages large directories and keeps controls available during large-file par
   page,
 }) => {
   await page.goto('/');
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'mdview' })).toBeVisible();
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
   await page
     .getByLabel('Import selected files', { exact: true })
     .setInputFiles(
@@ -314,7 +316,7 @@ test('pages large directories and keeps controls available during large-file par
 
 test('revokes old frame messages while disabling document scripts', async ({ page }) => {
   await page.goto('/');
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'mdview' })).toBeVisible();
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
   const attack =
     '# Trust boundary\n\n<script>document.body.dataset.running="yes";setInterval(()=>parent.postMessage({type:"navigate",href:"/target.md",channel:JSON.parse(document.getElementById("payload").textContent).channel},"*"),1);</script>';
   await page
@@ -351,7 +353,7 @@ test('updates document theme and independent zoom without rebuilding the preview
   page.on('worker', () => workers++);
   await page.goto('/');
   const frame = page.frameLocator('iframe');
-  await expect(frame.getByRole('heading', { name: 'mdview' })).toBeVisible();
+  await expect(frame.getByRole('heading', { name: 'Papyri' })).toBeVisible();
   await frame.locator('html').evaluate((node) => (node.dataset.session = 'preserved'));
   const initialWorkers = workers;
   await page.getByRole('button', { name: 'Toggle color theme' }).click();
@@ -364,7 +366,7 @@ test('updates document theme and independent zoom without rebuilding the preview
       frame.locator('html').evaluate((node) => parseFloat(getComputedStyle(node).fontSize)),
     )
     .toBeCloseTo(17.6);
-  await frame.getByRole('heading', { name: 'mdview' }).click();
+  await frame.getByRole('heading', { name: 'Papyri' }).click();
   await page.keyboard.press('Control+Shift+Equal');
   await expect(page.getByRole('button', { name: /Reset document zoom/ })).toHaveText('120%');
   await page.keyboard.press('Control+0');
@@ -441,7 +443,7 @@ test('renders multiline display delimiters and navigates numbered citations and 
   page,
 }) => {
   await page.goto('/');
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'mdview' })).toBeVisible();
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
   const equation = String.raw`[ \begin{bmatrix}Y_a&I\ O&J_R\end{bmatrix} \begin{bmatrix}\mathbf A\\mathbf B\end{bmatrix}
 
 \begin{bmatrix}\kappa^2\mathbf e_0\\mathbf0\end{bmatrix}. \tag{7} ]`;
@@ -470,11 +472,11 @@ test('defers diagram libraries and prevents document IDs from replacing the runt
 }) => {
   await page.goto('/');
   const frame = page.frameLocator('iframe');
-  await expect(frame.getByRole('heading', { name: 'mdview' })).toBeVisible();
+  await expect(frame.getByRole('heading', { name: 'Papyri' })).toBeVisible();
   expect(
     await frame
       .locator('body')
-      .evaluate(() => typeof (window as unknown as { mdviewDiagrams?: unknown }).mdviewDiagrams),
+      .evaluate(() => typeof (window as unknown as { papyriDiagrams?: unknown }).papyriDiagrams),
   ).toBe('undefined');
   await page
     .getByLabel('Import selected files', { exact: true })
@@ -520,7 +522,7 @@ test('fits the reading column to width and changes font size without raster scal
 }) => {
   await page.goto('/');
   const frame = page.frameLocator('iframe');
-  await expect(frame.getByRole('heading', { name: 'mdview', exact: true })).toBeVisible();
+  await expect(frame.getByRole('heading', { name: 'Papyri', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Fit document to width', exact: true }).click();
   await expect(frame.locator('html')).toHaveAttribute('data-fit-width', 'true');
   await expect
@@ -530,7 +532,7 @@ test('fits the reading column to width and changes font size without raster scal
         .evaluate((node) => Math.abs(node.getBoundingClientRect().width - window.innerWidth)),
     )
     .toBeLessThan(2);
-  await frame.getByRole('heading', { name: 'mdview', exact: true }).click();
+  await frame.getByRole('heading', { name: 'Papyri', exact: true }).click();
   await page.keyboard.press('Control+Equal');
   await expect(frame.locator('html')).toHaveAttribute('data-fit-width', 'false');
   await page.keyboard.press('Control+Equal');
@@ -569,13 +571,13 @@ test('keeps loading surfaces themed and conceals unpainted document frames', asy
   });
   await page.goto('/');
   const frame = page.frameLocator('iframe');
-  await expect(frame.getByRole('heading', { name: 'mdview', exact: true })).toBeVisible();
+  await expect(frame.getByRole('heading', { name: 'Papyri', exact: true })).toBeVisible();
   await expect(frame.locator('html')).toHaveCSS('background-color', 'rgb(30, 30, 46)');
   await frame.getByRole('link', { name: 'format gallery' }).click();
   await expect(frame.getByRole('heading', { name: 'Format gallery', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Toggle color theme' }).click();
   await frame.getByRole('link', { name: 'Back to welcome' }).click();
-  await expect(frame.getByRole('heading', { name: 'mdview', exact: true })).toBeVisible();
+  await expect(frame.getByRole('heading', { name: 'Papyri', exact: true })).toBeVisible();
   await expect(frame.locator('html')).toHaveCSS('background-color', 'rgb(239, 241, 245)');
   const starts = await page.evaluate(
     () => (window as unknown as { frameStarts: { pending: boolean; color: string }[] }).frameStarts,

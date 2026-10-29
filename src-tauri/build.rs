@@ -4,6 +4,7 @@ fn main() {
       "initial_path",
       "list_directory",
       "read_document",
+      "read_pdf",
       "read_asset",
       "document_stamp",
       "pick_path",

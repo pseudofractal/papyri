@@ -5,7 +5,8 @@ pub struct InitialPath {
   pub path: String,
   pub directory: bool,
 }
-const DOCUMENT_LIMIT: u64 = 8 * 1024 * 1024;
+pub const DOCUMENT_LIMIT: u64 = 8 * 1024 * 1024;
+pub const PDF_LIMIT: u64 = 64 * 1024 * 1024;
 const ASSET_LIMIT: u64 = 16 * 1024 * 1024;
 #[derive(Serialize)]
 pub struct Entry {
@@ -21,7 +22,7 @@ pub struct Document {
 fn error(path: &str, error: impl std::fmt::Display) -> String {
   format!("{path}: {error}")
 }
-fn bounded_read(path: &str, limit: u64) -> Result<(Vec<u8>, fs::Metadata), String> {
+pub fn bounded_read(path: &str, limit: u64) -> Result<(Vec<u8>, fs::Metadata), String> {
   if !fs::metadata(path).map_err(|e| error(path, e))?.is_file() {
     return Err(error(path, "Not a regular file"));
   }
@@ -103,6 +104,15 @@ pub fn document_stamp(path: String) -> Result<String, String> {
   let metadata = fs::metadata(&path).map_err(|e| error(&path, e))?;
   metadata_stamp(&metadata).map_err(|e| error(&path, e))
 }
+pub fn read_pdf(path: String) -> Result<Vec<u8>, String> {
+  if !Path::new(&path)
+    .extension()
+    .is_some_and(|extension| extension.eq_ignore_ascii_case("pdf"))
+  {
+    return Err(error(&path, "Expected a PDF document"));
+  }
+  bounded_read(&path, PDF_LIMIT).map(|(bytes, _)| bytes)
+}
 fn metadata_stamp(metadata: &fs::Metadata) -> Result<String, String> {
   let modified = metadata
     .modified()
@@ -128,7 +138,7 @@ mod tests {
   use super::*;
   #[test]
   fn bounded_reads_and_directory_navigation() {
-    let directory = std::env::temp_dir().join(format!("mdview-test-{}", std::process::id()));
+    let directory = std::env::temp_dir().join(format!("papyri-test-{}", std::process::id()));
     fs::create_dir_all(&directory).unwrap();
     let file = directory.join(".hidden.md");
     fs::write(&file, "# Hello").unwrap();
@@ -149,5 +159,17 @@ mod tests {
   fn rejects_non_markdown_and_devices() {
     assert!(read_document("/etc/passwd".into()).is_err());
     assert!(bounded_read("/dev/zero", 100).is_err());
+  }
+  #[test]
+  fn reads_pdf_bytes_without_decoding_and_bounds_allocation() {
+    let path = std::env::temp_dir().join(format!("papyri-pdf-test-{}.PDF", std::process::id()));
+    fs::write(&path, b"%PDF-1.7\n\xff").unwrap();
+    let name = path.to_string_lossy().into_owned();
+    assert_eq!(read_pdf(name.clone()).unwrap(), b"%PDF-1.7\n\xff");
+    let file = fs::OpenOptions::new().write(true).open(&path).unwrap();
+    file.set_len(PDF_LIMIT + 1).unwrap();
+    assert!(read_pdf(name).unwrap_err().contains("64 MiB"));
+    assert!(read_pdf("document.md".into()).is_err());
+    fs::remove_file(path).unwrap();
   }
 }

@@ -175,3 +175,31 @@ it('retains an unavailable split document with its own error state', async () =>
   expect(workspace.secondaryTab?.text).toBe('# First');
   expect(workspace.activeTab?.error).toBe('');
 });
+
+it('opens PDF and Typst tabs, refreshes binary previews, and retains them on compilation errors', async () => {
+  const { source, files } = memorySource();
+  const first = Uint8Array.of(1, 2, 3);
+  files.set('/paper.pdf', { text: '', bytes: first, stamp: '1' });
+  files.set('/paper.typ', { text: '', bytes: first, stamp: '1' });
+  const workspace = new Workspace();
+  workspace.changeSource(source);
+  await workspace.open('/paper.pdf', 'page=2');
+  expect(workspace.activeTab?.bytes).toEqual(first);
+  expect(workspace.anchor?.id).toBe('page=2');
+  await workspace.open('/paper.typ');
+  workspace.setScroll('/paper.typ', 500);
+  files.set('/paper.typ', { text: '', bytes: Uint8Array.of(4, 5), stamp: '2' });
+  await workspace.refresh();
+  expect(workspace.activeTab).toMatchObject({
+    bytes: Uint8Array.of(4, 5),
+    scroll: 500,
+    revision: 1,
+  });
+  files.delete('/paper.typ');
+  await workspace.refresh();
+  expect(workspace.activeTab?.error).toContain('Last preview retained');
+  expect(workspace.activeTab?.bytes).toEqual(Uint8Array.of(4, 5));
+  await workspace.open('/unsupported.txt');
+  expect(workspace.error).toContain('Markdown, PDF, or Typst');
+  expect(workspace.active).toBe('/paper.typ');
+});

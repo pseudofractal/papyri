@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Brand directions</title>
+    <style>
+      :root {
+        color: var(--foreground);
+        font-family: var(--font-sans, system-ui, sans-serif);
+      }
+      body {
+        margin: 0;
+      }
+      .directions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px 32px;
+      }
+      .concept {
+        min-width: 0;
+        padding: 18px 0 22px;
+        border-bottom: 1px solid var(--border);
+      }
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font: 12px var(--font-mono, monospace);
+        color: var(--muted-foreground);
+      }
+      .eyebrow span {
+        font-family: var(--font-sans, system-ui, sans-serif);
+      }
+      .identity {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        min-height: 126px;
+        color: var(--foreground);
+      }
+      .mark {
+        width: 94px;
+        height: 94px;
+        flex-shrink: 0;
+      }
+      .mark svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      h2 {
+        margin: 0;
+        font-size: 31px;
+        font-weight: 500;
+        letter-spacing: -0.04em;
+      }
+      p {
+        color: var(--muted-foreground);
+        font-size: 13px;
+        line-height: 1.6;
+        min-height: 43px;
+        margin: 0 0 17px;
+      }
+      .sizes {
+        display: flex;
+        align-items: center;
+        gap: 23px;
+        height: 62px;
+      }
+      .scale {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--foreground);
+      }
+      .scale > span {
+        display: block;
+      }
+      .scale svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      small {
+        font-size: 11px;
+        color: var(--muted-foreground);
+      }
+      .inverse {
+        display: grid;
+        place-items: center;
+        width: 43px;
+        height: 43px;
+        border-radius: var(--radius, 10px);
+        background: var(--foreground);
+        color: var(--background);
+        margin-left: auto;
+      }
+      .inverse svg {
+        width: 32px;
+        height: 32px;
+      }
+      code {
+        display: block;
+        margin-top: 14px;
+        color: var(--muted-foreground);
+        font: 12px var(--font-mono, monospace);
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 540px) {
+        .directions {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 8px;
+        }
+        .identity {
+          min-height: 115px;
+        }
+        p {
+          min-height: 0;
+        }
+        .sizes {
+          gap: 28px;
+        }
+        h2 {
+          font-size: 32px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="directions">
+      <section class="concept" aria-labelledby="name-01">
+        <div class="eyebrow">01 <span>Leaf + fold</span></div>
+        <div class="identity">
+          <div class="mark">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 96 96"
+              width="96"
+              height="96"
+              role="img"
+              aria-label="leafold logo"
+            >
+              <title>leafold</title>
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M29 15H55L75 35V72Q75 81 66 81H29Q21 81 21 73V23Q21 15 29 15Z" />
+                <path d="M55 15V29Q55 35 61 35H75" />
+                <path d="M34 64Q29 43 60 43Q62 66 40 66" />
+                <path d="M33 68L52 50" />
+              </g>
+            </svg>
+          </div>
+          <h2 id="name-01">leafold</h2>
+        </div>
+        <p>A folded page with a small leaf inside. My preferred overall direction.</p>
+        <div class="sizes">
+          <span class="scale"
+            ><span style="width: 16px; height: 16px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>leafold</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M29 15H55L75 35V72Q75 81 66 81H29Q21 81 21 73V23Q21 15 29 15Z" />
+                  <path d="M55 15V29Q55 35 61 35H75" />
+                  <path d="M34 64Q29 43 60 43Q62 66 40 66" />
+                  <path d="M33 68L52 50" />
+                </g></svg></span
+            ><small>16</small></span
+          ><span class="scale"
+            ><span style="width: 24px; height: 24px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>leafold</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M29 15H55L75 35V72Q75 81 66 81H29Q21 81 21 73V23Q21 15 29 15Z" />
+                  <path d="M55 15V29Q55 35 61 35H75" />
+                  <path d="M34 64Q29 43 60 43Q62 66 40 66" />
+                  <path d="M33 68L52 50" />
+                </g></svg></span
+            ><small>24</small></span
+          ><span class="scale"
+            ><span style="width: 32px; height: 32px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>leafold</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M29 15H55L75 35V72Q75 81 66 81H29Q21 81 21 73V23Q21 15 29 15Z" />
+                  <path d="M55 15V29Q55 35 61 35H75" />
+                  <path d="M34 64Q29 43 60 43Q62 66 40 66" />
+                  <path d="M33 68L52 50" />
+                </g></svg></span
+            ><small>32</small></span
+          ><span class="inverse" aria-label="leafold in inverse monochrome"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 96 96"
+              width="96"
+              height="96"
+              aria-hidden="true"
+            >
+              <title>leafold</title>
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M29 15H55L75 35V72Q75 81 66 81H29Q21 81 21 73V23Q21 15 29 15Z" />
+                <path d="M55 15V29Q55 35 61 35H75" />
+                <path d="M34 64Q29 43 60 43Q62 66 40 66" />
+                <path d="M33 68L52 50" />
+              </g></svg
+          ></span>
+        </div>
+        <code>leafold notes.typ</code>
+      </section>
+      <section class="concept" aria-labelledby="name-02">
+        <div class="eyebrow">02 <span>Bracketed L</span></div>
+        <div class="identity">
+          <div class="mark">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 96 96"
+              width="96"
+              height="96"
+              role="img"
+              aria-label="lefio logo"
+            >
+              <title>lefio</title>
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M29 20H18V76H29M67 20H78V76H67" />
+                <path d="M37 33V63H60M52 33H60" />
+              </g>
+            </svg>
+          </div>
+          <h2 id="name-02">lefio</h2>
+        </div>
+        <p>Rounded brackets and an L. Closest to the current icon, with a shorter name.</p>
+        <div class="sizes">
+          <span class="scale"
+            ><span style="width: 16px; height: 16px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>lefio</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M29 20H18V76H29M67 20H78V76H67" />
+                  <path d="M37 33V63H60M52 33H60" />
+                </g></svg></span
+            ><small>16</small></span
+          ><span class="scale"
+            ><span style="width: 24px; height: 24px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>lefio</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M29 20H18V76H29M67 20H78V76H67" />
+                  <path d="M37 33V63H60M52 33H60" />
+                </g></svg></span
+            ><small>24</small></span
+          ><span class="scale"
+            ><span style="width: 32px; height: 32px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>lefio</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M29 20H18V76H29M67 20H78V76H67" />
+                  <path d="M37 33V63H60M52 33H60" />
+                </g></svg></span
+            ><small>32</small></span
+          ><span class="inverse" aria-label="lefio in inverse monochrome"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 96 96"
+              width="96"
+              height="96"
+              aria-hidden="true"
+            >
+              <title>lefio</title>
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M29 20H18V76H29M67 20H78V76H67" />
+                <path d="M37 33V63H60M52 33H60" />
+              </g></svg
+          ></span>
+        </div>
+        <code>lefio notes.typ</code>
+      </section>
+      <section class="concept" aria-labelledby="name-03">
+        <div class="eyebrow">03 <span>Page + bookmark</span></div>
+        <div class="identity">
+          <div class="mark">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 96 96"
+              width="96"
+              height="96"
+              role="img"
+              aria-label="paprin logo"
+            >
+              <title>paprin</title>
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M36 12H70Q78 12 78 20V65" />
+                <path d="M28 23H60Q68 23 68 31V77H28Q20 77 20 69V31Q20 23 28 23Z" />
+                <path d="M35 24V49L44 42L53 49V24" />
+              </g>
+            </svg>
+          </div>
+          <h2 id="name-03">paprin</h2>
+        </div>
+        <p>Two sheets with a small bookmark. Familiar document imagery with softer corners.</p>
+        <div class="sizes">
+          <span class="scale"
+            ><span style="width: 16px; height: 16px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>paprin</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M36 12H70Q78 12 78 20V65" />
+                  <path d="M28 23H60Q68 23 68 31V77H28Q20 77 20 69V31Q20 23 28 23Z" />
+                  <path d="M35 24V49L44 42L53 49V24" />
+                </g></svg></span
+            ><small>16</small></span
+          ><span class="scale"
+            ><span style="width: 24px; height: 24px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>paprin</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M36 12H70Q78 12 78 20V65" />
+                  <path d="M28 23H60Q68 23 68 31V77H28Q20 77 20 69V31Q20 23 28 23Z" />
+                  <path d="M35 24V49L44 42L53 49V24" />
+                </g></svg></span
+            ><small>24</small></span
+          ><span class="scale"
+            ><span style="width: 32px; height: 32px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>paprin</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M36 12H70Q78 12 78 20V65" />
+                  <path d="M28 23H60Q68 23 68 31V77H28Q20 77 20 69V31Q20 23 28 23Z" />
+                  <path d="M35 24V49L44 42L53 49V24" />
+                </g></svg></span
+            ><small>32</small></span
+          ><span class="inverse" aria-label="paprin in inverse monochrome"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 96 96"
+              width="96"
+              height="96"
+              aria-hidden="true"
+            >
+              <title>paprin</title>
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M36 12H70Q78 12 78 20V65" />
+                <path d="M28 23H60Q68 23 68 31V77H28Q20 77 20 69V31Q20 23 28 23Z" />
+                <path d="M35 24V49L44 42L53 49V24" />
+              </g></svg
+          ></span>
+        </div>
+        <code>paprin notes.typ</code>
+      </section>
+      <section class="concept" aria-labelledby="name-04">
+        <div class="eyebrow">04 <span>Folded P</span></div>
+        <div class="identity">
+          <div class="mark">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 96 96"
+              width="96"
+              height="96"
+              role="img"
+              aria-label="plicon logo"
+            >
+              <title>plicon</title>
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M26 80V17H58L76 35V49L59 65H26" />
+                <path d="M58 17V35H76" />
+              </g>
+            </svg>
+          </div>
+          <h2 id="name-04">plicon</h2>
+        </div>
+        <p>A geometric P built from a folded page. The most compact, technical option.</p>
+        <div class="sizes">
+          <span class="scale"
+            ><span style="width: 16px; height: 16px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>plicon</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M26 80V17H58L76 35V49L59 65H26" />
+                  <path d="M58 17V35H76" />
+                </g></svg></span
+            ><small>16</small></span
+          ><span class="scale"
+            ><span style="width: 24px; height: 24px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>plicon</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M26 80V17H58L76 35V49L59 65H26" />
+                  <path d="M58 17V35H76" />
+                </g></svg></span
+            ><small>24</small></span
+          ><span class="scale"
+            ><span style="width: 32px; height: 32px"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                width="96"
+                height="96"
+                aria-hidden="true"
+              >
+                <title>plicon</title>
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M26 80V17H58L76 35V49L59 65H26" />
+                  <path d="M58 17V35H76" />
+                </g></svg></span
+            ><small>32</small></span
+          ><span class="inverse" aria-label="plicon in inverse monochrome"
+            ><svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 96 96"
+              width="96"
+              height="96"
+              aria-hidden="true"
+            >
+              <title>plicon</title>
+              <g
+                fill="none"
+                stroke="currentColor"
+                stroke-width="6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M26 80V17H58L76 35V49L59 65H26" />
+                <path d="M58 17V35H76" />
+              </g></svg
+          ></span>
+        </div>
+        <code>plicon notes.typ</code>
+      </section>
+    </div>
+  </body>
+</html>

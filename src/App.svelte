@@ -27,6 +27,11 @@
     viewShortcut,
     MIN_SIDEBAR_WIDTH,
     MAX_SIDEBAR_WIDTH,
+    MIN_PDF_ZOOM,
+    MAX_PDF_ZOOM,
+    MIN_ZOOM,
+    MAX_ZOOM,
+    clampZoom,
     type ZoomCommand,
     type ViewCommand,
   } from './lib/view';
@@ -38,7 +43,7 @@
   import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
   import { demoSource } from './lib/demo';
   import { loadPreferences } from './lib/preferences';
-  import { basename, dirname, isMarkdown, normalize, resolveLink } from './lib/paths';
+  import { basename, dirname, isDocument, isMarkdown, normalize, resolveLink } from './lib/paths';
   import type { Heading, Preferences, Source } from './lib/types';
   const workspace = new Workspace();
   let preferences = $state(loadPreferences());
@@ -60,6 +65,7 @@
   let refreshing = false;
   let viewportWidth = $state(window.innerWidth);
   const uiScale = $derived(preferences.uiZoom / 100);
+  const pagedDocument = $derived(!!workspace.activeTab?.bytes);
   const maximumSidebarWidth = $derived(
     Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, viewportWidth / uiScale - 360)),
   );
@@ -85,8 +91,20 @@
     zoom(command);
   }
   function zoom(command: ZoomCommand) {
-    const key = command.target === 'document' ? 'documentZoom' : 'uiZoom';
-    updatePreferences({ ...preferences, [key]: changeZoom(preferences[key], command.action) });
+    const pagedDocumentZoom = command.target === 'document' && pagedDocument;
+    const key = command.target === 'ui' ? 'uiZoom' : pagedDocumentZoom ? 'pdfZoom' : 'documentZoom';
+    const value = changeZoom(
+      preferences[key],
+      command.action,
+      pagedDocumentZoom ? MIN_PDF_ZOOM : MIN_ZOOM,
+      pagedDocumentZoom ? MAX_PDF_ZOOM : MAX_ZOOM,
+    );
+    if (value === preferences[key] && command.action !== 'reset') return;
+    updatePreferences({
+      ...preferences,
+      [key]: value,
+      fitWidth: pagedDocumentZoom ? false : preferences.fitWidth,
+    });
   }
   const trusted = $derived(
     trustedPath === workspace.active &&
@@ -100,7 +118,7 @@
   function updatePreferences(value: Preferences) {
     preferences = value;
     try {
-      localStorage.setItem('mdview.preferences', JSON.stringify({ ...value, version: 2 }));
+      localStorage.setItem('papyri.preferences', JSON.stringify({ ...value, version: 2 }));
     } catch {
       workspace.error = 'Preferences could not be persisted; browser storage is unavailable.';
     }
@@ -150,9 +168,8 @@
       workspace.navigateAnchor(target.anchor);
     }
     if (target.kind === 'local') {
-      if (!isMarkdown(target.path)) {
-        workspace.error =
-          'This link points to a non-Markdown file. Only Markdown documents open here.';
+      if (!isDocument(target.path)) {
+        workspace.error = 'This link is not a supported Markdown, PDF, or Typst document.';
         return;
       }
       await workspace.open(target.path, target.anchor);
@@ -249,7 +266,7 @@
   <header class="app-header">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"><span class="app-logo"></span></span><strong
-        >mdview</strong
+        >Papyri</strong
       >
     </div>
     <div class="header-actions">
@@ -284,7 +301,7 @@
         <div class="section-label">
           <span>EXPLORER</span>
           <div>
-            <button class="icon-button small" aria-label="Open Markdown files" onclick={chooseFile}
+            <button class="icon-button small" aria-label="Open documents" onclick={chooseFile}
               ><FileText size={15} /></button
             ><button class="icon-button small" aria-label="Refresh files" onclick={refresh}
               ><RefreshCw size={14} /></button
@@ -404,7 +421,9 @@
         </div>
         <ZoomControls
           label="document"
-          value={preferences.documentZoom}
+          value={pagedDocument ? preferences.pdfZoom : preferences.documentZoom}
+          minimum={pagedDocument ? MIN_PDF_ZOOM : MIN_ZOOM}
+          maximum={pagedDocument ? MAX_PDF_ZOOM : MAX_ZOOM}
           onchange={(action) => zoom({ target: 'document', action })}
         />
         <button
@@ -416,16 +435,18 @@
           onclick={() => viewCommand({ target: 'document', action: 'fit-width' })}
           ><Maximize2 size={16} /></button
         >
-        <button
-          class="trust-button"
-          class:trusted
-          aria-label={trusted
-            ? 'Scripts enabled: disable document scripts'
-            : 'Safe preview: trust current document for scripts'}
-          disabled={!workspace.active}
-          onclick={() => (trusted ? (trustedPath = '') : (trustDialog = true))}
-          ><Shield size={13} /><span>{trusted ? 'Scripts enabled' : 'Safe preview'}</span></button
-        >
+        {#if !workspace.active || isMarkdown(workspace.active)}<button
+            class="trust-button"
+            class:trusted
+            aria-label={trusted
+              ? 'Scripts enabled: disable document scripts'
+              : 'Safe preview: trust current document for scripts'}
+            disabled={!workspace.active}
+            onclick={() => (trusted ? (trustedPath = '') : (trustDialog = true))}
+            ><Shield size={13} /><span>{trusted ? 'Scripts enabled' : 'Safe preview'}</span></button
+          >{:else}<span class="trust-button paged-status" title="PDF preview · scripts disabled"
+            ><Shield size={13} /><span>PDF preview · scripts disabled</span></span
+          >{/if}
       </div>
       {#if searchOpen}<div class="search-bar">
           <Search size={16} /><input
@@ -433,7 +454,11 @@
             bind:value={query}
             placeholder="Find in document…"
             aria-label="Find in document"
-          /><span class="hint">Highlights up to 2,000 matches</span><button
+          /><span class="hint"
+            >{isMarkdown(workspace.active)
+              ? 'Highlights up to 2,000 matches'
+              : 'Search PDF text'}</span
+          ><button
             class="icon-button small"
             aria-label="Close search"
             onclick={() => {
@@ -467,6 +492,11 @@
                 oncommand={viewCommand}
                 onscroll={(path, y) => workspace.setScroll(path, y)}
                 onheadings={(value) => (headings = value)}
+                onpdfscale={(value) => {
+                  const pdfZoom = clampZoom(value, MIN_PDF_ZOOM, MAX_PDF_ZOOM);
+                  if (pdfZoom !== preferences.pdfZoom)
+                    updatePreferences({ ...preferences, pdfZoom });
+                }}
               />{/key}
             {#if workspace.secondaryTab}<div class="secondary-pane">
                 <div class="secondary-heading">
@@ -495,7 +525,7 @@
           {:else}<div class="empty-state">
               <span class="empty-icon" aria-hidden="true"><span class="app-logo"></span></span>
               <h1>No document open</h1>
-              <p>Open a Markdown file or choose a folder.</p>
+              <p>Open a Markdown, PDF, or Typst document, or choose a folder.</p>
               <button class="btn btn-primary" onclick={chooseFile}
                 ><FileText size={17} />Open a document</button
               ><button class="btn btn-ghost btn-sm" onclick={chooseFolder}>Browse a folder</button>
@@ -570,7 +600,7 @@
       <p>
         Its JavaScript will run inside an isolated frame. It can read everything in this document
         and its embedded images, consume resources, and contact the network by navigating its frame.
-        It cannot access mdview’s filesystem API.
+        It cannot access Papyri’s filesystem API.
       </p>
       <p>
         Trust only documents you understand. Document links cannot request host navigation while

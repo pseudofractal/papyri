@@ -1,5 +1,5 @@
 import type { Source } from './types';
-import { isMarkdown, normalize } from './paths';
+import { isDocument, normalize } from './paths';
 import { listDirectory } from './directories';
 export interface AnchorTarget {
   id: string;
@@ -8,6 +8,7 @@ export interface AnchorTarget {
 export interface Tab {
   path: string;
   text: string;
+  bytes?: Uint8Array;
   stamp: string;
   scroll: number;
   error: string;
@@ -46,7 +47,7 @@ export class Workspace {
     try {
       const entries = await listDirectory(source, source.root);
       if (request !== this.navigation || source !== this.source) return;
-      const first = entries.find((entry) => !entry.directory && isMarkdown(entry.path));
+      const first = entries.find((entry) => !entry.directory && isDocument(entry.path));
       if (first) await this.open(first.path);
     } catch (error) {
       if (request === this.navigation && source === this.source) this.error = String(error);
@@ -54,8 +55,8 @@ export class Workspace {
   }
   async open(path: string, anchor = '') {
     path = normalize(path);
-    if (!isMarkdown(path)) {
-      this.error = 'Only Markdown files open in mdview.';
+    if (!isDocument(path)) {
+      this.error = 'Open a Markdown, PDF, or Typst document.';
       return;
     }
     const request = ++this.navigation;
@@ -76,6 +77,7 @@ export class Workspace {
       this.tabs.push({
         path,
         text: file.text,
+        bytes: file.bytes,
         stamp: file.stamp,
         scroll: 0,
         error: '',
@@ -131,6 +133,7 @@ export class Workspace {
         if (source !== this.source || !this.tabs.includes(tab)) continue;
         if (file.stamp !== tab.stamp || file.text !== tab.text) {
           tab.text = file.text;
+          tab.bytes = file.bytes;
           tab.stamp = file.stamp;
           tab.revision++;
         }

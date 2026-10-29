@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import type { ViewCommand } from '../lib/view';
   import { parseDocument } from '../render/client';
-  import { prepareAssets, buildFrame } from '../render/sandbox';
+  import { prepareAssets, buildFrame, buildPdfFrame } from '../render/sandbox';
   import type { Preferences, Source, Heading } from '../lib/types';
   import type { AnchorTarget, Tab } from '../lib/workspace.svelte';
   let {
@@ -17,6 +17,7 @@
     onheadings,
     onscroll,
     oncommand,
+    onpdfscale,
   }: {
     tab: Tab;
     source: Source;
@@ -29,6 +30,7 @@
     onheadings: (headings: Heading[]) => void;
     onscroll: (path: string, y: number) => void;
     oncommand: (command: ViewCommand) => void;
+    onpdfscale?: (value: number) => void;
   } = $props();
   let frame = $state<HTMLIFrameElement>();
   let srcdoc = $state('');
@@ -42,6 +44,7 @@
     JSON.stringify({
       theme: preferences.theme,
       documentZoom: preferences.documentZoom,
+      pdfZoom: preferences.pdfZoom,
       uiZoom: preferences.uiZoom,
       fitWidth: preferences.fitWidth,
     }),
@@ -52,12 +55,13 @@
   $effect(() => {
     const currentTab = tab;
     const text = tab.text;
+    const bytes = tab.bytes;
     const path = tab.path;
     void tab.revision;
-    const delimiters = JSON.parse(delimiterKey);
-    const network = networkAllowed;
+    const delimiters = bytes ? [] : JSON.parse(delimiterKey);
+    const network = bytes ? false : networkAllowed;
     const prefs = untrack(() => ({ ...$state.snapshot(preferences), delimiters, network }));
-    const trust = trusted;
+    const trust = bytes ? false : trusted;
     const currentSource = source;
     const controller = new AbortController();
     const channelEntropyWords = 4;
@@ -70,15 +74,23 @@
     error = '';
     (async () => {
       try {
-        const result = await parseDocument(text, controller.signal, prefs.delimiters);
-        const html = await prepareAssets(result.html, currentSource, path);
-        const document = await buildFrame(html, prefs, trust, currentTab.scroll, channel);
+        let document: string;
+        let headings: Heading[] = [];
+        if (bytes) {
+          document = await buildPdfFrame(prefs, currentTab.scroll, channel, path);
+          elapsed = 0;
+        } else {
+          const result = await parseDocument(text, controller.signal, prefs.delimiters);
+          const html = await prepareAssets(result.html, currentSource, path);
+          document = await buildFrame(html, prefs, trust, currentTab.scroll, channel);
+          headings = result.headings;
+          elapsed = Math.round(result.elapsed);
+        }
         if (controller.signal.aborted) return;
-        elapsed = Math.round(result.elapsed);
         activeChannel = channel;
         allowsMessages = !trust;
         srcdoc = document;
-        onheadings(result.headings);
+        onheadings(headings);
         loading = false;
       } catch (reason) {
         if (!controller.signal.aborted) {
@@ -112,6 +124,35 @@
     )
       return;
     const data = event.data;
+    if (data.type === 'pdf-scale' && tab.bytes && Number.isFinite(data.value)) {
+      onpdfscale?.(data.value);
+      return;
+    }
+    if (data.type === 'pdf-request' && tab.bytes && allowsMessages) {
+      const bytes = tab.bytes.slice();
+      frame?.contentWindow?.postMessage({ type: 'pdf-data', bytes }, '*', [bytes.buffer]);
+      return;
+    }
+    if (data.type === 'pdf-error' && tab.bytes && typeof data.error === 'string') {
+      error = data.error.slice(0, 8192);
+      loading = false;
+      return;
+    }
+    if (data.type === 'headings' && tab.bytes && Array.isArray(data.headings)) {
+      onheadings(
+        data.headings
+          .slice(0, 1000)
+          .filter(
+            (heading: Heading) =>
+              typeof heading.id === 'string' &&
+              typeof heading.text === 'string' &&
+              Number.isInteger(heading.level) &&
+              heading.level >= 1 &&
+              heading.level <= 6,
+          ),
+      );
+      return;
+    }
     if (data.type === 'ready') {
       frameReady = true;
       return;
@@ -146,12 +187,14 @@
   {#if srcdoc}<iframe
       bind:this={frame}
       class:pending={!frameReady}
-      title="Markdown preview: {tab.path}"
+      title="{tab.bytes ? 'PDF' : 'Markdown'} preview: {tab.path}"
       sandbox="allow-scripts"
       referrerpolicy="no-referrer"
       {srcdoc}
     ></iframe>{/if}
   <span class="render-time"
-    >{elapsed} ms parse · {trusted ? 'Scripts enabled' : 'Isolated preview'}</span
+    >{tab.bytes
+      ? 'PDF.js · Read-only'
+      : `${elapsed} ms parse · ${trusted ? 'Scripts enabled' : 'Isolated preview'}`}</span
   >
 </div>
