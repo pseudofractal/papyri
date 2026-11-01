@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { openDialog } from '../lib/dialog';
   import { X, ShieldCheck, Braces } from '@lucide/svelte';
   import ZoomControls from './ZoomControls.svelte';
   import { changeZoom, MIN_PDF_ZOOM, MAX_PDF_ZOOM } from '../lib/view';
-  import type { Delimiter, Preferences } from '../lib/types';
+  import type { Delimiter, LatexEngine, Preferences } from '../lib/types';
   import { validateDelimiters } from '../lib/preferences';
+  import { native } from '../lib/sources';
+  import { invokeHost } from '../lib/native';
   let {
     preferences,
     onclose,
@@ -17,6 +19,28 @@
   } = $props();
   let delimiters = $state<Delimiter[]>(untrack(() => $state.snapshot(preferences.delimiters)));
   let error = $state('');
+  let engines = $state<{ name: LatexEngine; path: string | null }[]>([]);
+  let discoveryError = $state('');
+  let typstBinary = $state<string | null>(null);
+  let typstDiscoveryError = $state('');
+  onMount(() => {
+    if (native)
+      void invokeHost<typeof engines>('latex_engines')
+        .then((found) => {
+          engines = found;
+        })
+        .catch((reason) => {
+          discoveryError = String(reason);
+        });
+    if (native)
+      void invokeHost<string | null>('typst_binary')
+        .then((found) => {
+          typstBinary = found;
+        })
+        .catch((reason) => {
+          typstDiscoveryError = String(reason);
+        });
+  });
   function save() {
     try {
       const pairs = validateDelimiters(delimiters);
@@ -43,7 +67,8 @@
     <label class="setting-row"
       ><span
         >Allow network resources<small
-          >Images, chart data and trusted scripts may contact document-specified servers.</small
+          >Images, chart data, link previews and trusted scripts may contact document-specified
+          servers.</small
         ></span
       ><input
         class="toggle toggle-sm"
@@ -67,7 +92,7 @@
       />
     </div>
     <div class="setting-row">
-      <span>PDF and Typst pages</span><ZoomControls
+      <span>PDF, Typst and LaTeX pages</span><ZoomControls
         label="PDF"
         value={preferences.pdfZoom}
         minimum={MIN_PDF_ZOOM}
@@ -89,6 +114,67 @@
       />
     </div>
     <p class="hint">Document: Ctrl + / − / 0. Interface: Ctrl Alt + / − / 0.</p>
+    <h3>Typst compiler</h3>
+    <label class="setting-row"
+      ><span
+        >Typst executable<small
+          >{native ? typstBinary || 'Not found on PATH' : 'Available in the Linux app'}</small
+        ></span
+      >
+      <input
+        class="input input-sm"
+        aria-label="Typst executable path"
+        placeholder="Use PATH"
+        value={preferences.typstPath}
+        onchange={(event) =>
+          onchange({ ...preferences, typstPath: event.currentTarget.value.trim() })}
+      />
+    </label>
+    <p class="hint">Leave the path empty to use Typst from PATH or the bundled compiler.</p>
+    {#if typstDiscoveryError}<p class="error">
+        Could not discover Typst: {typstDiscoveryError}
+      </p>{/if}
+    <h3>LaTeX compiler</h3>
+    <label class="setting-row"
+      ><span>Engine</span>
+      <select
+        class="select select-sm"
+        value={preferences.latexEngine}
+        onchange={(event) =>
+          onchange({ ...preferences, latexEngine: event.currentTarget.value as LatexEngine })}
+      >
+        <option value="lualatex">LuaLaTeX</option><option value="pdflatex">pdfLaTeX</option><option
+          value="xelatex">XeLaTeX</option
+        >
+      </select>
+    </label>
+    {#each ['lualatex', 'pdflatex', 'xelatex'] as engine (engine)}
+      {@const name = engine as LatexEngine}
+      <label class="setting-row"
+        ><span
+          >{engine} executable<small
+            >{native
+              ? engines.find((item) => item.name === name)?.path || 'Not found on PATH'
+              : 'Available in the Linux app'}</small
+          ></span
+        >
+        <input
+          class="input input-sm"
+          aria-label="{engine} executable path"
+          placeholder="Use PATH"
+          value={preferences.latexPaths[name]}
+          onchange={(event) =>
+            onchange({
+              ...preferences,
+              latexPaths: { ...preferences.latexPaths, [name]: event.currentTarget.value.trim() },
+            })}
+        />
+      </label>
+    {/each}
+    <p class="hint">
+      Leave paths empty to use commands found on PATH. LaTeX compilation requires the Linux app.
+    </p>
+    {#if discoveryError}<p class="error">Could not discover LaTeX engines: {discoveryError}</p>{/if}
     <h3><Braces size={18} /> Mathematics</h3>
     <p class="hint">
       Add as many inline or display pairs as you need. Display pairs work together, including
