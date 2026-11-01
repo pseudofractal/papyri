@@ -23,6 +23,8 @@ for (const mode of ['pointer', 'keyboard'] as const) {
         },
       });
     });
+    if (!(await page.getByRole('complementary', { name: 'File explorer' }).isVisible()))
+      await page.getByRole('button', { name: 'Toggle explorer' }).click();
     const file = page.locator('.file-row').filter({ hasText: 'gallery.md' });
     if (mode === 'pointer') await file.dispatchEvent('pointerenter', { pointerType: 'mouse' });
     else await file.focus();
