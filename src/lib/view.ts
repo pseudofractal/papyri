@@ -18,10 +18,18 @@ export type ViewCommand =
   | ZoomCommand
   | { target: 'document'; action: 'fit-width' }
   | { target: 'palette'; action: 'open' }
-  | { target: 'tabs'; action: 'next' | 'previous' };
+  | { target: 'tabs'; action: 'next' | 'previous' }
+  | { target: 'view'; action: 'decorationless' };
 
 export function viewShortcut(event: KeyboardEvent): ViewCommand | null {
   if (!(event.ctrlKey || event.metaKey)) return null;
+  if (
+    !event.altKey &&
+    event.shiftKey &&
+    (event.key.toLowerCase() === 'd' ||
+      ((event.key === 'Unidentified' || event.key === '') && event.code === 'KeyD'))
+  )
+    return { target: 'view', action: 'decorationless' };
   if (
     !event.altKey &&
     !event.shiftKey &&

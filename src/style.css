@@ -1195,3 +1195,16 @@ textarea:focus-visible {
 .preview-pane.expanded .render-time {
   display: none;
 }
+.app-shell.decorationless .render-time {
+  display: none;
+}
+.app-shell.decorationless .app-header,
+.app-shell.decorationless .sidebar,
+.app-shell.decorationless .sidebar-resize,
+.app-shell.decorationless .tab-bar,
+.app-shell.decorationless .document-toolbar,
+.app-shell.decorationless .secondary-heading,
+.app-shell.decorationless .outline,
+.app-shell.decorationless .status-bar {
+  display: none;
+}

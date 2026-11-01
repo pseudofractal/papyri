@@ -75,6 +75,19 @@ it('reserves unshifted Ctrl = for width and supports bidirectional tab shortcuts
     target: 'document',
     action: 'in',
   });
+  expect(viewShortcut(keyboard('d', { shiftKey: true }))).toEqual({
+    target: 'view',
+    action: 'decorationless',
+  });
+  expect(viewShortcut(keyboard('D', { shiftKey: true }))).toEqual({
+    target: 'view',
+    action: 'decorationless',
+  });
+  expect(viewShortcut(keyboard('d'))).toBeNull();
+  expect(viewShortcut(keyboard('Unidentified', { code: 'KeyD', shiftKey: true }))).toEqual({
+    target: 'view',
+    action: 'decorationless',
+  });
   expect(viewShortcut(keyboard('=', { altKey: true }))).toEqual({ target: 'ui', action: 'in' });
   expect(viewShortcut(keyboard('Tab'))).toEqual({ target: 'tabs', action: 'next' });
   expect(viewShortcut(keyboard('k'))).toEqual({ target: 'palette', action: 'open' });

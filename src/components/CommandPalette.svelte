@@ -83,6 +83,7 @@
     search: Search,
     'close-search': Search,
     fit: Maximize2,
+    decorationless: Maximize2,
     'next-tab': SquareArrowRight,
     'previous-tab': SquareArrowLeft,
     'close-tab': SquareX,

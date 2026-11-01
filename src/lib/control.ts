@@ -17,6 +17,7 @@ export interface ControlState {
     palette: boolean;
     search: boolean;
     split: boolean;
+    decorationless: boolean;
     query: string;
   };
   preferences: Preferences;
@@ -65,6 +66,7 @@ export interface ControlActions {
     value?: number,
   ): Promise<unknown>;
   fitWidth(enabled?: boolean): Promise<unknown>;
+  decorationless(enabled?: boolean): Promise<unknown>;
   theme(theme: 'latte' | 'mocha' | 'toggle'): Promise<unknown>;
   panel(name: ControlPanel, action: ToggleAction): Promise<unknown>;
   search(query: string): Promise<unknown>;
@@ -134,6 +136,8 @@ export function createControlExecutor(
       }
       case 'fit-width':
         return actions.fitWidth(optionalBoolean(params, 'enabled'));
+      case 'decorationless':
+        return actions.decorationless(optionalBoolean(params, 'enabled'));
       case 'theme':
         return actions.theme(optionalEnum(params, 'theme', THEMES, 'toggle'));
       case 'panel':

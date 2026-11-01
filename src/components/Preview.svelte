@@ -36,6 +36,7 @@
     onpdfscale,
     onpdfpage,
     onrendererror,
+    ondismiss,
   }: {
     tab: Tab;
     scrollPosition?: number;
@@ -52,6 +53,7 @@
     onpdfscale?: (value: number) => void;
     onpdfpage?: (path: string, page: number, total: number) => void;
     onrendererror?: (path: string, error: string) => void;
+    ondismiss?: () => void;
   } = $props();
   let frame = $state<HTMLIFrameElement>();
   let srcdoc = $state('');
@@ -214,6 +216,10 @@
     )
       return;
     const data = event.data;
+    if (data.type === 'dismiss') {
+      ondismiss?.();
+      return;
+    }
     if (data.type === 'diagram-runtime-request' && !tab.bytes) {
       const channel = activeChannel;
       const sender = event.source;
@@ -306,6 +312,7 @@
       data.type === 'view-command' &&
       ((['document', 'ui'].includes(data.target) && ['in', 'out', 'reset'].includes(data.action)) ||
         (data.target === 'palette' && data.action === 'open') ||
+        (data.target === 'view' && data.action === 'decorationless') ||
         (data.target === 'document' && data.action === 'fit-width') ||
         (data.target === 'tabs' && ['next', 'previous'].includes(data.action)))
     ) {

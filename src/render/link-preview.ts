@@ -115,7 +115,10 @@ export function installLinkPreviews(root: HTMLElement, networkAllowed: boolean) 
   });
   root.addEventListener('focusout', hide);
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') hide();
+    if (event.key === 'Escape') {
+      hide();
+      event.stopPropagation();
+    }
   });
   window.addEventListener('scroll', hide, { passive: true });
   root.addEventListener('scroll', hide, { passive: true, capture: true });

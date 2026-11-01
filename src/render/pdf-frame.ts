@@ -213,6 +213,10 @@ new ResizeObserver(() => {
   if (payload.fitWidth) presentation();
 }).observe(container);
 window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    send({ type: 'dismiss' });
+    return;
+  }
   const command = viewShortcut(event);
   if (command) {
     event.preventDefault();

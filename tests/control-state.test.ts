@@ -28,6 +28,7 @@ const view = {
   palette: false,
   search: false,
   split: false,
+  decorationless: false,
   query: '',
 };
 

@@ -24,6 +24,7 @@ function sampleState(): ControlState {
       palette: false,
       search: false,
       split: false,
+      decorationless: false,
       query: '',
     },
     preferences: {
@@ -61,6 +62,7 @@ function sampleActions(overrides: Partial<ControlActions> = {}): ControlActions 
     scroll: vi.fn(async () => ({})),
     zoom: vi.fn(async () => state),
     fitWidth: vi.fn(async () => state),
+    decorationless: vi.fn(async () => state),
     theme: vi.fn(async () => state),
     panel: vi.fn(async () => state),
     search: vi.fn(async () => state),
@@ -129,13 +131,17 @@ describe('control executor', () => {
     await expect(execute('zoom', { action: 'in', value: 120 })).rejects.toThrow('either');
   });
 
-  it('toggles fit-to-width and themes', async () => {
+  it('toggles fit-to-width, decoration-less mode, and themes', async () => {
     const actions = sampleActions();
     const execute = createControlExecutor(actions);
     await execute('fit-width', {});
     await execute('fit-width', { enabled: false });
     expect(actions.fitWidth).toHaveBeenNthCalledWith(1, undefined);
     expect(actions.fitWidth).toHaveBeenNthCalledWith(2, false);
+    await execute('decorationless', {});
+    await execute('decorationless', { enabled: true });
+    expect(actions.decorationless).toHaveBeenNthCalledWith(1, undefined);
+    expect(actions.decorationless).toHaveBeenNthCalledWith(2, true);
     await execute('theme', {});
     await execute('theme', { theme: 'latte' });
     expect(actions.theme).toHaveBeenNthCalledWith(1, 'toggle');

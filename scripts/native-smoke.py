@@ -450,6 +450,20 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         state = json.loads(control("state", "--json"))
         assert state["view"]["sidebar"] is False, state["view"]
         control("panel", "sidebar", "on")
+        control("decorationless", "on")
+        state = json.loads(control("state", "--json"))
+        assert state["view"]["decorationless"] is True, state["view"]
+        until(
+            lambda: execute("const hidden=s=>getComputedStyle(document.querySelector(s)).display==='none';return hidden('.app-header')&&hidden('.tab-bar')&&hidden('.document-toolbar')&&hidden('.status-bar')&&Math.abs(document.querySelector('.preview-pane').getBoundingClientRect().height-innerHeight)<=2"),
+            "native decoration-less viewport",
+        )
+        control("decorationless", "off")
+        state = json.loads(control("state", "--json"))
+        assert state["view"]["decorationless"] is False, state["view"]
+        until(
+            lambda: execute("const shown=s=>getComputedStyle(document.querySelector(s)).display!=='none';return shown('.app-header')&&shown('.tab-bar')&&shown('.document-toolbar')&&shown('.status-bar')"),
+            "native chrome restored",
+        )
         control("search", "Imported")
         state = json.loads(control("state", "--json"))
         assert state["view"]["search"] is True and state["view"]["query"] == "Imported", state["view"]
@@ -468,7 +482,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             until(lambda: execute("return document.querySelector('input[aria-label=\"Directory path\"]')?.value === " + json.dumps(expected)), "CLI default and directory arguments")
             request("DELETE", prefix)
             session = None
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings and panels"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode"]}, indent=2))
     except Exception:
         if session:
             try:

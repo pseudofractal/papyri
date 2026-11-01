@@ -22,6 +22,7 @@ export interface ControlViewState {
   settings: boolean;
   palette: boolean;
   search: boolean;
+  decorationless: boolean;
   query: string;
 }
 
@@ -160,6 +161,10 @@ export function createControlActions(context: ControlContext): ControlActions {
       const current = context.preferences();
       const value = enabled ?? !current.fitWidth;
       if (value !== current.fitWidth) context.updatePreferences({ ...current, fitWidth: value });
+      return context.state();
+    },
+    decorationless: async (enabled) => {
+      context.view.decorationless = enabled ?? !context.view.decorationless;
       return context.state();
     },
     theme: async (value) => {

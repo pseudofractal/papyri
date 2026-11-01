@@ -30,7 +30,7 @@ pub(crate) fn print_result(method: &str, value: Value, json_output: bool) {
       }
       "theme" => print_theme(&mut output, &value),
       "zoom" => print_zoom(&mut output, &value),
-      "fit-width" | "panel" => print_view(&mut output, &value),
+      "fit-width" | "decorationless" | "panel" => print_view(&mut output, &value),
       "search" => print_search(&mut output, &value),
       "refresh" => {
         let _ = writeln!(output, "Refreshed");
@@ -186,10 +186,11 @@ fn print_view_flags(output: &mut String, view: &serde_json::Map<String, Value>) 
   };
   let _ = writeln!(
     output,
-    "View: sidebar={} outline={} split={} palette={} search={} settings={}",
+    "View: sidebar={} outline={} split={} decorationless={} palette={} search={} settings={}",
     flag("sidebar"),
     flag("outline"),
     flag("split"),
+    flag("decorationless"),
     flag("palette"),
     flag("search"),
     flag("settings")

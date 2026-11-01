@@ -17,7 +17,14 @@ export type ControlExecutor = (method: string, params: Record<string, unknown>) 
  */
 export async function installControl(execute: ControlExecutor): Promise<UnlistenFn> {
   const readOnly = new Set(['state', 'headings', 'commands']);
-  const viewMethods = new Set(['theme', 'zoom', 'fit-width', 'preferences.set', 'search']);
+  const viewMethods = new Set([
+    'theme',
+    'zoom',
+    'fit-width',
+    'decorationless',
+    'preferences.set',
+    'search',
+  ]);
   const documentMethods = new Set([
     'open',
     'close',

@@ -199,6 +199,18 @@ fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
       };
       print_result("fit-width", request("fit-width", params, wait)?, args.json)
     }
+    CtlCommand::Decorationless { action } => {
+      let params = match action {
+        Some(ToggleAction::On) => json!({ "enabled": true }),
+        Some(ToggleAction::Off) => json!({ "enabled": false }),
+        Some(ToggleAction::Toggle) | None => json!({}),
+      };
+      print_result(
+        "decorationless",
+        request("decorationless", params, wait)?,
+        args.json,
+      )
+    }
     CtlCommand::Theme(theme) => {
       let value = match theme.theme {
         ThemeArg::Light => "latte",
@@ -639,6 +651,32 @@ mod tests {
         command: CtlCommand::FitWidth {
           action: Some(ToggleAction::On)
         },
+        ..
+      }))
+    ));
+    let cli = Cli::try_parse_from(["papyri", "ctl", "decorationless"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Decorationless { action: None },
+        ..
+      }))
+    ));
+    let cli = Cli::try_parse_from(["papyri", "ctl", "decorationless", "off"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Decorationless {
+          action: Some(ToggleAction::Off)
+        },
+        ..
+      }))
+    ));
+    let cli = Cli::try_parse_from(["papyri", "ctl", "decoration-less"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Decorationless { action: None },
         ..
       }))
     ));

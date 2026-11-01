@@ -319,6 +319,10 @@ setTimeout(() => {
 });
 
 window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    notifyHost({ type: 'dismiss' });
+    return;
+  }
   const command = viewShortcut(event);
   if (!command) return;
   event.preventDefault();

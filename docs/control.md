@@ -20,6 +20,7 @@ papyri ctl tab list
 papyri ctl scroll by 600
 papyri ctl scroll to 0
 papyri ctl panel outline toggle
+papyri ctl decorationless on
 papyri ctl fit-width on
 papyri ctl zoom set 120 --target document
 papyri ctl search "theorem"
@@ -65,9 +66,9 @@ papyri completions powershell
 
 The completion script is written to stdout; redirect it to the location your
 shell loads. `papyri completions --help` lists the supported shells. Common
-aliases are `status`, `tabs`, `fit`, and `prefs`; `-j` is shorthand for
-`--json` and `-s` for `--socket`. `papyri --version` and `papyri ctl --version`
-print the application version.
+aliases are `status`, `tabs`, `fit`, and `prefs`; `decoration-less` is accepted
+for `decorationless`. `-j` is shorthand for `--json` and `-s` for `--socket`.
+`papyri --version` and `papyri ctl --version` print the application version.
 
 ## Socket
 
@@ -140,6 +141,7 @@ while work already underway may finish after the client has timed out.
 | `scroll.top` / `scroll.bottom` | optional `pane`                                                                                         | Jump to an end.                                                   |
 | `zoom`                         | `target` (`document`/`ui`), either `action` (`in`/`out`/`reset`) or `value`                             | Change zoom.                                                      |
 | `fit-width`                    | optional `enabled` boolean                                                                              | Toggle or set fit-to-width.                                       |
+| `decorationless`               | optional `enabled` boolean                                                                              | Toggle or set decoration-less reading mode.                       |
 | `theme`                        | `theme` (`latte`/`mocha`/`toggle`)                                                                      | Change the color theme.                                           |
 | `panel`                        | `name` (`sidebar`, `outline`, `settings`, `palette`, `search`, `split`), `action` (`on`/`off`/`toggle`) | Show or hide UI surfaces.                                         |
 | `search`                       | `query`                                                                                                 | Set document search; an empty query clears it.                    |
@@ -162,6 +164,13 @@ is visible. The `anchor` option applies to the main pane only. `tab list --json`
 returns a focused `{"tabs":[...]}` object. Documents with scripts enabled do not
 update the saved scroll bookmark, but a control-initiated scroll still resolves
 with the frame's resulting position so `papyri ctl scroll` can report success.
+
+Decoration-less mode hides the header, explorer, tabs, document toolbar,
+outline, and status bar so the preview fills the viewport. The command palette
+and all keyboard shortcuts remain available; `Esc` leaves the mode when no
+dialog or search is open. Toggle it with `Ctrl Shift D` or
+`papyri ctl decorationless [on|off|toggle]`. The mode is view state rather than
+a preference, so it is not persisted across restarts.
 
 ### State shape
 
@@ -190,6 +199,7 @@ with the frame's resulting position so `papyri ctl scroll` can report success.
     "palette": false,
     "search": false,
     "split": false,
+    "decorationless": false,
     "query": ""
   },
   "preferences": {

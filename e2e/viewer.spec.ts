@@ -1590,6 +1590,44 @@ test('keeps generated reference targets distinct from headings and authored HTML
   await expect(frame.locator('p#reference-1-2')).toBeInViewport();
 });
 
+test('hides chrome in decoration-less mode while keeping the palette and shortcuts', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Papyri' })).toBeVisible();
+
+  await frame.locator('body').press('Control+Shift+D');
+  await expect(page.locator('.app-shell')).toHaveClass(/decorationless/);
+  await expect(page.locator('.app-header')).toBeHidden();
+  await expect(page.locator('.sidebar')).toBeHidden();
+  await expect(page.locator('.tab-bar')).toBeHidden();
+  await expect(page.locator('.document-toolbar')).toBeHidden();
+  await expect(page.locator('.status-bar')).toBeHidden();
+  await expect(page.locator('.render-time')).toBeHidden();
+  expect(
+    await page.locator('.preview-pane').evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return Math.abs(bounds.width - innerWidth) <= 2 && Math.abs(bounds.height - innerHeight) <= 2;
+    }),
+  ).toBe(true);
+
+  await frame.locator('body').press('Control+k');
+  const dialog = page.getByRole('dialog', { name: 'Command palette' });
+  const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
+  await expect(search).toBeFocused();
+  await search.fill('>toggle decoration');
+  await dialog.getByRole('option', { name: /Toggle decoration-less mode/ }).click();
+  await expect(page.locator('.app-header')).toBeVisible();
+  await expect(page.locator('.app-shell')).not.toHaveClass(/decorationless/);
+
+  await page.keyboard.press('Control+Shift+D');
+  await expect(page.locator('.app-header')).toBeHidden();
+  await frame.locator('body').press('Escape');
+  await expect(page.locator('.app-header')).toBeVisible();
+  await expect(page.locator('.app-shell')).not.toHaveClass(/decorationless/);
+});
+
 test('uses readable syntax colors in both document themes', async ({ page }) => {
   await page.goto('/');
   await page

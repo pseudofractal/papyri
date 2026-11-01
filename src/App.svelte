@@ -63,6 +63,7 @@
   let help = $state(false);
   let searchOpen = $state(false);
   let paletteOpen = $state(false);
+  let decorationless = $state(false);
   let query = $state('');
   let pathInput = $derived(workspace.directory);
   let headings = $state<Heading[]>([]);
@@ -103,6 +104,10 @@
     document.documentElement.style.setProperty('--ui-scale', String(uiScale));
   });
   function viewCommand(command: ViewCommand) {
+    if (command.target === 'view') {
+      decorationless = !decorationless;
+      return;
+    }
     if (command.target === 'palette') {
       if (workspace.source && !settings && !help && !trustDialog) paletteOpen = true;
       return;
@@ -254,6 +259,13 @@
         label: 'Toggle table of contents',
         keywords: 'outline headings',
         run: () => (outline = !outline),
+      },
+      {
+        id: 'decorationless',
+        label: 'Toggle decoration-less mode',
+        shortcut: 'Ctrl Shift D',
+        keywords: 'fullscreen full screen zen focus reading hide ui chrome',
+        run: () => viewCommand({ target: 'view', action: 'decorationless' }),
       },
       {
         id: 'theme',
@@ -509,6 +521,26 @@
     recentCommands = [id, ...recentCommands.filter((item) => item !== id)].slice(0, 20);
     command.run();
   }
+  function dismiss() {
+    if (settings) {
+      settings = false;
+      return;
+    }
+    if (help) {
+      help = false;
+      return;
+    }
+    if (trustDialog) {
+      trustDialog = false;
+      return;
+    }
+    if (searchOpen) {
+      searchOpen = false;
+      query = '';
+      return;
+    }
+    if (decorationless) decorationless = false;
+  }
   function keyboard(event: KeyboardEvent) {
     if (paletteOpen) return;
     const command = viewShortcut(event);
@@ -519,11 +551,7 @@
     }
     const modifier = event.ctrlKey || event.metaKey;
     if (event.key === 'Escape') {
-      settings = false;
-      help = false;
-      trustDialog = false;
-      searchOpen = false;
-      query = '';
+      dismiss();
       return;
     }
     if (!modifier) return;
@@ -552,6 +580,7 @@
         palette: paletteOpen,
         search: searchOpen,
         split: !!workspace.secondary,
+        decorationless,
         query,
       },
       preferences: $state.snapshot(preferences) as Preferences,
@@ -587,6 +616,12 @@
     },
     set search(value) {
       searchOpen = value;
+    },
+    get decorationless() {
+      return decorationless;
+    },
+    set decorationless(value) {
+      decorationless = value;
     },
     get query() {
       return query;
@@ -699,7 +734,7 @@
 </script>
 
 <svelte:window onkeydown={keyboard} bind:innerWidth={viewportWidth} />
-<div class="app-shell" data-theme={preferences.theme}>
+<div class="app-shell" class:decorationless data-theme={preferences.theme}>
   <header class="app-header">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"><span class="app-logo"></span></span><strong
@@ -944,6 +979,7 @@
                 oncommand={viewCommand}
                 onscroll={(path, y) => workspace.setScroll(path, y)}
                 onrendererror={(path, error) => void workspace.showSource(path, error)}
+                ondismiss={dismiss}
                 onheadings={(value) => {
                   headings = value;
                   headingsPath = workspace.active;
@@ -981,6 +1017,7 @@
                   oncommand={viewCommand}
                   onscroll={(path, y) => workspace.setSecondaryScroll(path, y)}
                   onrendererror={(path, error) => void workspace.showSource(path, error)}
+                  ondismiss={dismiss}
                   onheadings={() => {}}
                 />
               </div>{/if}
@@ -1116,6 +1153,8 @@
       <dl class="shortcuts">
         <dt>Command palette and file search</dt>
         <dd>Ctrl K</dd>
+        <dt>Decoration-less mode</dt>
+        <dd>Ctrl Shift D / Esc to exit</dd>
         <dt>Open file</dt>
         <dd>Ctrl O</dd>
         <dt>Open folder</dt>
@@ -1145,7 +1184,8 @@
       </dl>
       <p>
         Zoom shortcuts work while the document has focus too. All essential actions have toolbar
-        buttons; UI zoom controls are also in Settings.
+        buttons; UI zoom controls are also in Settings. Decoration-less mode hides the toolbar, so
+        use shortcuts or the command palette there.
       </p>
       <div class="modal-action">
         <button class="btn btn-primary" onclick={() => (help = false)}>Close</button>

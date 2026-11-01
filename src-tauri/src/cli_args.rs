@@ -25,7 +25,7 @@ pub(crate) enum TopCommand {
   /// Control a running Papyri window over its local socket
   #[command(
     long_about = "Control a running Papyri window over its local socket.\n\nCommands print a human-readable summary by default; `watch` always streams JSONL. Pass `--json` for one compact JSON object from other commands; runtime errors use the same JSON envelope. Use `--wait` to wait for the socket, or `ping --wait` to also wait for host readiness.",
-    after_help = "Examples:\n  papyri ctl ping --wait 5\n  papyri ctl open notes.md --anchor intro\n  papyri ctl tab next\n  papyri ctl scroll by 400\n  papyri ctl preferences set '{\"theme\":\"latte\"}'\n  papyri ctl watch --events state,headings\n\nSet PAPYRI_CONTROL_SOCKET or pass --socket to target another instance."
+    after_help = "Examples:\n  papyri ctl ping --wait 5\n  papyri ctl open notes.md --anchor intro\n  papyri ctl tab next\n  papyri ctl scroll by 400\n  papyri ctl decorationless on\n  papyri ctl preferences set '{\"theme\":\"latte\"}'\n  papyri ctl watch --events state,headings\n\nSet PAPYRI_CONTROL_SOCKET or pass --socket to target another instance."
   )]
   Ctl(CtlArgs),
   /// Generate shell completions for papyri
@@ -100,6 +100,12 @@ pub(crate) enum CtlCommand {
   /// Toggle or set fit-to-width
   #[command(visible_alias = "fit")]
   FitWidth {
+    #[arg(value_enum, value_name = "ACTION")]
+    action: Option<ToggleAction>,
+  },
+  /// Toggle or set decoration-less reading mode
+  #[command(visible_alias = "decoration-less")]
+  Decorationless {
     #[arg(value_enum, value_name = "ACTION")]
     action: Option<ToggleAction>,
   },
