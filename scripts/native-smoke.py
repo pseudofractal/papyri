@@ -417,6 +417,8 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         assert socket_path == test_environment["PAPYRI_CONTROL_SOCKET"], socket_path
         tabs = control("tab", "list")
         assert "paper.typ" in tabs, tabs
+        tab_json = json.loads(control("tab", "list", "--json"))
+        assert set(tab_json) == {"tabs"} and tab_json["tabs"], tab_json
         completions = subprocess.run(
             [binary, "completions", "bash"],
             capture_output=True,

@@ -24,7 +24,7 @@ pub(crate) struct Cli {
 pub(crate) enum TopCommand {
   /// Control a running Papyri window over its local socket
   #[command(
-    long_about = "Control a running Papyri window over its local socket.\n\nCommands print a human-readable summary by default. Pass `--json` for one compact JSON object, including structured errors. Use `--wait` when a window may still be starting.",
+    long_about = "Control a running Papyri window over its local socket.\n\nCommands print a human-readable summary by default; `watch` always streams JSONL. Pass `--json` for one compact JSON object from other commands; runtime errors use the same JSON envelope. Use `--wait` to wait for the socket, or `ping --wait` to also wait for host readiness.",
     after_help = "Examples:\n  papyri ctl ping --wait 5\n  papyri ctl open notes.md --anchor intro\n  papyri ctl tab next\n  papyri ctl scroll by 400\n  papyri ctl preferences set '{\"theme\":\"latte\"}'\n  papyri ctl watch --events state,headings\n\nSet PAPYRI_CONTROL_SOCKET or pass --socket to target another instance."
   )]
   Ctl(CtlArgs),
@@ -35,10 +35,10 @@ pub(crate) enum TopCommand {
 #[derive(Args, Debug)]
 #[command(version, display_name = "papyri ctl")]
 pub(crate) struct CtlArgs {
-  /// Print one compact JSON object instead of a human-readable summary
+  /// Print one compact JSON object instead of a human-readable summary (watch always streams JSONL)
   #[arg(short = 'j', long, global = true, help_heading = "Output")]
   pub(crate) json: bool,
-  /// Wait up to this many seconds for the socket and host UI to become ready
+  /// Wait up to this many seconds for the control socket (ping also waits for host readiness)
   #[arg(
     long,
     global = true,
@@ -47,7 +47,7 @@ pub(crate) struct CtlArgs {
     help_heading = "Connection"
   )]
   pub(crate) wait: f64,
-  /// Control socket path (defaults to PAPYRI_CONTROL_SOCKET or the runtime directory)
+  /// Control socket path, resolved to an absolute path (defaults to PAPYRI_CONTROL_SOCKET or the runtime directory)
   #[arg(
     short = 's',
     long,
@@ -345,10 +345,10 @@ impl ZoomTarget {
 #[derive(Clone, Copy, Debug, ValueEnum)]
 pub(crate) enum ThemeArg {
   /// Light theme (Catppuccin Latte)
-  #[value(alias = "latte")]
+  #[value(name = "latte", alias = "light")]
   Light,
   /// Dark theme (Catppuccin Mocha)
-  #[value(alias = "mocha")]
+  #[value(name = "mocha", alias = "dark")]
   Dark,
   /// Switch to the other theme
   Toggle,

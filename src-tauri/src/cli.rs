@@ -129,9 +129,7 @@ fn run_completions(args: CompletionsArgs) -> Result<(), CliError> {
 
 fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
   if let Some(socket) = args.socket.as_ref() {
-    if socket.as_os_str().is_empty() {
-      return Err(CliError::new("bad-params", "`--socket` must not be empty."));
-    }
+    let socket = socket_override(socket)?;
     std::env::set_var("PAPYRI_CONTROL_SOCKET", socket);
   }
   let wait = seconds(args.wait);
@@ -165,7 +163,10 @@ fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
         request("tab.previous", json!({}), wait)?,
         args.json,
       ),
-      TabCommand::List => print_result("tab.list", request("state", json!({}), wait)?, args.json),
+      TabCommand::List => {
+        let state = request("state", json!({}), wait)?;
+        print_result("tab.list", tab_list_value(&state), args.json)
+      }
       TabCommand::Activate { path } => {
         let params = json!({ "path": absolute_path(&path)?.to_string_lossy() });
         print_result(
@@ -277,6 +278,29 @@ fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
     }
   }
   Ok(())
+}
+
+fn tab_list_value(state: &Value) -> Value {
+  let tabs = state
+    .get("tabs")
+    .cloned()
+    .unwrap_or_else(|| Value::Array(Vec::new()));
+  json!({ "tabs": tabs })
+}
+
+fn socket_override(socket: &Path) -> Result<PathBuf, CliError> {
+  if socket.as_os_str().is_empty() {
+    return Err(CliError::new("bad-params", "`--socket` must not be empty."));
+  }
+  std::path::absolute(socket).map_err(|error| {
+    CliError::new(
+      "bad-params",
+      format!(
+        "Could not resolve socket path {}: {error}",
+        socket.display()
+      ),
+    )
+  })
 }
 
 fn request(method: &str, params: Value, wait: Duration) -> Result<Value, CliError> {
@@ -705,5 +729,84 @@ mod tests {
   #[test]
   fn clap_definition_is_valid() {
     Cli::command().debug_assert();
+  }
+
+  #[test]
+  fn builds_a_focused_tab_list() {
+    let state = json!({
+      "active": "/notes.md",
+      "tabs": [{ "path": "/notes.md", "kind": "markdown" }],
+      "view": { "sidebar": true }
+    });
+    assert_eq!(
+      tab_list_value(&state),
+      json!({ "tabs": [{ "path": "/notes.md", "kind": "markdown" }] })
+    );
+    assert_eq!(tab_list_value(&json!({})), json!({ "tabs": [] }));
+  }
+
+  #[test]
+  fn resolves_relative_socket_paths() {
+    let resolved = socket_override(Path::new("control.sock")).unwrap();
+    assert!(resolved.is_absolute());
+    assert!(resolved.ends_with("control.sock"));
+    assert!(socket_override(Path::new("")).is_err());
+  }
+
+  #[test]
+  fn parses_aliases_and_theme_names() {
+    let cli = Cli::try_parse_from(["papyri", "ctl", "status"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::State,
+        ..
+      }))
+    ));
+
+    let cli = Cli::try_parse_from(["papyri", "ctl", "tabs", "list"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Tab(TabArgs {
+          command: TabCommand::List
+        }),
+        ..
+      }))
+    ));
+
+    let cli = Cli::try_parse_from(["papyri", "ctl", "fit", "on"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::FitWidth {
+          action: Some(ToggleAction::On)
+        },
+        ..
+      }))
+    ));
+
+    let cli = Cli::try_parse_from(["papyri", "ctl", "prefs", "get"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Preferences(PreferencesArgs {
+          command: PreferenceCommand::Get
+        }),
+        ..
+      }))
+    ));
+
+    for name in ["latte", "light"] {
+      let cli = Cli::try_parse_from(["papyri", "ctl", "theme", name]).unwrap();
+      let Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Theme(ThemeArgs { theme }),
+        ..
+      })) = cli.command
+      else {
+        panic!("expected theme");
+      };
+      assert!(matches!(theme, ThemeArg::Light));
+    }
   }
 }

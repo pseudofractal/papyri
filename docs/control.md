@@ -30,8 +30,9 @@ papyri ctl socket                # Print the resolved socket path
 
 Run `papyri --help` or `papyri ctl --help` for the complete command list and
 examples. Paths are resolved against the CLI's working directory and sent to
-the app as absolute paths. `--wait SECONDS` waits for the socket and the host
-UI to become ready. This is useful from editor startup hooks:
+the app as absolute paths. `--wait SECONDS` waits for the control socket;
+`ping --wait` also waits for the host UI to report ready. This is useful from
+editor startup hooks:
 
 ```sh
 papyri ctl ping --wait 5
@@ -43,7 +44,8 @@ is running raises that window.
 
 ## Help and completion
 
-Each command has detailed help, including value names, aliases and examples:
+The control help includes workflow examples, and each command has detailed
+value and option help:
 
 ```sh
 papyri ctl open --help
@@ -76,11 +78,12 @@ print the application version.
 | Last resort | `$TMPDIR/papyri-<uid>/control.sock`                                     |
 
 Set `PAPYRI_CONTROL_SOCKET` to use another path, or pass the global
-`papyri ctl --socket <PATH>` option. The parent directory is created with mode
-`0700` when absent and the socket with mode `0600`, so only the same user can
-connect. Keep an overridden socket directory private. There is no network
-listener. `papyri ctl socket` prints the path that would be used without
-connecting.
+`papyri ctl --socket <PATH>` option. A relative `--socket` path is resolved to
+an absolute path against the CLI's working directory. The parent directory is
+created with mode `0700` when absent and the socket with mode `0600`, so only
+the same user can connect. Keep an overridden socket directory private. There
+is no network listener. `papyri ctl socket` prints the path that would be used
+without connecting.
 
 Each line is one JSON object. Requests carry an `id` chosen by the client and a
 method name:
@@ -155,10 +158,10 @@ can use new methods without waiting for a CLI update. `papyri ctl socket` and
 `papyri completions <shell>` are CLI-only; they do not send a socket request.
 An `open` with `pane: "secondary"` opens in the split pane when a document is
 already active; with no active document it opens in the main pane so the preview
-is visible. The `anchor` option applies to the main pane only. Documents with
-scripts enabled do not update the saved scroll bookmark, but a control-initiated
-scroll still resolves with the frame's resulting position so `papyri ctl scroll`
-can report success.
+is visible. The `anchor` option applies to the main pane only. `tab list --json`
+returns a focused `{"tabs":[...]}` object. Documents with scripts enabled do not
+update the saved scroll bookmark, but a control-initiated scroll still resolves
+with the frame's resulting position so `papyri ctl scroll` can report success.
 
 ### State shape
 
@@ -260,8 +263,9 @@ CLI writes a single object to stdout and exits nonzero:
 ```
 
 Without `--json`, errors are printed to stderr as `error: <message>` and the
-exit status is nonzero. A closed output pipe is treated as a normal end of
-output, not an error.
+exit status is nonzero. Argument parsing errors are reported by clap and are
+not part of the JSON envelope. A closed output pipe is treated as a normal end
+of output, not an error.
 
 ## Neovim
 

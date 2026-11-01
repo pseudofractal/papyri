@@ -108,17 +108,32 @@ fn print_tabs(output: &mut String, value: &Value) {
     return;
   }
   for tab in tabs {
-    let path = tab.get("path").and_then(Value::as_str).unwrap_or("?");
-    let kind = tab.get("kind").and_then(Value::as_str).unwrap_or("?");
-    let marker = if tab.get("active").and_then(Value::as_bool) == Some(true) {
-      "*"
-    } else if tab.get("secondary").and_then(Value::as_bool) == Some(true) {
-      "+"
-    } else {
-      " "
-    };
-    let _ = writeln!(output, "{marker} {path} ({kind})");
+    let _ = writeln!(
+      output,
+      "{} {} ({})",
+      tab_marker(tab),
+      tab_path(tab),
+      tab_kind(tab)
+    );
   }
+}
+
+fn tab_marker(tab: &Value) -> &'static str {
+  if tab.get("active").and_then(Value::as_bool) == Some(true) {
+    "*"
+  } else if tab.get("secondary").and_then(Value::as_bool) == Some(true) {
+    "+"
+  } else {
+    " "
+  }
+}
+
+fn tab_path(tab: &Value) -> &str {
+  tab.get("path").and_then(Value::as_str).unwrap_or("?")
+}
+
+fn tab_kind(tab: &Value) -> &str {
+  tab.get("kind").and_then(Value::as_str).unwrap_or("?")
 }
 
 fn print_socket(output: &mut String, value: &Value) {
@@ -227,15 +242,14 @@ fn print_state(output: &mut String, value: &Value) {
   if let Some(tabs) = value.get("tabs").and_then(Value::as_array) {
     let _ = writeln!(output, "Tabs ({}):", tabs.len());
     for tab in tabs {
-      let path = tab.get("path").and_then(Value::as_str).unwrap_or("?");
-      let kind = tab.get("kind").and_then(Value::as_str).unwrap_or("?");
       let scroll = tab.get("scroll").and_then(Value::as_f64).unwrap_or(0.0);
-      let marker = if tab.get("active").and_then(Value::as_bool) == Some(true) {
-        "*"
-      } else {
-        " "
-      };
-      let _ = writeln!(output, "  {marker} {path} ({kind}, scroll {scroll:.0})");
+      let _ = writeln!(
+        output,
+        "  {} {} ({}, scroll {scroll:.0})",
+        tab_marker(tab),
+        tab_path(tab),
+        tab_kind(tab)
+      );
       if let Some(error) = tab.get("error").and_then(Value::as_str) {
         let _ = writeln!(output, "      error: {error}");
       }
