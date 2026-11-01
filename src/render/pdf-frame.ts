@@ -12,11 +12,12 @@ import {
   PDFViewer,
 } from 'pdfjs-dist/legacy/web/pdf_viewer.mjs';
 import workerSource from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
-import resources from 'papyri:pdf-resources';
 import { viewShortcut } from '../lib/view';
+import { installLinkPreviews } from './link-preview';
 import type { Heading, Preferences } from '../lib/types';
 import 'pdfjs-dist/web/pdf_viewer.css';
 import './pdf.css';
+import './link-preview.css';
 
 interface Payload {
   channel: string;
@@ -25,6 +26,7 @@ interface Payload {
   theme: Preferences['theme'];
   pdfZoom: number;
   fitWidth: boolean;
+  network: boolean;
 }
 const payload: Payload = JSON.parse(document.getElementById('payload')!.textContent!);
 const send = (data: Record<string, unknown>) =>
@@ -46,6 +48,7 @@ class HostLinkService extends PDFLinkService {
     const local = parsed.origin === LOCAL_LINK_ORIGIN;
     const href = local ? parsed.pathname + parsed.hash : url;
     link.href = '#';
+    if (!local) link.dataset.previewHref = href;
     link.title = local ? decodeURI(href) : url;
     link.addEventListener('click', (event) => {
       event.preventDefault();
@@ -54,6 +57,7 @@ class HostLinkService extends PDFLinkService {
   }
 }
 const linkService = new HostLinkService({ eventBus, ignoreDestinationZoom: true });
+installLinkPreviews(container, payload.network);
 const findController = new PDFFindController({ eventBus, linkService });
 const viewer = new PDFViewer({
   container,
@@ -71,13 +75,37 @@ let passwordCallback: ((password: string) => void) | undefined;
 let pendingAnchor = '';
 let pendingQuery = '';
 let destinations: (string | unknown[])[] = [];
+let resourceRequest = 0;
+const pendingResources = new Map<
+  number,
+  { resolve: (bytes: Uint8Array) => void; reject: (error: Error) => void }
+>();
 
 /** PDF.js requests only its own bundled fonts, CMaps, and image decoders. */
 class BundledBinaryDataFactory {
   async fetch({ filename }: { filename: string }): Promise<Uint8Array> {
-    const encoded = resources[filename];
-    if (!encoded) throw new Error(`Bundled PDF resource is unavailable: ${filename}`);
-    return Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+    if (typeof filename !== 'string' || !filename || filename.length > 128)
+      throw new Error('Invalid bundled PDF resource name.');
+    const request = ++resourceRequest;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        pendingResources.delete(request);
+        const error = `PDF resource request timed out: ${filename}`;
+        send({ type: 'pdf-error', error });
+        reject(new Error(error));
+      }, 15_000);
+      pendingResources.set(request, {
+        resolve: (bytes) => {
+          clearTimeout(timeout);
+          resolve(bytes);
+        },
+        reject: (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        },
+      });
+      send({ type: 'pdf-resource-request', name: filename, request });
+    });
   }
 }
 function presentation() {
@@ -135,16 +163,25 @@ async function outline(pdf: PDFDocumentProxy) {
 }
 eventBus.on('pagesinit', () => {
   loaded = true;
+  send({ type: 'pdf-page', page: viewer.currentPageNumber, total: viewer.pagesCount });
   presentation();
   container.scrollTop = payload.scroll;
   if (pendingQuery) search(pendingQuery);
   if (pendingAnchor) navigate(pendingAnchor);
   send({ type: 'ready' });
 });
+let firstPageRendered = false;
+eventBus.on('pagerendered', ({ error }: { error?: unknown }) => {
+  if (!error && !firstPageRendered) {
+    firstPageRendered = true;
+    send({ type: 'pdf-rendered' });
+  }
+});
 eventBus.on('pagechanging', ({ pageNumber }: { pageNumber: number }) => {
   pageInput.value = String(pageNumber);
   previous.disabled = pageNumber <= 1;
   next.disabled = pageNumber >= viewer.pagesCount;
+  send({ type: 'pdf-page', page: pageNumber, total: viewer.pagesCount });
 });
 eventBus.on('updatefindmatchescount', ({ matchesCount }: { matchesCount: { total: number } }) => {
   matchCount.textContent = `${matchesCount.total} matches`;
@@ -169,18 +206,9 @@ passwordInput.addEventListener('keydown', (event) => {
     unlockPdf();
   }
 });
-let scrollFrame = 0;
-container.addEventListener(
-  'scroll',
-  () => {
-    if (scrollFrame) return;
-    scrollFrame = requestAnimationFrame(() => {
-      scrollFrame = 0;
-      send({ type: 'scroll', y: container.scrollTop });
-    });
-  },
-  { passive: true },
-);
+container.addEventListener('scroll', () => send({ type: 'scroll', y: container.scrollTop }), {
+  passive: true,
+});
 new ResizeObserver(() => {
   if (payload.fitWidth) presentation();
 }).observe(container);
@@ -194,6 +222,20 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('message', (event) => {
   if (event.source !== parent || !event.data) return;
   const data = event.data;
+  if (data.type === 'pdf-resource-result' && Number.isSafeInteger(data.request)) {
+    const pending = pendingResources.get(data.request);
+    if (pending) {
+      pendingResources.delete(data.request);
+      if (data.bytes instanceof Uint8Array) pending.resolve(data.bytes);
+      else {
+        const error =
+          typeof data.error === 'string' ? data.error : 'Invalid PDF resource response.';
+        send({ type: 'pdf-error', error });
+        pending.reject(new Error(error));
+      }
+    }
+    return;
+  }
   if (data.type === 'search' && typeof data.query === 'string') search(data.query);
   if (data.type === 'anchor' && typeof data.id === 'string') navigate(data.id);
   if (data.type === 'presentation') {

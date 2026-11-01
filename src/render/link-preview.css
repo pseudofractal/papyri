@@ -1,0 +1,54 @@
+.link-preview-destination,
+.link-preview-card {
+  position: fixed;
+  z-index: 10000;
+  pointer-events: none;
+  background: var(--code, var(--pdf-toolbar, #181825));
+  color: inherit;
+  border: 1px solid var(--line, var(--pdf-text, #cdd6f4));
+  border-radius: 8px;
+  box-shadow: 0 4px 18px #0004;
+  font:
+    12px/1.4 system-ui,
+    sans-serif;
+}
+.link-preview-destination[hidden],
+.link-preview-card[hidden] {
+  display: none;
+}
+.link-preview-destination {
+  z-index: 10001;
+  right: 12px;
+  bottom: 12px;
+  max-width: min(480px, calc(100vw - 24px));
+  max-height: 4.8em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  padding: 5px 8px;
+}
+.link-preview-card {
+  box-sizing: border-box;
+  width: min(320px, calc(100vw - 24px));
+  max-height: min(240px, calc(100vh - 24px));
+  overflow: hidden;
+  padding: 8px;
+}
+.link-preview-card strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.link-preview-card p {
+  margin: 4px 0 0;
+}
+.link-preview-card img,
+.link-preview-card iframe {
+  display: block;
+  width: 100%;
+  height: 175px;
+  margin-top: 6px;
+  border: 0;
+  object-fit: contain;
+  background: #fff;
+}

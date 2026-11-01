@@ -2,16 +2,47 @@ import DOMPurify from 'dompurify';
 import 'katex/dist/katex.min.css';
 import './highlighting.css';
 import './reading.css';
+import './link-preview.css';
 import { syncViewportSize } from './viewport';
 import { viewShortcut } from '../lib/view';
 import { createDiagramViewer } from './diagram-view';
 import { resolveReferenceTargets } from './reference-targets';
+import { installLinkPreviews } from './link-preview';
 const runtimeNonce = (document.currentScript as HTMLScriptElement | null)?.nonce || '';
 const payload = JSON.parse(document.getElementById('payload')!.textContent!);
 const root = document.getElementById('document')!;
-const diagramSource = document.getElementById('diagram-runtime')?.textContent;
 const notifyHost = (message: Record<string, unknown>) =>
   parent.postMessage({ ...message, channel: payload.channel }, '*');
+let exportRequest = 0;
+const pendingExports = new Map<
+  number,
+  { resolve: (message: string) => void; reject: (reason: Error) => void }
+>();
+async function exportDiagram(action: 'download' | 'copy', blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const request = ++exportRequest;
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingExports.delete(request);
+      reject(new Error('The export request timed out.'));
+    }, 120_000);
+    pendingExports.set(request, {
+      resolve: (message) => {
+        clearTimeout(timeout);
+        resolve(message);
+      },
+      reject: (reason) => {
+        clearTimeout(timeout);
+        reject(reason);
+      },
+    });
+    parent.postMessage(
+      { type: 'diagram-export', action, mime: blob.type, bytes, request, channel: payload.channel },
+      '*',
+      [bytes.buffer],
+    );
+  });
+}
 export function sanitize(html: string) {
   return DOMPurify.sanitize(html, {
     ADD_TAGS: ['math', 'semantics', 'annotation'],
@@ -58,6 +89,7 @@ function applyPresentation(presentation: Record<string, unknown>) {
 applyPresentation(payload);
 root.innerHTML = payload.trusted ? payload.html : sanitize(payload.html);
 resolveReferenceTargets(root);
+installLinkPreviews(root, payload.network);
 if (payload.trusted) {
   for (const old of root.querySelectorAll('script')) {
     const script = document.createElement('script');
@@ -69,21 +101,36 @@ if (payload.trusted) {
 }
 let diagrams: Promise<typeof import('./diagrams')> | undefined;
 function loadDiagrams() {
-  return (diagrams ??= new Promise((resolve, reject) => {
-    try {
-      const source = diagramSource;
-      if (!source) throw new Error('Bundled diagram runtime is unavailable.');
-      const script = document.createElement('script');
-      if (runtimeNonce) script.nonce = runtimeNonce;
-      script.textContent = source;
-      document.head.append(script);
-      const runtime = (window as unknown as { papyriDiagrams?: typeof import('./diagrams') })
-        .papyriDiagrams;
-      if (!runtime) throw new Error('The diagram runtime could not start.');
-      resolve(runtime);
-    } catch (error) {
-      reject(error);
+  return (diagrams ??= new Promise<typeof import('./diagrams')>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      window.removeEventListener('message', receive);
+      reject(new Error('The diagram runtime request timed out.'));
+    }, 30_000);
+    function receive(event: MessageEvent) {
+      if (event.source !== parent || event.data?.type !== 'diagram-runtime-result') return;
+      clearTimeout(timeout);
+      window.removeEventListener('message', receive);
+      try {
+        const source = event.data.source;
+        if (event.data.error) throw new Error(event.data.error);
+        if (!source) throw new Error('Bundled diagram runtime is unavailable.');
+        const script = document.createElement('script');
+        if (runtimeNonce) script.nonce = runtimeNonce;
+        script.textContent = source;
+        document.head.append(script);
+        const runtime = (window as unknown as { papyriDiagrams?: typeof import('./diagrams') })
+          .papyriDiagrams;
+        if (!runtime) throw new Error('The diagram runtime could not start.');
+        resolve(runtime);
+      } catch (error) {
+        reject(error);
+      }
     }
+    window.addEventListener('message', receive);
+    notifyHost({ type: 'diagram-runtime-request' });
+  }).catch((error) => {
+    diagrams = undefined;
+    throw error;
   }));
 }
 for (const block of root.querySelectorAll<HTMLElement>('pre.diagram-source')) {
@@ -97,8 +144,12 @@ for (const block of root.querySelectorAll<HTMLElement>('pre.diagram-source')) {
   const status = document.createElement('p');
   status.setAttribute('role', 'status');
   const output = document.createElement('div');
-  const { viewport, expandButton } = createDiagramViewer(output, format, (expanded) =>
-    notifyHost({ type: 'diagram-expanded', expanded }),
+  const { viewport, expandButton } = createDiagramViewer(
+    output,
+    format,
+    (expanded) => notifyHost({ type: 'diagram-expanded', expanded }),
+    exportDiagram,
+    !payload.trusted,
   );
   const actions = document.createElement('div');
   actions.className = 'diagram-actions';
@@ -149,6 +200,15 @@ for (const block of root.querySelectorAll<HTMLElement>('pre.diagram-source')) {
 }
 window.addEventListener('message', (event) => {
   if (event.source !== parent) return;
+  if (event.data?.type === 'diagram-export-result' && Number.isSafeInteger(event.data.request)) {
+    const pending = pendingExports.get(event.data.request);
+    if (pending) {
+      pendingExports.delete(event.data.request);
+      if (typeof event.data.error === 'string') pending.reject(new Error(event.data.error));
+      else pending.resolve(typeof event.data.message === 'string' ? event.data.message : 'Done.');
+    }
+    return;
+  }
   if (event.data.type === 'presentation') applyPresentation(event.data);
   if (event.data.type === 'anchor' && typeof event.data.id === 'string')
     document.getElementById(event.data.id)?.scrollIntoView();
@@ -190,15 +250,9 @@ window.addEventListener('message', (event) => {
     notifyHost({ type: 'matches', count: matches });
   }
 });
-let scrollTimer: ReturnType<typeof setTimeout>;
-window.addEventListener(
-  'scroll',
-  () => {
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(() => notifyHost({ type: 'scroll', y: window.scrollY }), 100);
-  },
-  { passive: true },
-);
+window.addEventListener('scroll', () => notifyHost({ type: 'scroll', y: window.scrollY }), {
+  passive: true,
+});
 // Hidden loading frames can suspend animation callbacks. Styles and DOM are ready here.
 setTimeout(() => {
   window.scrollTo(0, payload.scroll);

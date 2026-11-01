@@ -13,3 +13,5 @@ public/diagrams.js
 public/pdf.js
 public/pdf.css
 public/pdf-licenses/
+public/pdf-resources/
+public/pdf-resources.json

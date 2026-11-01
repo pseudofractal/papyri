@@ -18,7 +18,7 @@
               && !(lib.hasPrefix "result" name)
               && !(lib.hasPrefix ".env" name)
               && !(lib.hasSuffix ".keystore" name)
-              && !(builtins.elem name [ "renderer.js" "renderer.css" "diagrams.js" "pdf.js" "pdf.css" "pdf-licenses" ]);
+              && !(builtins.elem name [ "renderer.js" "renderer.css" "diagrams.js" "pdf.js" "pdf.css" "pdf-licenses" "pdf-resources" "pdf-resources.json" ]);
           };
           webSource = lib.fileset.toSource {
             root = ./.;

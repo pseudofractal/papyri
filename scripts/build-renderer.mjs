@@ -1,11 +1,22 @@
 import { build, transform } from 'esbuild';
-import { copyFile, mkdir, readdir, readFile } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 
 const licenseDirectory = 'public/pdf-licenses';
+const resourceDirectory = 'public/pdf-resources';
+const resourceNames = [];
 await mkdir(licenseDirectory, { recursive: true });
+await mkdir(resourceDirectory, { recursive: true });
 await copyFile('node_modules/pdfjs-dist/LICENSE', `${licenseDirectory}/PDFJS.txt`);
 for (const directory of ['cmaps', 'standard_fonts', 'wasm']) {
   for (const name of await readdir(`node_modules/pdfjs-dist/${directory}`)) {
+    if (/\.(bcmap|pfb|ttf|wasm)$/.test(name) && !name.startsWith('quickjs')) {
+      if (resourceNames.includes(name)) throw new Error(`Duplicate PDF resource: ${name}`);
+      resourceNames.push(name);
+      await copyFile(
+        `node_modules/pdfjs-dist/${directory}/${name}`,
+        `${resourceDirectory}/${name}`,
+      );
+    }
     if (name.startsWith('LICENSE'))
       await copyFile(
         `node_modules/pdfjs-dist/${directory}/${name}`,
@@ -13,6 +24,7 @@ for (const directory of ['cmaps', 'standard_fonts', 'wasm']) {
       );
   }
 }
+await writeFile('public/pdf-resources.json', JSON.stringify(resourceNames));
 await build({
   entryPoints: ['src/render/frame.ts'],
   bundle: true,
@@ -46,23 +58,8 @@ await build({
   loader: { '.svg': 'dataurl', '.gif': 'dataurl' },
   plugins: [
     {
-      name: 'offline-pdf-resources',
+      name: 'inline-pdf-worker',
       setup(build) {
-        build.onResolve({ filter: /^papyri:pdf-resources$/ }, () => ({
-          path: 'resources',
-          namespace: 'pdf',
-        }));
-        build.onLoad({ filter: /.*/, namespace: 'pdf' }, async () => {
-          const resources = {};
-          for (const directory of ['cmaps', 'standard_fonts', 'wasm']) {
-            for (const name of await readdir(`node_modules/pdfjs-dist/${directory}`)) {
-              if (!/\.(bcmap|pfb|ttf|wasm)$/.test(name) || name.startsWith('quickjs')) continue;
-              const bytes = await readFile(`node_modules/pdfjs-dist/${directory}/${name}`);
-              resources[name] = bytes.toString('base64');
-            }
-          }
-          return { contents: `export default ${JSON.stringify(resources)}`, loader: 'js' };
-        });
         build.onLoad({ filter: /pdf\.worker\.mjs$/ }, async ({ path }) => ({
           contents: (
             await transform(await readFile(path, 'utf8'), {
