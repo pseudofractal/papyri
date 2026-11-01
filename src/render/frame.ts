@@ -11,6 +11,9 @@ import { installLinkPreviews } from './link-preview';
 const runtimeNonce = (document.currentScript as HTMLScriptElement | null)?.nonce || '';
 const payload = JSON.parse(document.getElementById('payload')!.textContent!);
 const root = document.getElementById('document')!;
+// Capture host scrolling before trusted document scripts can replace it.
+const scrollWindowTo = window.scrollTo.bind(window);
+const scrollWindowBy = window.scrollBy.bind(window);
 const notifyHost = (message: Record<string, unknown>) =>
   parent.postMessage({ ...message, channel: payload.channel }, '*');
 let exportRequest = 0;
@@ -235,7 +238,7 @@ function scrollFromWheel(
     const containsX = scrollX !== 0 && /^(contain|none)$/.test(style.overscrollBehaviorX);
     if (containsX || containsY) return;
   }
-  window.scrollBy({ left: scrollX, top: scrollY });
+  scrollWindowBy({ left: scrollX, top: scrollY });
 }
 window.addEventListener('message', (event) => {
   if (event.source !== parent) return;
@@ -246,7 +249,7 @@ window.addEventListener('message', (event) => {
       : finiteNumber(event.data.dy)
         ? window.scrollY + event.data.dy
         : window.scrollY;
-    window.scrollTo({ top: Math.max(0, y), behavior: 'auto' });
+    scrollWindowTo({ top: Math.max(0, y), behavior: 'auto' });
     notifyHost({ type: 'scroll-done', request, y: window.scrollY });
     return;
   }
@@ -311,7 +314,7 @@ window.addEventListener('scroll', () => notifyHost({ type: 'scroll', y: window.s
 });
 // Hidden loading frames can suspend animation callbacks. Styles and DOM are ready here.
 setTimeout(() => {
-  window.scrollTo(0, payload.scroll);
+  scrollWindowTo(0, payload.scroll);
   notifyHost({ type: 'ready' });
 });
 

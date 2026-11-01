@@ -1250,6 +1250,41 @@ test('does not expose diagram export to script-enabled documents', async ({ page
   );
 });
 
+test('scrolls a trusted document even when scripts replace scrollTo', async ({ page }) => {
+  await page.goto('/');
+  const paragraphs = Array.from({ length: 200 }, (_, index) => `Paragraph ${index}.`).join('\n\n');
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(
+      markdownFile(
+        `# Trusted scroll\n\n<script>window.scrollTo = () => {}; window.__scrollBlocked = true;</script>\n\n${paragraphs}`,
+        'trusted-scroll.md',
+      ),
+    );
+  await page
+    .getByRole('button', { name: 'Safe preview: trust current document for scripts' })
+    .click();
+  await page.getByRole('button', { name: 'Enable scripts for this document' }).click();
+  await expect(page.locator('.preview-pane')).toHaveAttribute('aria-busy', 'false');
+  const frame = page.frameLocator('iframe');
+  await expect
+    .poll(() =>
+      frame
+        .locator('html')
+        .evaluate(() => (window as unknown as { __scrollBlocked?: boolean }).__scrollBlocked),
+    )
+    .toBe(true);
+  await page
+    .locator('iframe')
+    .evaluate((element) =>
+      (element as HTMLIFrameElement).contentWindow?.postMessage(
+        { type: 'scroll', request: 1, y: 700 },
+        '*',
+      ),
+    );
+  await expect.poll(() => frame.locator('html').evaluate(() => window.scrollY)).toBeGreaterThan(0);
+});
+
 test('keeps fitted content inside the pane while wide blocks scroll locally', async ({ page }) => {
   await page.goto('/');
   const wideExpression = String.raw`\begin{bmatrix}${Array.from({ length: 60 }, (_, index) => `x_{${index}}`).join(' & ')}\end{bmatrix}`;

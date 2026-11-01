@@ -155,7 +155,7 @@ export function mergePreferences(
           throw new Error('`latexPaths` must be an object.');
         const paths = value as Record<string, unknown>;
         for (const [engine, compiler] of Object.entries(paths)) {
-          if (!(engine in next.latexPaths))
+          if (!Object.hasOwn(next.latexPaths, engine))
             throw new Error(`Unknown LaTeX engine in latexPaths: ${engine}`);
           if (typeof compiler !== 'string')
             throw new Error(`\`latexPaths.${engine}\` must be a string.`);

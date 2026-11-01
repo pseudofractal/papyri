@@ -75,7 +75,9 @@ Event subscriptions receive separate lines:
 
 The window marks itself ready after the host UI has installed its control
 listener. Requests wait up to 20 seconds for that readiness, so a client may
-connect immediately after the socket appears. `ping` is handled by the native
+connect immediately after the socket appears. Commands that change state are
+serialized in arrival order; `state`, `headings`, and `commands` are read-only
+and may run while another command is in flight. `ping` is handled by the native
 layer and reports `ready` without touching the webview. Readiness covers the
 control listener, not the initial document: use `state.busy` and `state.active`
 while startup finishes. Document actions also wait for the initial folder and
@@ -115,7 +117,10 @@ Papyri finishes opening its initial path.
 | `unsubscribe`                  | none                                                                                                    | Stop events on the current connection.                            |
 
 `papyri ctl raw METHOD '{"key":1}'` sends any method directly, so integrations
-can use new methods without waiting for a CLI update.
+can use new methods without waiting for a CLI update. An `open` with
+`pane: "secondary"` opens in the split pane when a document is already active;
+with no active document it opens in the main pane so the preview is visible.
+The `anchor` option applies to the main pane only.
 
 ### State shape
 

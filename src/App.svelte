@@ -91,6 +91,7 @@
   type PreviewControls = {
     scrollTo(y: number): Promise<number>;
     scrollBy(dy: number): Promise<number>;
+    documentPath(): string;
   };
   let primaryPreview = $state<PreviewControls>();
   let secondaryPreview = $state<PreviewControls>();
@@ -590,7 +591,7 @@
         error: tab.error || null,
       })),
       pdf:
-        pdfPage.path && pdfPage.total
+        pagedDocument && pdfPage.path === workspace.active && pdfPage.total
           ? { path: pdfPage.path, page: pdfPage.page, total: pdfPage.total }
           : null,
       view: {
@@ -641,10 +642,12 @@
       if (options.directory) {
         workspace.directory = workspace.searchRoot = target;
         workspace.treeRevision++;
+        workspace.error = '';
         return controlState();
       }
       if (!isDocument(target)) throw new Error('Open a Markdown, PDF, Typst, or LaTeX document.');
-      if (options.pane === 'secondary') {
+      if (options.pane === 'secondary' && workspace.active) {
+        if (options.anchor) throw new Error('Anchors are only supported in the main pane.');
         await workspace.openSecondary(target);
         if (workspace.secondary !== target)
           throw new Error(workspace.error || `Could not open ${target}.`);
@@ -679,7 +682,10 @@
       if (!tabs.length) return controlState();
       const current = tabs.findIndex((tab) => tab.path === workspace.active);
       const step = direction === 'next' ? 1 : -1;
-      const next = tabs[(current + step + tabs.length) % tabs.length];
+      const next =
+        current === -1
+          ? tabs[direction === 'next' ? 0 : tabs.length - 1]
+          : tabs[(current + step + tabs.length) % tabs.length];
       await workspace.open(next.path);
       return controlState();
     },
@@ -702,9 +708,22 @@
     },
     async scroll(pane, target) {
       await workspaceReady;
-      const preview = pane === 'secondary' ? secondaryPreview : primaryPreview;
-      if (!preview)
-        throw new Error(pane === 'secondary' ? 'The split pane is empty.' : 'No document is open.');
+      const deadline = Date.now() + 10_000;
+      let preview: PreviewControls | undefined;
+      while (Date.now() < deadline) {
+        const expected = pane === 'secondary' ? workspace.secondary : workspace.active;
+        if (!expected)
+          throw new Error(
+            pane === 'secondary' ? 'The split pane is empty.' : 'No document is open.',
+          );
+        const candidate = pane === 'secondary' ? secondaryPreview : primaryPreview;
+        if (candidate?.documentPath() === expected) {
+          preview = candidate;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      if (!preview) throw new Error('The preview is not ready yet.');
       const y = await scrollPreview(preview, target);
       return { pane, y: Math.round(y) };
     },
@@ -781,6 +800,7 @@
     },
     async heading(id) {
       await workspaceReady;
+      if (!workspace.active) throw new Error('No document is open.');
       workspace.navigateAnchor(id);
       return controlState();
     },

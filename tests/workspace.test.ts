@@ -100,6 +100,50 @@ describe('workspace navigation and live updates', () => {
       revision: 1,
     });
   });
+  it('does not add a secondary tab after the source changes', async () => {
+    const { source } = memorySource();
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const read = source.read.bind(source);
+    source.read = async (path) => {
+      if (path === '/b.md') await gate;
+      return read(path);
+    };
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    const opening = workspace.openSecondary('/b.md');
+    workspace.changeSource(memorySource().source);
+    release();
+    await opening;
+    expect(workspace.tabs).toEqual([]);
+    expect(workspace.secondary).toBe('');
+  });
+  it('deduplicates concurrent main and secondary opens of the same path', async () => {
+    const { source } = memorySource();
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const read = source.read.bind(source);
+    let reads = 0;
+    source.read = async (path) => {
+      reads++;
+      if (path === '/b.md') await gate;
+      return read(path);
+    };
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    const main = workspace.open('/b.md');
+    const secondary = workspace.openSecondary('/b.md');
+    release();
+    await Promise.all([main, secondary]);
+    expect(workspace.tabs.filter((tab) => tab.path === '/b.md')).toHaveLength(1);
+    expect(workspace.active).toBe('/b.md');
+    expect(workspace.secondary).toBe('/b.md');
+    expect(reads).toBeGreaterThanOrEqual(1);
+  });
   it('shows source when the PDF renderer fails', async () => {
     const { source, files } = memorySource();
     files.set('/paper.tex', { text: '', stamp: '1', bytes: Uint8Array.of(1) });

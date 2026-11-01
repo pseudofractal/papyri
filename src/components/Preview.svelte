@@ -76,6 +76,9 @@
     if (!Number.isFinite(dy)) return Promise.reject(new Error('Scroll delta must be finite.'));
     return requestScroll({ dy });
   }
+  export function documentPath() {
+    return tab.path;
+  }
   function requestScroll(payload: { y?: number; dy?: number }): Promise<number> {
     if (!frame || !frameReady) return Promise.reject(new Error('The preview is not ready yet.'));
     const request = ++scrollRequest;

@@ -14,11 +14,22 @@ export type ControlExecutor = (method: string, params: Record<string, unknown>) 
  * is installed before `control_ready`, so startup requests cannot be lost.
  */
 export async function installControl(execute: ControlExecutor): Promise<UnlistenFn> {
+  const readOnly = new Set(['state', 'headings', 'commands']);
+  let mutations = Promise.resolve();
+  const dispatch = (method: string, params: Record<string, unknown>) => {
+    if (readOnly.has(method)) return execute(method, params);
+    const task = mutations.then(() => execute(method, params));
+    mutations = task.then(
+      () => undefined,
+      () => undefined,
+    );
+    return task;
+  };
   return listen<ControlRequest>('papyri-control-request', (event) => {
     const { id, method, params } = event.payload;
     void (async () => {
       try {
-        const result = await execute(method, params ?? {});
+        const result = await dispatch(method, params ?? {});
         await invokeHost('control_respond', { id, ok: true, result: result ?? null });
       } catch (error) {
         await invokeHost('control_respond', {

@@ -86,17 +86,20 @@ export class Workspace {
     try {
       const file = await source.read(path);
       if (request !== this.navigation || source !== this.source) return;
-      this.tabs.push({
-        path,
-        text: file.text,
-        bytes: file.bytes,
-        stamp: file.stamp,
-        scroll: 0,
-        error: file.compilationError || '',
-        compilationError: file.compilationError,
-        retryCompilation: file.retryCompilation,
-        revision: 0,
-      });
+      const loaded = this.tabs.find((tab) => tab.path === path);
+      if (!loaded) {
+        this.tabs.push({
+          path,
+          text: file.text,
+          bytes: file.bytes,
+          stamp: file.stamp,
+          scroll: 0,
+          error: file.compilationError || '',
+          compilationError: file.compilationError,
+          retryCompilation: file.retryCompilation,
+          revision: 0,
+        });
+      }
       this.active = path;
       this.rememberFile(path);
       this.anchor = anchor ? { id: anchor, request } : null;
@@ -123,17 +126,18 @@ export class Workspace {
       try {
         const file = await source.read(path);
         if (this.source !== source) return;
-        this.tabs.push({
-          path,
-          text: file.text,
-          bytes: file.bytes,
-          stamp: file.stamp,
-          scroll: 0,
-          error: file.compilationError || '',
-          compilationError: file.compilationError,
-          retryCompilation: file.retryCompilation,
-          revision: 0,
-        });
+        if (!this.tabs.some((tab) => tab.path === path))
+          this.tabs.push({
+            path,
+            text: file.text,
+            bytes: file.bytes,
+            stamp: file.stamp,
+            scroll: 0,
+            error: file.compilationError || '',
+            compilationError: file.compilationError,
+            retryCompilation: file.retryCompilation,
+            revision: 0,
+          });
       } catch (error) {
         this.error = String(error);
         return;

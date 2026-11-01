@@ -73,6 +73,9 @@ describe('preference updates', () => {
     expect(() =>
       mergePreferences(structuredClone(defaults), { latexPaths: { tectonic: '/bin/tectonic' } }),
     ).toThrow('Unknown LaTeX engine');
+    expect(() =>
+      mergePreferences(structuredClone(defaults), { latexPaths: { toString: '/bin/tectonic' } }),
+    ).toThrow('Unknown LaTeX engine');
     expect(() => mergePreferences(structuredClone(defaults), { latexPaths: [] })).toThrow(
       'must be an object',
     );
