@@ -43,16 +43,16 @@
   import { Workspace } from './lib/workspace.svelte';
   import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
   import { demoSource } from './lib/demo';
-  import { loadPreferences, mergePreferences } from './lib/preferences';
+  import { loadPreferences } from './lib/preferences';
   import { traceStartup } from './lib/startup-trace';
   import { basename, dirname, isDocument, isMarkdown, normalize, resolveLink } from './lib/paths';
   import type { Heading, LatexEngine, Preferences, Source } from './lib/types';
   import type { PaletteCommand } from './lib/palette';
-  import { createControlExecutor, type ControlActions, type ControlState } from './lib/control';
+  import { createControlExecutor, type ControlState } from './lib/control';
   import { installControl, markControlReady, publishControlEvent } from './lib/control-host';
-  import { HEADINGS_POLL_MS, HEADINGS_READY_TIMEOUT_MS } from './lib/control-timings';
   import { buildControlState } from './lib/control-state';
-  import { scrollPreview, waitForPreview, type PreviewControls } from './lib/preview-control';
+  import type { PreviewControls } from './lib/preview-control';
+  import { createControlActions, type ControlViewState } from './lib/control-actions';
   const workspace = new Workspace();
   let preferences = $state(loadPreferences());
   let sidebar = $state(window.innerWidth >= 760);
@@ -555,213 +555,63 @@
       preferences: $state.snapshot(preferences) as Preferences,
     });
   }
-  function applyPreferencePatch(patch: Record<string, unknown>): Preferences {
-    const next = mergePreferences($state.snapshot(preferences) as Preferences, patch);
-    updatePreferences(next);
-    return next;
-  }
-  const controlActions: ControlActions = {
-    state: controlState,
-    async headings() {
-      await workspaceReady;
-      if (!workspace.active) throw new Error('No document is open.');
-      const deadline = Date.now() + HEADINGS_READY_TIMEOUT_MS;
-      while (headingsPath !== workspace.active && Date.now() < deadline)
-        await new Promise((resolve) => setTimeout(resolve, HEADINGS_POLL_MS));
-      if (headingsPath !== workspace.active)
-        throw new Error('The document is still rendering its headings.');
-      return {
-        path: workspace.active,
-        headings: headings.map((heading) => ({ ...heading })),
-      };
+  const controlView: ControlViewState = {
+    get sidebar() {
+      return sidebar;
     },
-    async commands() {
-      await workspaceReady;
-      return {
-        commands: paletteCommands.map(({ id, label, group }) => ({ id, label, group })),
-      };
+    set sidebar(value) {
+      sidebar = value;
     },
-    async open(path, options) {
-      await workspaceReady;
-      const target = normalize(path);
-      if (options.directory) {
-        workspace.directory = workspace.searchRoot = target;
-        workspace.treeRevision++;
-        workspace.error = '';
-        return controlState();
-      }
-      if (!isDocument(target)) throw new Error('Open a Markdown, PDF, Typst, or LaTeX document.');
-      if (options.pane === 'secondary' && workspace.active) {
-        if (options.anchor) throw new Error('Anchors are only supported in the main pane.');
-        await workspace.openSecondary(target);
-        if (workspace.secondary !== target)
-          throw new Error(workspace.error || `Could not open ${target}.`);
-        return controlState();
-      }
-      await workspace.open(target, options.anchor || '');
-      if (workspace.active !== target)
-        throw new Error(workspace.error || `Could not open ${target}.`);
-      if (window.innerWidth < 760) sidebar = false;
-      return controlState();
+    get outline() {
+      return outline;
     },
-    async close(path) {
-      await workspaceReady;
-      const target = path ? normalize(path) : workspace.active;
-      if (!target) throw new Error('No tab is open.');
-      if (!workspace.tabs.some((tab) => tab.path === target))
-        throw new Error(`Tab is not open: ${target}`);
-      workspace.close(target);
-      return controlState();
+    set outline(value) {
+      outline = value;
     },
-    async focus(path) {
-      await workspaceReady;
-      const target = normalize(path);
-      await workspace.open(target);
-      if (workspace.active !== target)
-        throw new Error(workspace.error || `Could not open ${target}.`);
-      return controlState();
+    get settings() {
+      return settings;
     },
-    async tab(direction) {
-      await workspaceReady;
-      const tabs = workspace.tabs;
-      if (!tabs.length) return controlState();
-      const current = tabs.findIndex((tab) => tab.path === workspace.active);
-      const step = direction === 'next' ? 1 : -1;
-      const next =
-        current === -1
-          ? tabs[direction === 'next' ? 0 : tabs.length - 1]
-          : tabs[(current + step + tabs.length) % tabs.length];
-      await workspace.open(next.path);
-      return controlState();
+    set settings(value) {
+      settings = value;
     },
-    async activate(path) {
-      await workspaceReady;
-      const target = normalize(path);
-      await workspace.open(target);
-      if (workspace.active !== target)
-        throw new Error(workspace.error || `Could not open ${target}.`);
-      return controlState();
+    get palette() {
+      return paletteOpen;
     },
-    async closeTab(path) {
-      await workspaceReady;
-      const target = path ? normalize(path) : workspace.active;
-      if (!target) throw new Error('No tab is open.');
-      if (!workspace.tabs.some((tab) => tab.path === target))
-        throw new Error(`Tab is not open: ${target}`);
-      workspace.close(target);
-      return controlState();
+    set palette(value) {
+      paletteOpen = value;
     },
-    async scroll(pane, target) {
-      await workspaceReady;
-      const preview = await waitForPreview(
-        () => (pane === 'secondary' ? workspace.secondary : workspace.active),
-        () => (pane === 'secondary' ? secondaryPreview : primaryPreview),
-        pane === 'secondary' ? 'The split pane is empty.' : 'No document is open.',
-      );
-      const y = await scrollPreview(preview, target);
-      return { pane, y: Math.round(y) };
+    get search() {
+      return searchOpen;
     },
-    zoom: async (target, action, value) => {
-      if (value !== undefined) {
-        const paged = target === 'document' && pagedDocument;
-        const key = target === 'ui' ? 'uiZoom' : paged ? 'pdfZoom' : 'documentZoom';
-        const zoomValue = clampZoom(
-          value,
-          paged ? MIN_PDF_ZOOM : MIN_ZOOM,
-          paged ? MAX_PDF_ZOOM : MAX_ZOOM,
-        );
-        updatePreferences({
-          ...preferences,
-          [key]: zoomValue,
-          fitWidth: paged ? false : preferences.fitWidth,
-        });
-      } else if (action) {
-        zoom({ target, action });
-      }
-      return controlState();
+    set search(value) {
+      searchOpen = value;
     },
-    fitWidth: async (enabled) => {
-      const value = enabled ?? !preferences.fitWidth;
-      if (value !== preferences.fitWidth) updatePreferences({ ...preferences, fitWidth: value });
-      return controlState();
+    get query() {
+      return query;
     },
-    theme: async (value) => {
-      const theme =
-        value === 'toggle' ? (preferences.theme === 'mocha' ? 'latte' : 'mocha') : value;
-      updatePreferences({ ...preferences, theme });
-      return controlState();
-    },
-    panel: async (name, action) => {
-      const desired = (current: boolean) =>
-        action === 'on' ? true : action === 'off' ? false : !current;
-      switch (name) {
-        case 'sidebar':
-          sidebar = desired(sidebar);
-          break;
-        case 'outline':
-          outline = desired(outline);
-          break;
-        case 'settings':
-          settings = desired(settings);
-          break;
-        case 'palette':
-          await workspaceReady;
-          if (!workspace.source) throw new Error('No folder or document source is available.');
-          paletteOpen = desired(paletteOpen);
-          break;
-        case 'search':
-          searchOpen = desired(searchOpen);
-          if (!searchOpen) query = '';
-          break;
-        case 'split':
-          await workspaceReady;
-          if (!workspace.active) throw new Error('No document is open.');
-          if (action === 'off') workspace.secondary = '';
-          else if (action === 'on')
-            workspace.secondary =
-              workspace.secondary ||
-              workspace.tabs.find((tab) => tab.path !== workspace.active)?.path ||
-              workspace.active;
-          else split();
-          break;
-      }
-      return controlState();
-    },
-    search: async (value) => {
+    set query(value) {
       query = value;
-      searchOpen = value.trim().length > 0;
-      return controlState();
-    },
-    async heading(id) {
-      await workspaceReady;
-      if (!workspace.active) throw new Error('No document is open.');
-      workspace.navigateAnchor(id);
-      return controlState();
-    },
-    async page(page) {
-      await workspaceReady;
-      if (!pagedDocument) throw new Error('The active document is not a PDF preview.');
-      if (pdfPage.path === workspace.active && pdfPage.total && page > pdfPage.total)
-        throw new Error(`The document has ${pdfPage.total} pages.`);
-      workspace.navigateAnchor(`page=${page}`);
-      return controlState();
-    },
-    async command(id) {
-      await workspaceReady;
-      if (!paletteCommands.some((command) => command.id === id))
-        throw new Error(`Unknown command: ${id}`);
-      runPaletteCommand(id);
-      return controlState();
-    },
-    async preferences(patch) {
-      return { preferences: applyPreferencePatch(patch) };
-    },
-    refresh: async () => {
-      await workspaceReady;
-      await refresh();
-      return controlState();
     },
   };
+  const controlActions = createControlActions({
+    workspace,
+    workspaceReady,
+    view: controlView,
+    state: controlState,
+    headings: () => headings,
+    headingsPath: () => headingsPath,
+    pdfPage: () => pdfPage,
+    pagedDocument: () => pagedDocument,
+    primaryPreview: () => primaryPreview,
+    secondaryPreview: () => secondaryPreview,
+    preferences: () => $state.snapshot(preferences) as Preferences,
+    updatePreferences,
+    commands: () => paletteCommands,
+    runCommand: runPaletteCommand,
+    zoom,
+    split,
+    refresh,
+  });
   const executeControl = createControlExecutor(controlActions);
   let controlPublishTimer: ReturnType<typeof setTimeout> | undefined;
   let lastPublishedState = '';
