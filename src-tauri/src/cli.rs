@@ -173,14 +173,14 @@ struct ScrollArgs {
 enum ScrollCommand {
   /// Scroll to an absolute position
   To {
-    #[arg(value_name = "Y")]
+    #[arg(value_name = "Y", allow_hyphen_values = true)]
     y: f64,
     #[arg(long, value_enum, default_value_t = PaneArg::Main)]
     pane: PaneArg,
   },
   /// Scroll by a relative amount
   By {
-    #[arg(value_name = "DY")]
+    #[arg(value_name = "DY", allow_hyphen_values = true)]
     dy: f64,
     #[arg(long, value_enum, default_value_t = PaneArg::Main)]
     pane: PaneArg,
@@ -1031,6 +1031,20 @@ mod tests {
 
   #[test]
   fn parses_scroll_and_zoom() {
+    let cli = Cli::try_parse_from(["papyri", "ctl", "scroll", "by", "-100"]).unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command:
+        CtlCommand::Scroll(ScrollArgs {
+          command: ScrollCommand::By { dy, pane },
+        }),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected negative scroll");
+    };
+    assert_eq!(dy, -100.0);
+    assert!(matches!(pane, PaneArg::Main));
+
     let (method, params) = scroll_request(ScrollCommand::By {
       dy: 200.0,
       pane: PaneArg::Secondary,

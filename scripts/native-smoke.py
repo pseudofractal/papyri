@@ -415,6 +415,14 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         control("scroll", "by", "300")
         state = json.loads(control("state", "--json"))
         assert next(tab for tab in state["tabs"] if tab["active"])["scroll"] > 0, state
+        control("scroll", "by", "-100")
+        state = json.loads(control("state", "--json"))
+        assert next(tab for tab in state["tabs"] if tab["active"])["scroll"] > 0, state
+        previous_active = state["active"]
+        control("tab", "next")
+        assert json.loads(control("state", "--json"))["active"] != previous_active
+        control("focus", previous_active)
+        assert json.loads(control("state", "--json"))["active"] == previous_active
         before = state["preferences"]
         control("preferences", "set", json.dumps({"theme": "latte", "network": True, "documentZoom": 120}), "--json")
         state = json.loads(control("state", "--json"))
