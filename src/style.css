@@ -1117,6 +1117,9 @@ textarea:focus-visible {
   background: var(--color-primary);
   outline: none;
 }
+.resizing-sidebar iframe {
+  pointer-events: none;
+}
 .delimiter-list {
   display: grid;
   gap: 8px;

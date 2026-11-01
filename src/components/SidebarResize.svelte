@@ -15,6 +15,11 @@
   } = $props();
   const KEYBOARD_STEP = 16;
   let dragging = $state(false);
+  // Preview frames take pointer events from the drag once the pointer crosses them.
+  $effect(() => {
+    document.documentElement.classList.toggle('resizing-sidebar', dragging);
+    return () => document.documentElement.classList.remove('resizing-sidebar');
+  });
   let startX = 0;
   let startWidth = 0;
   const clamp = (value: number) =>
