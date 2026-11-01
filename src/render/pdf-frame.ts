@@ -222,6 +222,11 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('message', (event) => {
   if (event.source !== parent || !event.data) return;
   const data = event.data;
+  if (data.type === 'wheel' && Number.isFinite(data.deltaX) && Number.isFinite(data.deltaY)) {
+    const scale = Number.isFinite(data.scale) && data.scale > 0 ? data.scale : 1;
+    container.scrollBy({ left: data.deltaX * scale, top: data.deltaY * scale });
+    return;
+  }
   if (data.type === 'pdf-resource-result' && Number.isSafeInteger(data.request)) {
     const pending = pendingResources.get(data.request);
     if (pending) {

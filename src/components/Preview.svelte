@@ -301,10 +301,38 @@
     if (data.type === 'scroll' && Number.isFinite(data.y))
       onscroll(tab.path, Math.max(0, Math.min(data.y, 100_000_000)));
   }
+  // WebKitGTK retargets wheel events over an iframe to the host without scrolling
+  // the frame. Forward the delta using positions relative to the frame viewport.
+  function forwardWheel(event: WheelEvent) {
+    if (!frame || event.target !== frame || !activeChannel) return;
+    if (!Number.isFinite(event.deltaX) || !Number.isFinite(event.deltaY)) return;
+    if (!event.deltaX && !event.deltaY) return;
+    const bounds = frame.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+    event.preventDefault();
+    const lineHeight = 16;
+    const multiplier = event.deltaMode === 1 ? lineHeight : 1;
+    frame.contentWindow?.postMessage(
+      {
+        type: 'wheel',
+        x: (event.clientX - bounds.left) / bounds.width,
+        y: (event.clientY - bounds.top) / bounds.height,
+        deltaX: event.deltaX * multiplier,
+        deltaY: event.deltaY * multiplier,
+        scale: preferences.uiZoom / 100,
+      },
+      '*',
+    );
+  }
 </script>
 
 <svelte:window onmessage={message} />
-<div class="preview-pane" class:expanded aria-busy={!error && (loading || !frameReady)}>
+<div
+  class="preview-pane"
+  class:expanded
+  aria-busy={!error && (loading || !frameReady)}
+  onwheel={forwardWheel}
+>
   {#if !error && (loading || !frameReady)}<div class="preview-status" role="status">
       <span class="loading loading-spinner loading-sm"></span> Loading document…
     </div>{/if}

@@ -198,8 +198,53 @@ for (const block of root.querySelectorAll<HTMLElement>('pre.diagram-source')) {
     } else if (!payload.trusted) notifyHost({ type: 'navigate', href });
   });
 }
+function finiteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+/** Scroll the element under a forwarded pointer, falling back to the document. */
+function scrollFromWheel(
+  xRatio: number,
+  yRatio: number,
+  deltaX: number,
+  deltaY: number,
+  scale: number,
+) {
+  const x = Math.min(Math.max(xRatio, 0), 0.999) * window.innerWidth;
+  const y = Math.min(Math.max(yRatio, 0), 0.999) * window.innerHeight;
+  const scrollX = deltaX * scale;
+  const scrollY = deltaY * scale;
+  for (let node = document.elementFromPoint(x, y); node; node = node.parentElement) {
+    const style = getComputedStyle(node);
+    const canScrollY =
+      scrollY !== 0 &&
+      /^(auto|scroll)$/.test(style.overflowY) &&
+      (scrollY > 0
+        ? node.scrollTop + node.clientHeight < node.scrollHeight - 1
+        : node.scrollTop > 0);
+    const canScrollX =
+      scrollX !== 0 &&
+      /^(auto|scroll)$/.test(style.overflowX) &&
+      (scrollX > 0
+        ? node.scrollLeft + node.clientWidth < node.scrollWidth - 1
+        : node.scrollLeft > 0);
+    if (canScrollY || canScrollX) {
+      node.scrollBy({ left: canScrollX ? scrollX : 0, top: canScrollY ? scrollY : 0 });
+      return;
+    }
+    const containsY = scrollY !== 0 && /^(contain|none)$/.test(style.overscrollBehaviorY);
+    const containsX = scrollX !== 0 && /^(contain|none)$/.test(style.overscrollBehaviorX);
+    if (containsX || containsY) return;
+  }
+  window.scrollBy({ left: scrollX, top: scrollY });
+}
 window.addEventListener('message', (event) => {
   if (event.source !== parent) return;
+  if (event.data?.type === 'wheel') {
+    const { x, y, deltaX, deltaY, scale } = event.data;
+    if ([x, y, deltaX, deltaY].every(finiteNumber))
+      scrollFromWheel(x, y, deltaX, deltaY, finiteNumber(scale) && scale > 0 ? scale : 1);
+    return;
+  }
   if (event.data?.type === 'diagram-export-result' && Number.isSafeInteger(event.data.request)) {
     const pending = pendingExports.get(event.data.request);
     if (pending) {

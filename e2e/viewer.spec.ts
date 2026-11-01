@@ -40,6 +40,26 @@ for (const mode of ['pointer', 'keyboard'] as const) {
   });
 }
 
+test('scrolls the preview when WebKit retargets wheel input to the host', async ({ page }) => {
+  await page.goto('/');
+  const frame = page.frameLocator('.preview-pane iframe');
+  await expect(frame.getByRole('heading', { name: 'Papyri' })).toBeVisible();
+  await page
+    .getByLabel('Import selected files', { exact: true })
+    .setInputFiles(markdownFile(`# Wheel document\n\n${'Paragraph.\n\n'.repeat(200)}`, 'wheel.md'));
+  await expect(frame.getByRole('heading', { name: 'Wheel document' })).toBeVisible();
+  const iframe = page.locator('.preview-pane iframe');
+  const bounds = (await iframe.boundingBox())!;
+  await iframe.dispatchEvent('wheel', {
+    deltaY: 600,
+    clientX: bounds.x + bounds.width / 2,
+    clientY: bounds.y + bounds.height / 2,
+    bubbles: true,
+    cancelable: true,
+  });
+  await expect.poll(() => frame.locator('html').evaluate(() => window.scrollY)).toBeGreaterThan(0);
+});
+
 test('loads the diagram runtime only on demand and retries a failed load', async ({ page }) => {
   let requests = 0;
   await page.route('**/diagrams.js', async (route) => {
