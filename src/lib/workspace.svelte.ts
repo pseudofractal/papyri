@@ -110,6 +110,39 @@ export class Workspace {
   private rememberFile(path: string) {
     this.recentFiles = [path, ...this.recentFiles.filter((item) => item !== path)].slice(0, 20);
   }
+  /** Load a tab without changing the active document, then show it in the split pane. */
+  async openSecondary(path: string) {
+    path = normalize(path);
+    if (!isDocument(path)) {
+      this.error = 'Open a Markdown, PDF, Typst, or LaTeX document.';
+      return;
+    }
+    if (!this.tabs.some((tab) => tab.path === path)) {
+      const source = this.source;
+      if (!source) return;
+      try {
+        const file = await source.read(path);
+        if (this.source !== source) return;
+        this.tabs.push({
+          path,
+          text: file.text,
+          bytes: file.bytes,
+          stamp: file.stamp,
+          scroll: 0,
+          error: file.compilationError || '',
+          compilationError: file.compilationError,
+          retryCompilation: file.retryCompilation,
+          revision: 0,
+        });
+      } catch (error) {
+        this.error = String(error);
+        return;
+      }
+    }
+    this.secondary = path;
+    this.rememberFile(path);
+    this.error = '';
+  }
   /** Queue a one-time heading command for the active preview, including repeated clicks. */
   navigateAnchor(id: string) {
     if (!this.active) return;

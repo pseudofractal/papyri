@@ -84,6 +84,17 @@ describe('workspace navigation and live updates', () => {
     await workspace.refresh();
     expect(workspace.activeTab?.error).toContain('Renderer unavailable');
   });
+  it('loads a document in the secondary pane without changing the active tab', async () => {
+    const { source } = memorySource();
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    await workspace.open('/a.md');
+    await workspace.openSecondary('/b.md');
+    expect(workspace.active).toBe('/a.md');
+    expect(workspace.secondary).toBe('/b.md');
+    expect(workspace.tabs.map((tab) => tab.path)).toEqual(['/a.md', '/b.md']);
+    expect(workspace.activeTab?.text).toBe('# First');
+  });
   it('keeps each split pane position independently and clears it when the tab closes', async () => {
     const { source } = memorySource();
     const workspace = new Workspace();

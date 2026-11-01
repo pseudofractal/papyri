@@ -1,4 +1,6 @@
+mod cli;
 mod commands;
+mod control;
 mod executables;
 mod files;
 mod latex;
@@ -13,6 +15,9 @@ fn trace_native_startup(stage: &str) {
 }
 
 pub fn run() {
+  if cli::intercept() {
+    return;
+  }
   trace_native_startup("entry");
   let mut bytes = [0u8; 32];
   getrandom::fill(&mut bytes).expect("Unable to create host session token");
@@ -30,10 +35,14 @@ pub fn run() {
       commands::document_stamp,
       commands::pick_path,
       commands::save_diagram,
-      commands::open_external
+      commands::open_external,
+      control::control_ready,
+      control::control_respond,
+      control::control_emit
     ]);
   trace_native_startup("builder");
   tauri::Builder::default()
+    .manage(control::ControlState::default())
     .append_invoke_initialization_script(security::initialization(&token))
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
@@ -46,6 +55,9 @@ pub fn run() {
         .default_window_icon()
         .ok_or("Application icon is unavailable")?;
       window.set_icon(icon.clone())?;
+      if let Err(error) = control::start(app.handle().clone()) {
+        eprintln!("Papyri control socket unavailable: {error}");
+      }
       trace_native_startup("setup-complete");
       Ok(())
     })

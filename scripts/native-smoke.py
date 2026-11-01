@@ -74,6 +74,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         "XDG_DATA_HOME": str(root / "app-data"),
         "XDG_CONFIG_HOME": str(root / "config"),
         "XDG_CACHE_HOME": str(root / "cache"),
+        "PAPYRI_CONTROL_SOCKET": str(root / "control.sock"),
     }
     driver = subprocess.Popen(["tauri-driver"], stdout=log, stderr=log, env=test_environment, start_new_session=True)
     session = None
@@ -96,6 +97,18 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             actions = [{"type": "keyDown", "value": key} for key in keys]
             actions += [{"type": "keyUp", "value": key} for key in reversed(keys)]
             request("POST", prefix + "/actions", {"actions": [{"type": "key", "id": "keyboard", "actions": actions}]})
+
+        def control(*arguments):
+            result = subprocess.run(
+                [binary, "ctl", *arguments],
+                capture_output=True,
+                text=True,
+                env=test_environment,
+                timeout=90,
+            )
+            if result.returncode != 0:
+                raise AssertionError(result.stderr.strip() or f"papyri ctl {' '.join(arguments)} failed")
+            return result.stdout
 
         def frame(index=0):
             request("POST", prefix + "/frame", {"id": None})
@@ -396,6 +409,12 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         (root / "part.typ").write_text("Changed imported dependency")
         until(lambda: preview("return document.querySelector('.textLayer')?.textContent.includes('Changed imported dependency')"), "native Typst import live update")
         request("POST", prefix + "/frame", {"id": None})
+        control("ping", "--wait", "10")
+        state = json.loads(control("state", "--json"))
+        assert state["active"] == str(root / "paper.typ"), state
+        control("scroll", "by", "300")
+        state = json.loads(control("state", "--json"))
+        assert next(tab for tab in state["tabs"] if tab["active"])["scroll"] > 0, state
         request("DELETE", prefix)
         session = None
         for args, expected in [([], str(Path.cwd())), ([str(root)], str(root))]:
@@ -405,7 +424,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             until(lambda: execute("return document.querySelector('input[aria-label=\"Directory path\"]')?.value === " + json.dumps(expected)), "CLI default and directory arguments")
             request("DELETE", prefix)
             session = None
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI"]}, indent=2))
     except Exception:
         if session:
             try:

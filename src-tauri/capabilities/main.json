@@ -3,6 +3,7 @@
   "description": "Host UI only; document frames have opaque origins and no IPC permissions.",
   "windows": ["main"],
   "permissions": [
+    "core:event:default",
     "allow-initial-path",
     "allow-startup-trace",
     "allow-list-directory",
@@ -11,6 +12,9 @@
     "allow-read-asset",
     "allow-document-stamp",
     "allow-pick-path",
-    "allow-open-external"
+    "allow-open-external",
+    "allow-control-ready",
+    "allow-control-respond",
+    "allow-control-emit"
   ]
 }

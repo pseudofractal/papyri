@@ -10,6 +10,9 @@ fn main() {
       "document_stamp",
       "pick_path",
       "open_external",
+      "control_ready",
+      "control_respond",
+      "control_emit",
     ]),
   ))
   .expect("Unable to generate application permissions");

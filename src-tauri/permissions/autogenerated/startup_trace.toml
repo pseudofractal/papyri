@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-startup-trace"
+description = "Enables the startup_trace command without any pre-configured scope."
+commands.allow = ["startup_trace"]
+
+[[permission]]
+identifier = "deny-startup-trace"
+description = "Denies the startup_trace command without any pre-configured scope."
+commands.deny = ["startup_trace"]

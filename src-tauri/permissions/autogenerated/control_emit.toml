@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-control-emit"
+description = "Enables the control_emit command without any pre-configured scope."
+commands.allow = ["control_emit"]
+
+[[permission]]
+identifier = "deny-control-emit"
+description = "Denies the control_emit command without any pre-configured scope."
+commands.deny = ["control_emit"]

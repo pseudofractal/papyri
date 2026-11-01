@@ -40,14 +40,31 @@
   import Settings from './components/Settings.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { invokeHost } from './lib/native';
-  import { Workspace } from './lib/workspace.svelte';
+  import { Workspace, type Tab } from './lib/workspace.svelte';
   import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
   import { demoSource } from './lib/demo';
   import { loadPreferences } from './lib/preferences';
   import { traceStartup } from './lib/startup-trace';
-  import { basename, dirname, isDocument, isMarkdown, normalize, resolveLink } from './lib/paths';
+  import {
+    basename,
+    dirname,
+    isDocument,
+    isLatex,
+    isMarkdown,
+    isTypst,
+    normalize,
+    resolveLink,
+  } from './lib/paths';
   import type { Heading, LatexEngine, Preferences, Source } from './lib/types';
   import type { PaletteCommand } from './lib/palette';
+  import {
+    createControlExecutor,
+    type ControlActions,
+    type ControlState,
+    type ControlTab,
+    type ScrollTarget,
+  } from './lib/control';
+  import { installControl, markControlReady, publishControlEvent } from './lib/control-host';
   const workspace = new Workspace();
   let preferences = $state(loadPreferences());
   let sidebar = $state(window.innerWidth >= 760);
@@ -71,6 +88,16 @@
   let searchInput = $state<HTMLInputElement>();
   let refreshing = false;
   let viewportWidth = $state(window.innerWidth);
+  type PreviewControls = {
+    scrollTo(y: number): Promise<number>;
+    scrollBy(dy: number): Promise<number>;
+  };
+  let primaryPreview = $state<PreviewControls>();
+  let secondaryPreview = $state<PreviewControls>();
+  let resolveWorkspaceReady = () => {};
+  const workspaceReady = new Promise<void>((resolve) => {
+    resolveWorkspaceReady = resolve;
+  });
   const uiScale = $derived(preferences.uiZoom / 100);
   const pagedDocument = $derived(!!workspace.activeTab?.bytes);
   const maximumSidebarWidth = $derived(
@@ -527,9 +554,397 @@
     if (key === '\\') split();
     if (key === ',') settings = !settings;
   }
+  function documentKind(tab: Tab): ControlTab['kind'] {
+    if (tab.bytes) return 'pdf';
+    if (isTypst(tab.path)) return 'typst-source';
+    if (isLatex(tab.path)) return 'latex-source';
+    return 'markdown';
+  }
+  async function scrollPreview(preview: PreviewControls, target: ScrollTarget) {
+    const deadline = Date.now() + 10_000;
+    for (;;) {
+      try {
+        if ('y' in target) return await preview.scrollTo(target.y);
+        if ('dy' in target) return await preview.scrollBy(target.dy);
+        if ('top' in target) return await preview.scrollTo(0);
+        return await preview.scrollTo(100_000_000);
+      } catch (error) {
+        const waiting = error instanceof Error && error.message.includes('not ready');
+        if (!waiting || Date.now() >= deadline) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+  }
+  function controlState(): ControlState {
+    const source = workspace.source;
+    return {
+      protocol: 1,
+      active: workspace.active || null,
+      secondary: workspace.secondary || null,
+      tabs: workspace.tabs.map((tab) => ({
+        path: tab.path,
+        kind: documentKind(tab),
+        active: tab.path === workspace.active,
+        secondary: tab.path === workspace.secondary,
+        scroll: Math.round(tab.scroll),
+        error: tab.error || null,
+      })),
+      pdf:
+        pdfPage.path && pdfPage.total
+          ? { path: pdfPage.path, page: pdfPage.page, total: pdfPage.total }
+          : null,
+      view: {
+        sidebar,
+        outline,
+        settings,
+        palette: paletteOpen,
+        search: searchOpen,
+        split: !!workspace.secondary,
+        query,
+      },
+      preferences: $state.snapshot(preferences) as Preferences,
+      directory: workspace.directory,
+      source: source ? { label: source.label, root: source.root, live: source.live } : null,
+      busy: workspace.busy,
+      error: workspace.error || null,
+    };
+  }
+  function preferenceNumber(value: unknown, minimum: number, maximum: number, name: string) {
+    if (typeof value !== 'number' || !Number.isFinite(value))
+      throw new Error(`\`${name}\` must be a finite number.`);
+    return clampZoom(value, minimum, maximum);
+  }
+  function applyPreferencePatch(patch: Record<string, unknown>): Preferences {
+    const next = { ...$state.snapshot(preferences) } as Preferences;
+    for (const [key, value] of Object.entries(patch)) {
+      switch (key) {
+        case 'theme':
+          if (value !== 'latte' && value !== 'mocha')
+            throw new Error('`theme` must be "latte" or "mocha".');
+          next.theme = value;
+          break;
+        case 'network':
+          if (typeof value !== 'boolean') throw new Error('`network` must be a boolean.');
+          next.network = value;
+          break;
+        case 'fitWidth':
+          if (typeof value !== 'boolean') throw new Error('`fitWidth` must be a boolean.');
+          next.fitWidth = value;
+          break;
+        case 'documentZoom':
+          next.documentZoom = preferenceNumber(value, MIN_ZOOM, MAX_ZOOM, 'documentZoom');
+          break;
+        case 'pdfZoom':
+          next.pdfZoom = preferenceNumber(value, MIN_PDF_ZOOM, MAX_PDF_ZOOM, 'pdfZoom');
+          break;
+        case 'uiZoom':
+          next.uiZoom = preferenceNumber(value, MIN_ZOOM, MAX_ZOOM, 'uiZoom');
+          break;
+        case 'sidebarWidth':
+          next.sidebarWidth = preferenceNumber(
+            value,
+            MIN_SIDEBAR_WIDTH,
+            MAX_SIDEBAR_WIDTH,
+            'sidebarWidth',
+          );
+          break;
+        case 'typstPath':
+          if (typeof value !== 'string') throw new Error('`typstPath` must be a string.');
+          next.typstPath = value;
+          break;
+        case 'latexEngine':
+          if (!['lualatex', 'pdflatex', 'xelatex'].includes(value as string))
+            throw new Error('`latexEngine` must be lualatex, pdflatex, or xelatex.');
+          next.latexEngine = value as LatexEngine;
+          break;
+        case 'latexPaths': {
+          if (!value || typeof value !== 'object' || Array.isArray(value))
+            throw new Error('`latexPaths` must be an object.');
+          const paths = value as Record<string, unknown>;
+          for (const engine of ['lualatex', 'pdflatex', 'xelatex'] as LatexEngine[]) {
+            if (!(engine in paths)) continue;
+            if (typeof paths[engine] !== 'string')
+              throw new Error(`\`latexPaths.${engine}\` must be a string.`);
+            next.latexPaths[engine] = paths[engine] as string;
+          }
+          break;
+        }
+        case 'delimiters': {
+          if (!Array.isArray(value) || value.length > 32)
+            throw new Error('`delimiters` must be an array of at most 32 delimiters.');
+          next.delimiters = value.map((item, index) => {
+            if (!item || typeof item !== 'object' || Array.isArray(item))
+              throw new Error(`\`delimiters[${index}]\` must be an object.`);
+            const delimiter = item as Record<string, unknown>;
+            if (
+              typeof delimiter.left !== 'string' ||
+              !delimiter.left ||
+              typeof delimiter.right !== 'string' ||
+              !delimiter.right ||
+              typeof delimiter.display !== 'boolean'
+            )
+              throw new Error(
+                `\`delimiters[${index}]\` needs string left/right values and a display boolean.`,
+              );
+            return {
+              left: delimiter.left,
+              right: delimiter.right,
+              display: delimiter.display,
+            };
+          });
+          break;
+        }
+        default:
+          throw new Error(`Unknown preference: ${key}`);
+      }
+    }
+    updatePreferences(next);
+    return next;
+  }
+  const controlActions: ControlActions = {
+    state: controlState,
+    async headings() {
+      await workspaceReady;
+      if (!workspace.active) throw new Error('No document is open.');
+      const deadline = Date.now() + 10_000;
+      while (headingsPath !== workspace.active && Date.now() < deadline)
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      if (headingsPath !== workspace.active)
+        throw new Error('The document is still rendering its headings.');
+      return {
+        path: workspace.active,
+        headings: headings.map((heading) => ({ ...heading })),
+      };
+    },
+    async commands() {
+      await workspaceReady;
+      return {
+        commands: paletteCommands.map(({ id, label, group }) => ({ id, label, group })),
+      };
+    },
+    async open(path, options) {
+      await workspaceReady;
+      const target = normalize(path);
+      if (options.directory) {
+        workspace.directory = workspace.searchRoot = target;
+        workspace.treeRevision++;
+        return controlState();
+      }
+      if (!isDocument(target)) throw new Error('Open a Markdown, PDF, Typst, or LaTeX document.');
+      if (options.pane === 'secondary') {
+        await workspace.openSecondary(target);
+        if (workspace.secondary !== target)
+          throw new Error(workspace.error || `Could not open ${target}.`);
+        return controlState();
+      }
+      await workspace.open(target, options.anchor || '');
+      if (workspace.active !== target)
+        throw new Error(workspace.error || `Could not open ${target}.`);
+      if (window.innerWidth < 760) sidebar = false;
+      return controlState();
+    },
+    async close(path) {
+      await workspaceReady;
+      const target = path ? normalize(path) : workspace.active;
+      if (!target) throw new Error('No tab is open.');
+      if (!workspace.tabs.some((tab) => tab.path === target))
+        throw new Error(`Tab is not open: ${target}`);
+      workspace.close(target);
+      return controlState();
+    },
+    async focus(path) {
+      await workspaceReady;
+      const target = normalize(path);
+      await workspace.open(target);
+      if (workspace.active !== target)
+        throw new Error(workspace.error || `Could not open ${target}.`);
+      return controlState();
+    },
+    async tab(direction) {
+      await workspaceReady;
+      const tabs = workspace.tabs;
+      if (!tabs.length) return controlState();
+      const current = tabs.findIndex((tab) => tab.path === workspace.active);
+      const step = direction === 'next' ? 1 : -1;
+      const next = tabs[(current + step + tabs.length) % tabs.length];
+      await workspace.open(next.path);
+      return controlState();
+    },
+    async activate(path) {
+      await workspaceReady;
+      const target = normalize(path);
+      await workspace.open(target);
+      if (workspace.active !== target)
+        throw new Error(workspace.error || `Could not open ${target}.`);
+      return controlState();
+    },
+    async closeTab(path) {
+      await workspaceReady;
+      const target = path ? normalize(path) : workspace.active;
+      if (!target) throw new Error('No tab is open.');
+      if (!workspace.tabs.some((tab) => tab.path === target))
+        throw new Error(`Tab is not open: ${target}`);
+      workspace.close(target);
+      return controlState();
+    },
+    async scroll(pane, target) {
+      await workspaceReady;
+      const preview = pane === 'secondary' ? secondaryPreview : primaryPreview;
+      if (!preview)
+        throw new Error(pane === 'secondary' ? 'The split pane is empty.' : 'No document is open.');
+      const y = await scrollPreview(preview, target);
+      return { pane, y: Math.round(y) };
+    },
+    zoom: async (target, action, value) => {
+      if (value !== undefined) {
+        const paged = target === 'document' && pagedDocument;
+        const key = target === 'ui' ? 'uiZoom' : paged ? 'pdfZoom' : 'documentZoom';
+        const zoomValue = clampZoom(
+          value,
+          paged ? MIN_PDF_ZOOM : MIN_ZOOM,
+          paged ? MAX_PDF_ZOOM : MAX_ZOOM,
+        );
+        updatePreferences({
+          ...preferences,
+          [key]: zoomValue,
+          fitWidth: paged ? false : preferences.fitWidth,
+        });
+      } else if (action) {
+        zoom({ target, action });
+      }
+      return controlState();
+    },
+    fitWidth: async (enabled) => {
+      const value = enabled ?? !preferences.fitWidth;
+      if (value !== preferences.fitWidth) updatePreferences({ ...preferences, fitWidth: value });
+      return controlState();
+    },
+    theme: async (value) => {
+      const theme =
+        value === 'toggle' ? (preferences.theme === 'mocha' ? 'latte' : 'mocha') : value;
+      updatePreferences({ ...preferences, theme });
+      return controlState();
+    },
+    panel: async (name, action) => {
+      await workspaceReady;
+      const desired = (current: boolean) =>
+        action === 'on' ? true : action === 'off' ? false : !current;
+      switch (name) {
+        case 'sidebar':
+          sidebar = desired(sidebar);
+          break;
+        case 'outline':
+          outline = desired(outline);
+          break;
+        case 'settings':
+          settings = desired(settings);
+          break;
+        case 'palette':
+          if (!workspace.source) throw new Error('No folder or document source is available.');
+          paletteOpen = desired(paletteOpen);
+          break;
+        case 'search':
+          searchOpen = desired(searchOpen);
+          if (!searchOpen) query = '';
+          break;
+        case 'split':
+          if (!workspace.active) throw new Error('No document is open.');
+          if (action === 'off') workspace.secondary = '';
+          else if (action === 'on')
+            workspace.secondary =
+              workspace.secondary ||
+              workspace.tabs.find((tab) => tab.path !== workspace.active)?.path ||
+              workspace.active;
+          else split();
+          break;
+      }
+      return controlState();
+    },
+    search: async (value) => {
+      await workspaceReady;
+      query = value;
+      searchOpen = value.trim().length > 0;
+      return controlState();
+    },
+    async heading(id) {
+      await workspaceReady;
+      workspace.navigateAnchor(id);
+      return controlState();
+    },
+    async page(page) {
+      await workspaceReady;
+      if (!pagedDocument) throw new Error('The active document is not a PDF preview.');
+      if (pdfPage.path === workspace.active && pdfPage.total && page > pdfPage.total)
+        throw new Error(`The document has ${pdfPage.total} pages.`);
+      workspace.navigateAnchor(`page=${page}`);
+      return controlState();
+    },
+    async command(id) {
+      await workspaceReady;
+      if (!paletteCommands.some((command) => command.id === id))
+        throw new Error(`Unknown command: ${id}`);
+      runPaletteCommand(id);
+      return controlState();
+    },
+    async preferences(patch) {
+      await workspaceReady;
+      return { preferences: applyPreferencePatch(patch) };
+    },
+    refresh: async () => {
+      await workspaceReady;
+      await refresh();
+      return controlState();
+    },
+  };
+  const executeControl = createControlExecutor(controlActions);
+  let controlPublishTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastPublishedState = '';
+  let lastPublishedHeadings = '';
+  function scheduleControlPublish() {
+    if (!native || controlPublishTimer) return;
+    controlPublishTimer = setTimeout(() => {
+      controlPublishTimer = undefined;
+      const state = controlState();
+      const key = JSON.stringify(state);
+      if (key === lastPublishedState) return;
+      lastPublishedState = key;
+      publishControlEvent('state', state);
+    }, 100);
+  }
+  $effect(() => {
+    if (!native) return;
+    void controlState();
+    scheduleControlPublish();
+  });
+  $effect(() => {
+    if (!native) return;
+    const value = {
+      path: headingsPath === workspace.active ? workspace.active : null,
+      headings: headingsPath === workspace.active ? headings : [],
+    };
+    const key = JSON.stringify(value);
+    if (key === lastPublishedHeadings) return;
+    lastPublishedHeadings = key;
+    publishControlEvent('headings', value);
+  });
   onMount(() => {
     let disposed = false;
+    let uninstallControl: (() => void) | undefined;
     (async () => {
+      if (native) {
+        try {
+          uninstallControl = await installControl(executeControl);
+          if (disposed) {
+            uninstallControl();
+            uninstallControl = undefined;
+            resolveWorkspaceReady();
+            return;
+          }
+          await markControlReady();
+        } catch (error) {
+          console.error('Control bridge unavailable:', error);
+        }
+      }
       try {
         if (native) {
           const { source, initial } = await desktopSource(() => preferences);
@@ -549,6 +964,8 @@
         }
       } catch (error) {
         workspace.error = String(error);
+      } finally {
+        resolveWorkspaceReady();
       }
     })();
     const timer = setInterval(() => {
@@ -556,6 +973,8 @@
     }, 2000);
     return () => {
       disposed = true;
+      uninstallControl?.();
+      if (controlPublishTimer) clearTimeout(controlPublishTimer);
       clearInterval(timer);
     };
   });
@@ -795,6 +1214,7 @@
         <div class="panes" class:split={!!workspace.secondary}>
           {#if workspace.activeTab && workspace.source}
             {#key workspace.active}<Preview
+                bind:this={primaryPreview}
                 tab={workspace.activeTab}
                 source={workspace.source}
                 {preferences}
@@ -831,6 +1251,7 @@
                     {workspace.secondaryTab.error}
                   </div>{/if}
                 <Preview
+                  bind:this={secondaryPreview}
                   tab={workspace.secondaryTab}
                   scrollPosition={workspace.secondaryPosition}
                   source={workspace.source}

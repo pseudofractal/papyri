@@ -15,3 +15,5 @@ public/pdf.css
 public/pdf-licenses/
 public/pdf-resources/
 public/pdf-resources.json
+
+__pycache__/

@@ -8,6 +8,12 @@ The diagram runtime is supplied by the parent only on request from the current p
 
 PDF previews can request bundled PDF.js fonts, CMaps, and decoders through their current-frame message channel. The host accepts only filenames in its generated resource manifest, restricts their syntax and size, and fetches them from the bundled resource directory. The protocol cannot read arbitrary local paths or URLs.
 
+The socket is not a network service. The control API, `papyri ctl`, and the
+integration examples are documented in [control API](control.md). Because any
+process running as the same user can connect, the socket is a convenience
+boundary rather than a privilege boundary; it exposes no operation the GUI user
+could not already perform.
+
 Tauri warns that Linux cannot reliably distinguish iframe IPC from host requests. Therefore every application command additionally checks a random 256-bit per-process host token. Initialization exposes the token only when the frame is the top-level application at the expected application/dev origin. An opaque document cannot read it through the same-origin policy. There are no plugin command permissions; built-in picker and opener plugins are called from authenticated Rust commands. The app command manifest opts commands into Tauri ACLs as another layer. Unit tests reject absent/forged tokens. Browser integration tests verify opaque-origin parent access rejection and script execution only after trust. Native WebKit validation is reported separately; browser tests alone are not evidence of native IPC isolation.
 
 ## Explicit trust

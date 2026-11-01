@@ -222,6 +222,17 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('message', (event) => {
   if (event.source !== parent || !event.data) return;
   const data = event.data;
+  if (data.type === 'scroll' && Number.isSafeInteger(data.request)) {
+    const request = data.request;
+    const top = Number.isFinite(data.y)
+      ? data.y
+      : Number.isFinite(data.dy)
+        ? container.scrollTop + data.dy
+        : container.scrollTop;
+    container.scrollTo({ top: Math.max(0, top), behavior: 'auto' });
+    send({ type: 'scroll-done', request, y: container.scrollTop });
+    return;
+  }
   if (data.type === 'wheel' && Number.isFinite(data.deltaX) && Number.isFinite(data.deltaY)) {
     const scale = Number.isFinite(data.scale) && data.scale > 0 ? data.scale : 1;
     container.scrollBy({ left: data.deltaX * scale, top: data.deltaY * scale });

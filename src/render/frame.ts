@@ -239,6 +239,17 @@ function scrollFromWheel(
 }
 window.addEventListener('message', (event) => {
   if (event.source !== parent) return;
+  if (event.data?.type === 'scroll' && Number.isSafeInteger(event.data.request)) {
+    const request = event.data.request;
+    const y = finiteNumber(event.data.y)
+      ? event.data.y
+      : finiteNumber(event.data.dy)
+        ? window.scrollY + event.data.dy
+        : window.scrollY;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'auto' });
+    notifyHost({ type: 'scroll-done', request, y: window.scrollY });
+    return;
+  }
   if (event.data?.type === 'wheel') {
     const { x, y, deltaX, deltaY, scale } = event.data;
     if ([x, y, deltaX, deltaY].every(finiteNumber))

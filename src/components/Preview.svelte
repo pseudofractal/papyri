@@ -58,6 +58,42 @@
   let frameReady = $state(false);
   let expanded = $state(false);
   let retryRequest = $state(0);
+  let scrollRequest = 0;
+  const pendingScrolls = new Map<
+    number,
+    {
+      resolve: (y: number) => void;
+      reject: (error: Error) => void;
+      timeout: ReturnType<typeof setTimeout>;
+    }
+  >();
+  export function scrollTo(y: number): Promise<number> {
+    if (!Number.isFinite(y)) return Promise.reject(new Error('Scroll position must be finite.'));
+    return requestScroll({ y: Math.max(0, y) });
+  }
+  export function scrollBy(dy: number): Promise<number> {
+    if (!Number.isFinite(dy)) return Promise.reject(new Error('Scroll delta must be finite.'));
+    return requestScroll({ dy });
+  }
+  function requestScroll(payload: { y?: number; dy?: number }): Promise<number> {
+    if (!frame || !frameReady) return Promise.reject(new Error('The preview is not ready yet.'));
+    const request = ++scrollRequest;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        pendingScrolls.delete(request);
+        reject(new Error('The preview did not acknowledge the scroll.'));
+      }, 2000);
+      pendingScrolls.set(request, { resolve, reject, timeout });
+      frame?.contentWindow?.postMessage({ type: 'scroll', request, ...payload }, '*');
+    });
+  }
+  function cancelScrolls(reason: string) {
+    for (const pending of pendingScrolls.values()) {
+      clearTimeout(pending.timeout);
+      pending.reject(new Error(reason));
+    }
+    pendingScrolls.clear();
+  }
   const networkAllowed = $derived(preferences.network);
   const presentationKey = $derived(
     JSON.stringify({
@@ -93,6 +129,7 @@
     activeChannel = '';
     loading = true;
     error = '';
+    cancelScrolls('The preview changed.');
     (async () => {
       try {
         traceStartup('preview-start');
@@ -298,6 +335,20 @@
     }
     if (data.type === 'navigate' && typeof data.href === 'string' && data.href.length < 8192)
       onlink(data.href);
+    if (
+      data.type === 'scroll-done' &&
+      Number.isSafeInteger(data.request) &&
+      Number.isFinite(data.y)
+    ) {
+      const pending = pendingScrolls.get(data.request);
+      if (pending) {
+        pendingScrolls.delete(data.request);
+        clearTimeout(pending.timeout);
+        pending.resolve(data.y);
+        onscroll(tab.path, Math.max(0, Math.min(data.y, 100_000_000)));
+      }
+      return;
+    }
     if (data.type === 'scroll' && Number.isFinite(data.y))
       onscroll(tab.path, Math.max(0, Math.min(data.y, 100_000_000)));
   }

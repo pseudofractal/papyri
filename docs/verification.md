@@ -29,6 +29,7 @@ A separate X11 desktop check launched the installed `.desktop` entry through GIO
 - A real geometry guide previously passed 16 native layout checks at 50–200% UI zoom with panel and split changes. The document stays inside its viewport; fit-width code wraps without changing source text. The private guide was not modified or copied into the repository. Generic fixtures cover the same layout conditions.
 - Wide equations, tables and diagrams retain local scrolling. Expanded diagrams fit the frame, remain isolated, and support Close and Escape. Catppuccin defaults apply when authors omit colors; authored colors are preserved.
 - Security tests cover opaque-origin parent access rejection, safe-mode script blocking, explicit trust, trust revocation, forged/absent native host tokens, deferred-library DOM clobbering and revoked frame message channels.
+- Native control checks exercise `papyri ctl` over the real Unix socket: ping and state, auto-launched and forwarded opens, tab switching, split panes, Markdown and PDF scrolling, headings, search, palette commands, preferences, event watching, raise and quit.
 - Branding checks use one monochrome SVG source, regenerate launcher/native icons, validate the desktop entry, and verify inherited icon color and themed dialogs. Long filenames remain bounded in the toolbar.
 
 ## Floating-panel layout
