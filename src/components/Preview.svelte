@@ -52,6 +52,7 @@
   } = $props();
   let frame = $state<HTMLIFrameElement>();
   let srcdoc = $state('');
+  let frameGeneration = $state(0);
   let error = $state('');
   let loading = $state(true);
   let elapsed = $state(0);
@@ -169,6 +170,7 @@
         activeChannel = channel;
         allowsMessages = !trust;
         srcdoc = document;
+        frameGeneration++;
         onheadings(headings);
         loading = false;
       } catch (reason) {
@@ -391,18 +393,18 @@
       <span>{error}</span>
       <button class="btn btn-ghost btn-sm" onclick={() => retryRequest++}>Retry preview</button>
     </div>{/if}
-  {#if srcdoc}<iframe
-      bind:this={frame}
-      class:pending={!frameReady}
-      title="{tab.bytes
-        ? 'PDF'
-        : isTypst(tab.path) || isLatex(tab.path)
-          ? 'Source'
-          : 'Markdown'} preview: {tab.path}"
-      sandbox="allow-scripts"
-      referrerpolicy="no-referrer"
-      {srcdoc}
-    ></iframe>{/if}
+  {#if srcdoc}{#key frameGeneration}<iframe
+        bind:this={frame}
+        class:pending={!frameReady}
+        title="{tab.bytes
+          ? 'PDF'
+          : isTypst(tab.path) || isLatex(tab.path)
+            ? 'Source'
+            : 'Markdown'} preview: {tab.path}"
+        sandbox="allow-scripts"
+        referrerpolicy="no-referrer"
+        {srcdoc}
+      ></iframe>{/key}{/if}
   <span class="render-time"
     >{tab.bytes
       ? 'PDF.js · Read-only'
