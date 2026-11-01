@@ -16,6 +16,7 @@ papyri ctl open notes.md         # Open, launching Papyri if needed
 papyri ctl state                 # Active document, tabs, view, preferences
 papyri ctl state --json          # Compact machine-readable output
 papyri ctl tab next
+papyri ctl tab list
 papyri ctl scroll by 600
 papyri ctl scroll to 0
 papyri ctl panel outline toggle
@@ -24,12 +25,13 @@ papyri ctl zoom set 120 --target document
 papyri ctl search "theorem"
 papyri ctl command next-tab
 papyri ctl preferences set '{"theme":"latte","documentZoom":120}'
+papyri ctl socket                # Print the resolved socket path
 ```
 
-Run `papyri ctl --help` for the complete list. Paths are resolved against the
-CLI's working directory and sent to the app as absolute paths. `--wait SECONDS`
-waits for the socket; `ping --wait` also waits for the window to report ready.
-This is useful from editor startup hooks:
+Run `papyri --help` or `papyri ctl --help` for the complete command list and
+examples. Paths are resolved against the CLI's working directory and sent to
+the app as absolute paths. `--wait SECONDS` waits for the socket and the host
+UI to become ready. This is useful from editor startup hooks:
 
 ```sh
 papyri ctl ping --wait 5
@@ -39,6 +41,32 @@ Passing a path to `papyri` while a window is running forwards the path instead
 of starting a second instance. Running `papyri` with no arguments while a window
 is running raises that window.
 
+## Help and completion
+
+Each command has detailed help, including value names, aliases and examples:
+
+```sh
+papyri ctl open --help
+papyri ctl scroll by --help
+papyri ctl preferences --help
+```
+
+Generate completions for your shell:
+
+```sh
+papyri completions bash > ~/.local/share/bash-completion/completions/papyri
+papyri completions zsh > ~/.zfunc/_papyri
+papyri completions fish > ~/.config/fish/completions/papyri.fish
+papyri completions elvish
+papyri completions powershell
+```
+
+The completion script is written to stdout; redirect it to the location your
+shell loads. `papyri completions --help` lists the supported shells. Common
+aliases are `status`, `tabs`, `fit`, and `prefs`; `-j` is shorthand for
+`--json` and `-s` for `--socket`. `papyri --version` and `papyri ctl --version`
+print the application version.
+
 ## Socket
 
 | Platform    | Default path                                                            |
@@ -47,10 +75,12 @@ is running raises that window.
 | Fallback    | `$XDG_CACHE_HOME/papyri/control.sock` or `~/.cache/papyri/control.sock` |
 | Last resort | `$TMPDIR/papyri-<uid>/control.sock`                                     |
 
-Set `PAPYRI_CONTROL_SOCKET` to use another path. The parent directory is created
-with mode `0700` when absent and the socket with mode `0600`, so only the same
-user can connect. Keep an overridden socket directory private. There is no
-network listener.
+Set `PAPYRI_CONTROL_SOCKET` to use another path, or pass the global
+`papyri ctl --socket <PATH>` option. The parent directory is created with mode
+`0700` when absent and the socket with mode `0600`, so only the same user can
+connect. Keep an overridden socket directory private. There is no network
+listener. `papyri ctl socket` prints the path that would be used without
+connecting.
 
 Each line is one JSON object. Requests carry an `id` chosen by the client and a
 method name:
@@ -121,13 +151,14 @@ while work already underway may finish after the client has timed out.
 | `unsubscribe`                  | none                                                                                                    | Stop events on the current connection.                            |
 
 `papyri ctl raw METHOD '{"key":1}'` sends any method directly, so integrations
-can use new methods without waiting for a CLI update. An `open` with
-`pane: "secondary"` opens in the split pane when a document is already active;
-with no active document it opens in the main pane so the preview is visible.
-The `anchor` option applies to the main pane only. Documents with scripts enabled
-do not update the saved scroll bookmark, but a control-initiated scroll still
-resolves with the frame's resulting position so `papyri ctl scroll` can report
-success.
+can use new methods without waiting for a CLI update. `papyri ctl socket` and
+`papyri completions <shell>` are CLI-only; they do not send a socket request.
+An `open` with `pane: "secondary"` opens in the split pane when a document is
+already active; with no active document it opens in the main pane so the preview
+is visible. The `anchor` option applies to the main pane only. Documents with
+scripts enabled do not update the saved scroll bookmark, but a control-initiated
+scroll still resolves with the frame's resulting position so `papyri ctl scroll`
+can report success.
 
 ### State shape
 

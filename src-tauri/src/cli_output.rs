@@ -18,9 +18,11 @@ pub(crate) fn print_result(method: &str, value: Value, json_output: bool) {
   } else {
     match method {
       "state" => print_state(&mut output, &value),
+      "tab.list" => print_tabs(&mut output, &value),
       "open" | "focus" | "close" | "tab.next" | "tab.previous" | "tab.activate" | "tab.close"
       | "heading" | "page" | "command" => print_active(&mut output, &value),
       "ping" => print_ping(&mut output, &value),
+      "socket" => print_socket(&mut output, &value),
       "headings" => print_headings(&mut output, &value),
       "commands" => print_commands(&mut output, &value),
       "scroll.to" | "scroll.by" | "scroll.top" | "scroll.bottom" => {
@@ -57,25 +59,29 @@ pub(crate) fn print_result(method: &str, value: Value, json_output: bool) {
       }
     }
   }
-  write_output(&output);
+  write_stdout(&output);
 }
 
 /// Write one response. A closed consumer is a normal end of output, not a panic.
-fn write_output(output: &str) {
+pub(crate) fn write_output(output: &str) -> io::Result<()> {
   if output.is_empty() {
-    return;
+    return Ok(());
   }
   let mut stdout = io::stdout().lock();
   match stdout
     .write_all(output.as_bytes())
     .and_then(|()| stdout.flush())
   {
-    Ok(()) => {}
-    Err(error) if error.kind() == io::ErrorKind::BrokenPipe => {}
-    Err(error) => {
-      let _ = writeln!(io::stderr(), "error: could not write output: {error}");
-      std::process::exit(1);
-    }
+    Ok(()) => Ok(()),
+    Err(error) if error.kind() == io::ErrorKind::BrokenPipe => Ok(()),
+    Err(error) => Err(error),
+  }
+}
+
+fn write_stdout(output: &str) {
+  if let Err(error) = write_output(output) {
+    let _ = writeln!(io::stderr(), "error: could not write output: {error}");
+    std::process::exit(1);
   }
 }
 
@@ -91,6 +97,33 @@ fn print_active(output: &mut String, value: &Value) {
       let _ = writeln!(output, "Secondary: {secondary}");
     }
   }
+}
+
+fn print_tabs(output: &mut String, value: &Value) {
+  let Some(tabs) = value.get("tabs").and_then(Value::as_array) else {
+    return;
+  };
+  if tabs.is_empty() {
+    let _ = writeln!(output, "No tabs are open.");
+    return;
+  }
+  for tab in tabs {
+    let path = tab.get("path").and_then(Value::as_str).unwrap_or("?");
+    let kind = tab.get("kind").and_then(Value::as_str).unwrap_or("?");
+    let marker = if tab.get("active").and_then(Value::as_bool) == Some(true) {
+      "*"
+    } else if tab.get("secondary").and_then(Value::as_bool) == Some(true) {
+      "+"
+    } else {
+      " "
+    };
+    let _ = writeln!(output, "{marker} {path} ({kind})");
+  }
+}
+
+fn print_socket(output: &mut String, value: &Value) {
+  let path = value.get("path").and_then(Value::as_str).unwrap_or("?");
+  let _ = writeln!(output, "{path}");
 }
 
 fn print_theme(output: &mut String, value: &Value) {
@@ -215,6 +248,20 @@ fn print_state(output: &mut String, value: &Value) {
     ) {
       let _ = writeln!(output, "PDF page: {page}/{total}");
     }
+  }
+  if let Some(directory) = value.get("directory").and_then(Value::as_str) {
+    if !directory.is_empty() {
+      let _ = writeln!(output, "Directory: {directory}");
+    }
+  }
+  if let Some(source) = value.get("source").and_then(Value::as_object) {
+    if let Some(label) = source.get("label").and_then(Value::as_str) {
+      let root = source.get("root").and_then(Value::as_str).unwrap_or("?");
+      let _ = writeln!(output, "Source: {label} ({root})");
+    }
+  }
+  if value.get("busy").and_then(Value::as_bool) == Some(true) {
+    let _ = writeln!(output, "Busy: yes");
   }
   if let Some(view) = value.get("view").and_then(Value::as_object) {
     print_view_flags(output, view);

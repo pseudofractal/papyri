@@ -5,9 +5,9 @@
 //! path passed while Papyri is running is forwarded to that instance.
 
 use crate::cli_args::*;
-use crate::cli_output::print_result;
+use crate::cli_output::{print_result, write_output};
 use crate::control::{self, ProtocolError, Request};
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
 use std::{
   fmt,
@@ -83,6 +83,12 @@ pub fn intercept() -> bool {
       }
       true
     }
+    Some(TopCommand::Completions(args)) => {
+      if let Err(error) = run_completions(args) {
+        fail(error, false);
+      }
+      true
+    }
     None => match cli.path {
       Some(path) => {
         if control::is_running() {
@@ -108,7 +114,26 @@ pub fn intercept() -> bool {
   }
 }
 
+fn run_completions(args: CompletionsArgs) -> Result<(), CliError> {
+  let mut command = Cli::command();
+  let mut generated = Vec::new();
+  clap_complete::generate(args.shell, &mut command, "papyri", &mut generated);
+  let generated = String::from_utf8_lossy(&generated);
+  write_output(&generated).map_err(|error| {
+    CliError::new(
+      "io-error",
+      format!("Could not write shell completions: {error}"),
+    )
+  })
+}
+
 fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
+  if let Some(socket) = args.socket.as_ref() {
+    if socket.as_os_str().is_empty() {
+      return Err(CliError::new("bad-params", "`--socket` must not be empty."));
+    }
+    std::env::set_var("PAPYRI_CONTROL_SOCKET", socket);
+  }
   let wait = seconds(args.wait);
   match args.command {
     CtlCommand::Ping => print_result("ping", ping(wait)?, args.json),
@@ -140,7 +165,7 @@ fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
         request("tab.previous", json!({}), wait)?,
         args.json,
       ),
-      TabCommand::List => print_result("state", request("state", json!({}), wait)?, args.json),
+      TabCommand::List => print_result("tab.list", request("state", json!({}), wait)?, args.json),
       TabCommand::Activate { path } => {
         let params = json!({ "path": absolute_path(&path)?.to_string_lossy() });
         print_result(
@@ -238,6 +263,11 @@ fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
     },
     CtlCommand::Refresh => print_result("refresh", request("refresh", json!({}), wait)?, args.json),
     CtlCommand::Watch(watch) => run_watch(watch, wait)?,
+    CtlCommand::Socket => print_result(
+      "socket",
+      json!({ "path": control::socket_path().to_string_lossy() }),
+      args.json,
+    ),
     CtlCommand::Raise => print_result("raise", request("raise", json!({}), wait)?, args.json),
     CtlCommand::Quit => print_result("quit", request("quit", json!({}), wait)?, args.json),
     CtlCommand::Raw(raw) => {
@@ -643,5 +673,37 @@ mod tests {
     });
     assert_eq!(error.code, "timeout");
     assert_eq!(error.message, "The request timed out.");
+  }
+
+  #[test]
+  fn parses_socket_override_and_completions() {
+    let cli =
+      Cli::try_parse_from(["papyri", "ctl", "state", "--socket", "/tmp/papyri.sock"]).unwrap();
+    let Some(TopCommand::Ctl(CtlArgs { socket, .. })) = cli.command else {
+      panic!("expected ctl");
+    };
+    assert_eq!(socket, Some(PathBuf::from("/tmp/papyri.sock")));
+
+    let cli = Cli::try_parse_from(["papyri", "completions", "bash"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Completions(CompletionsArgs {
+        shell: clap_complete::Shell::Bash
+      }))
+    ));
+
+    let cli = Cli::try_parse_from(["papyri", "ctl", "socket"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Socket,
+        ..
+      }))
+    ));
+  }
+
+  #[test]
+  fn clap_definition_is_valid() {
+    Cli::command().debug_assert();
   }
 }

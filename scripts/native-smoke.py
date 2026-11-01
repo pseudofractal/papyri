@@ -413,6 +413,18 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         until(lambda: preview("return document.querySelector('.textLayer')?.textContent.includes('Changed imported dependency')"), "native Typst import live update")
         request("POST", prefix + "/frame", {"id": None})
         control("ping", "--wait", "10")
+        socket_path = control("socket").strip()
+        assert socket_path == test_environment["PAPYRI_CONTROL_SOCKET"], socket_path
+        tabs = control("tab", "list")
+        assert "paper.typ" in tabs, tabs
+        completions = subprocess.run(
+            [binary, "completions", "bash"],
+            capture_output=True,
+            text=True,
+            env=test_environment,
+            timeout=30,
+        )
+        assert completions.returncode == 0 and "_papyri" in completions.stdout, completions.stderr
         state = json.loads(control("state", "--json"))
         assert state["active"] == str(root / "paper.typ"), state
         control("scroll", "by", "300")
@@ -454,7 +466,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             until(lambda: execute("return document.querySelector('input[aria-label=\"Directory path\"]')?.value === " + json.dumps(expected)), "CLI default and directory arguments")
             request("DELETE", prefix)
             session = None
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "control settings and panels"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings and panels"]}, indent=2))
     except Exception:
         if session:
             try:
