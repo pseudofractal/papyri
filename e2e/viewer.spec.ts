@@ -1,9 +1,325 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { readFile } from 'node:fs/promises';
 const markdownFile = (text: string, name = 'sample.md') => ({
   name,
   mimeType: 'text/markdown',
   buffer: Buffer.from(text),
+});
+
+for (const mode of ['pointer', 'keyboard'] as const) {
+  test(`prepares Markdown on ${mode} file selection`, async ({ page }) => {
+    await page.goto('/');
+    await expect(
+      page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' }),
+    ).toBeVisible();
+    await page.evaluate(() => {
+      const original = window.Worker;
+      (window as unknown as { parserWorkers: number }).parserWorkers = 0;
+      window.Worker = new Proxy(original, {
+        construct(target, args) {
+          (window as unknown as { parserWorkers: number }).parserWorkers++;
+          return Reflect.construct(target, args);
+        },
+      });
+    });
+    const file = page.locator('.file-row').filter({ hasText: 'gallery.md' });
+    if (mode === 'pointer') await file.dispatchEvent('pointerenter', { pointerType: 'mouse' });
+    else await file.focus();
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as unknown as { parserWorkers: number }).parserWorkers),
+      )
+      .toBe(1);
+    await file.click();
+    await expect(
+      page.frameLocator('iframe').getByRole('heading', { name: 'Format gallery' }),
+    ).toBeVisible();
+  });
+}
+
+test('loads the diagram runtime only on demand and retries a failed load', async ({ page }) => {
+  let requests = 0;
+  await page.route('**/diagrams.js', async (route) => {
+    requests++;
+    if (requests === 1) await route.fulfill({ status: 503, body: 'Unavailable' });
+    else await route.continue();
+  });
+  await page.goto('/');
+  const frame = page.frameLocator('iframe');
+  const render = frame.getByRole('button', { name: 'Render mermaid diagram' });
+  await expect(render).toBeVisible();
+  expect(requests).toBe(0);
+  await render.click();
+  await expect(frame.getByText(/Could not load bundled renderer/)).toBeVisible();
+  await frame.getByRole('button', { name: 'Retry diagram' }).click();
+  await expect(frame.locator('.diagram svg')).toBeVisible();
+  expect(requests).toBe(2);
+});
+
+test('searches nested files and commands with the keyboard palette', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Import selected folder').setInputFiles('examples/showcase');
+  await page.keyboard.press('Control+k');
+  const dialog = page.getByRole('dialog', { name: 'Command palette' });
+  const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
+  await expect(search).toBeFocused();
+  await search.fill('ltx-sct');
+  await expect(dialog.getByRole('option', { name: /latex-section\.tex/ })).toBeVisible();
+  const accessibility = await new AxeBuilder({ page }).include('dialog[open]').analyze();
+  expect(
+    accessibility.violations.filter((item) => ['serious', 'critical'].includes(item.impact!)),
+  ).toEqual([]);
+  await search.press('Enter');
+  await expect(dialog).toHaveCount(0);
+  await expect(page.frameLocator('iframe').locator('pre code')).toContainText('section');
+  await page.frameLocator('iframe').locator('body').press('Control+k');
+  await expect(search).toBeFocused();
+  await search.fill('>sett');
+  await search.press('Enter');
+  await expect(page.getByRole('dialog', { name: 'Reading preferences' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await search.fill('>toggle');
+  await search.press('ArrowDown');
+  await expect(
+    dialog.getByRole('listbox', { name: 'Search results' }).getByRole('option', { selected: true }),
+  ).toHaveAttribute('id', 'palette-option-1');
+  await search.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});
+
+test('navigates headings and tabs, remembers choices, and searches document text', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const dialog = page.getByRole('dialog', { name: 'Command palette' });
+  const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
+  const openPalette = () => page.getByRole('button', { name: 'Open command palette' }).click();
+  await expect(
+    page.frameLocator('iframe').getByRole('heading', { name: 'Mathematics' }),
+  ).toBeVisible();
+  await openPalette();
+  await search.fill('@math');
+  await expect(
+    dialog.getByRole('option', { name: /Mathematics/ }).locator('svg.lucide-list'),
+  ).toHaveCount(1);
+  await dialog.getByRole('option', { name: /Mathematics/ }).click();
+  await expect
+    .poll(() =>
+      page
+        .frameLocator('iframe')
+        .locator('html')
+        .evaluate(() => scrollY),
+    )
+    .toBeGreaterThan(100);
+  await page.frameLocator('iframe').getByRole('link', { name: 'format gallery' }).click();
+  await expect(page.locator('.tab-select')).toHaveCount(2);
+  await openPalette();
+  await search.fill('%welc');
+  await expect(
+    dialog.getByRole('option', { name: /welcome\.md/ }).locator('svg.lucide-book-open'),
+  ).toHaveCount(1);
+  await dialog.getByRole('option', { name: /welcome\.md/ }).click();
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
+  await openPalette();
+  await expect(
+    dialog.getByRole('listbox', { name: 'Search results' }).getByRole('option').first(),
+  ).toContainText('welcome.md');
+  await search.fill('?Gaussian integral');
+  await expect(
+    dialog.getByRole('option', { name: /welcome\.md:.*Gaussian integral/ }),
+  ).toBeVisible();
+  await expect(
+    dialog
+      .getByRole('option', { name: /welcome\.md:.*Gaussian integral/ })
+      .locator('svg.lucide-file-search'),
+  ).toHaveCount(1);
+  await dialog.getByRole('option', { name: /welcome\.md:.*Gaussian integral/ }).click();
+  await expect(page.getByRole('textbox', { name: 'Find in document' })).toHaveValue(
+    'Gaussian integral',
+  );
+  await expect(page.frameLocator('iframe').locator('mark[data-search]').first()).toContainText(
+    'Gaussian integral',
+  );
+});
+
+test('changes the palette search scope and groups commands', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Import selected folder').setInputFiles('examples/showcase');
+  if (!(await page.getByLabel('Directory path').isVisible()))
+    await page.getByRole('button', { name: 'Toggle explorer' }).click();
+  await page.getByLabel('Directory path').fill('/showcase/parts');
+  await page.getByLabel('Directory path').press('Enter');
+  await page.getByRole('button', { name: 'Open command palette' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Command palette' });
+  const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
+  await search.fill('markdown.md');
+  await expect(dialog.getByText('No matches.')).toBeVisible();
+  await dialog.getByLabel('Search scope').selectOption('parent');
+  await expect(dialog.getByRole('option', { name: /markdown\.md/ })).toBeVisible();
+  await dialog.getByLabel('Search scope').selectOption('workspace');
+  await expect(dialog.getByRole('option', { name: /markdown\.md/ })).toBeVisible();
+  await search.fill('>');
+  await expect(dialog.locator('.palette-group', { hasText: 'Files' }).first()).toBeVisible();
+  await expect(dialog.locator('.palette-group', { hasText: 'View' }).first()).toBeVisible();
+});
+
+test('keeps the palette within the viewport and gives commands distinct icons', async ({
+  page,
+}) => {
+  await page.goto('/');
+  for (const viewport of [
+    { width: 1280, height: 860 },
+    { width: 390, height: 640 },
+    { width: 320, height: 480 },
+  ]) {
+    await page.setViewportSize(viewport);
+    for (const zoom of [50, 100, 200]) {
+      await page.evaluate((value) => {
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', { key: '0', ctrlKey: true, altKey: true }),
+        );
+        for (let step = 0; step < Math.abs(value - 100) / 10; step++)
+          window.dispatchEvent(
+            new KeyboardEvent('keydown', {
+              key: value < 100 ? '-' : '+',
+              ctrlKey: true,
+              altKey: true,
+            }),
+          );
+      }, zoom);
+      await page.getByRole('button', { name: 'Open command palette' }).click();
+      const dialog = page.getByRole('dialog', { name: 'Command palette' });
+      const panel = dialog.locator('.palette-panel');
+      const bounds = await panel.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const view = window.visualViewport;
+        return {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          viewLeft: view?.offsetLeft ?? 0,
+          viewTop: view?.offsetTop ?? 0,
+          viewRight: (view?.offsetLeft ?? 0) + Math.min(innerWidth, view?.width ?? innerWidth),
+          viewBottom: (view?.offsetTop ?? 0) + Math.min(innerHeight, view?.height ?? innerHeight),
+          width: rect.width,
+          height: rect.height,
+        };
+      });
+      expect(bounds.left).toBeGreaterThanOrEqual(bounds.viewLeft - 2);
+      expect(bounds.top).toBeGreaterThanOrEqual(bounds.viewTop - 2);
+      expect(bounds.right).toBeLessThanOrEqual(bounds.viewRight + 2);
+      expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewBottom + 2);
+      expect(bounds.width).toBeLessThanOrEqual((bounds.viewRight - bounds.viewLeft) * 0.9 + 2);
+      expect(bounds.width).toBeLessThanOrEqual(482);
+      expect(bounds.height).toBeLessThanOrEqual((bounds.viewBottom - bounds.viewTop) * 0.75 + 2);
+      expect(bounds.height).toBeLessThanOrEqual(442);
+      expect(
+        Math.abs((bounds.left + bounds.right) / 2 - (bounds.viewLeft + bounds.viewRight) / 2),
+      ).toBeLessThanOrEqual(2);
+      expect(
+        Math.abs((bounds.top + bounds.bottom) / 2 - (bounds.viewTop + bounds.viewBottom) / 2),
+      ).toBeLessThanOrEqual(2);
+      const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
+      await expect(search).toBeVisible();
+      await search.fill('>');
+      const options = dialog.getByRole('listbox', { name: 'Search results' }).getByRole('option');
+      expect(await options.count()).toBeGreaterThan(10);
+      expect(
+        await options.evaluateAll((items) =>
+          items.every((item) => item.querySelector('svg[aria-hidden="true"]')),
+        ),
+      ).toBe(true);
+      await expect(
+        dialog.getByRole('option', { name: /Open folder/ }).locator('svg.lucide-folder-open'),
+      ).toHaveCount(1);
+      await expect(
+        dialog.getByRole('option', { name: /Open settings/ }).locator('svg.lucide-settings'),
+      ).toHaveCount(1);
+      await search.press('ArrowUp');
+      await expect(
+        dialog
+          .getByRole('listbox', { name: 'Search results' })
+          .getByRole('option', { selected: true }),
+      ).toBeInViewport();
+      await search.press('Escape');
+    }
+  }
+});
+
+test('runs contextual commands for tabs, zoom, appearance, and folders', async ({ page }) => {
+  await page.goto('/');
+  const dialog = page.getByRole('dialog', { name: 'Command palette' });
+  const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
+  const run = async (label: string) => {
+    await page.getByRole('button', { name: 'Open command palette' }).click();
+    await search.fill(`>${label}`);
+    await dialog.getByRole('option', { name: label, exact: false }).click();
+    await expect(dialog).toHaveCount(0);
+  };
+  await run('Zoom in document');
+  await expect(page.getByRole('button', { name: /Reset document zoom/ })).toHaveText('110%');
+  await run('Reset document zoom');
+  await expect(page.getByRole('button', { name: /Reset document zoom/ })).toHaveText('100%');
+  await run('Use light theme');
+  await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'latte');
+  await run('Allow external resources');
+  await expect(page.locator('.offline-label')).toHaveText('External content allowed');
+  await run('Block external resources');
+  await expect(page.locator('.offline-label')).toHaveText('Network resources blocked');
+  await page.frameLocator('iframe').getByRole('link', { name: 'format gallery' }).click();
+  await expect(page.locator('.tab-select')).toHaveCount(2);
+  await run('Previous tab');
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
+  await run('Close other tabs');
+  await expect(page.locator('.tab-select')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await search.fill('>next tab');
+  await expect(dialog.getByRole('option', { name: /Next tab/ })).toHaveCount(0);
+  await search.fill('>preferences');
+  await expect(dialog.getByRole('option', { name: /Open settings/ })).toBeVisible();
+  await search.press('Escape');
+});
+
+test('selects a LaTeX engine from the palette in the desktop app', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string) => {
+          if (command === 'initial_path') return { path: '/', directory: true };
+          if (command === 'list_directory' || command === 'latex_engines') return [];
+          if (command === 'typst_binary') return null;
+          throw new Error(`Unexpected native command: ${command}`);
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Open command palette' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Command palette' });
+  await dialog.getByRole('combobox', { name: 'Search files and commands' }).fill('>xelatex');
+  await dialog.getByRole('option', { name: 'Use xelatex for LaTeX' }).click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Engine' })).toHaveValue('xelatex');
+});
+
+test('retries a preview after a transient renderer failure', async ({ page }) => {
+  let requests = 0;
+  await page.route('**/renderer.js', async (route) => {
+    requests++;
+    if (requests === 1) await route.fulfill({ status: 503, body: 'Unavailable' });
+    else await route.continue();
+  });
+  await page.goto('/');
+  await expect(page.getByRole('alert')).toContainText('503');
+  await page.getByRole('button', { name: 'Retry preview' }).click();
+  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(requests).toBe(2);
 });
 
 async function boundedDialog(page: Page) {
@@ -108,7 +424,9 @@ test('bounds floating panels to the viewport and wraps controls at every UI zoom
       await page
         .getByRole('button', { name: 'Close settings', exact: true })
         .scrollIntoViewIfNeeded();
-      expect(await panel.evaluate((element) => element.scrollTop)).toBeLessThan(5);
+      await expect(
+        page.getByRole('button', { name: 'Close settings', exact: true }),
+      ).toBeInViewport();
     }
   }
   await page.getByRole('button', { name: 'Close settings', exact: true }).click();
@@ -254,6 +572,22 @@ test('imports read-only files and enforces script and host isolation', async ({ 
   ).toHaveAttribute('aria-pressed', 'true');
   expect(await page.locator('body').getAttribute('data-escaped')).toBeNull();
 });
+test('persists Typst and LaTeX compiler settings', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByLabel('Typst executable path').fill('/opt/typst/bin/typst');
+  await page.getByLabel('Typst executable path').blur();
+  await page.getByRole('combobox', { name: 'Engine' }).selectOption('xelatex');
+  await page.getByLabel('xelatex executable path').fill('/opt/tex/bin/xelatex');
+  await page.getByLabel('xelatex executable path').blur();
+  await page.getByRole('button', { name: 'Apply preferences' }).click();
+  await page.reload();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.getByLabel('Typst executable path')).toHaveValue('/opt/typst/bin/typst');
+  await expect(page.getByRole('combobox', { name: 'Engine' })).toHaveValue('xelatex');
+  await expect(page.getByLabel('xelatex executable path')).toHaveValue('/opt/tex/bin/xelatex');
+});
+
 test('validates and persists math preferences', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
@@ -632,6 +966,17 @@ test('uses Catppuccin diagram defaults, preserves authored colors and expands sc
     .poll(async () => (await page.locator('iframe').first().boundingBox())!.width)
     .toBeGreaterThan(page.viewportSize()!.width - 5);
   await expect
+    .poll(async () =>
+      Number(
+        (await dialog.getByRole('button', { name: /Reset diagram zoom/ }).textContent())!.replace(
+          '%',
+          '',
+        ),
+      ),
+    )
+    .toBeLessThan(100);
+  await dialog.getByRole('button', { name: /Reset diagram zoom/ }).click();
+  await expect
     .poll(() =>
       dialog.locator('.diagram-viewport').evaluate((node) => node.scrollWidth > node.clientWidth),
     )
@@ -641,6 +986,31 @@ test('uses Catppuccin diagram defaults, preserves authored colors and expands sc
   await expect
     .poll(() => dialog.locator('.diagram-viewport').evaluate((node) => node.scrollLeft))
     .toBeGreaterThan(0);
+  const diagramViewport = dialog.locator('.diagram-viewport');
+  await diagramViewport.evaluate((element) => (element.scrollLeft = 0));
+  const area = (await diagramViewport.boundingBox())!;
+  await page.mouse.move(area.x + area.width * 0.75, area.y + area.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(area.x + area.width * 0.3, area.y + area.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect
+    .poll(() => diagramViewport.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(10);
+  const focalBefore = await diagramViewport.evaluate(
+    (element) => element.scrollLeft + element.clientWidth / 2,
+  );
+  await page.mouse.move(area.x + area.width * 0.5, area.y + area.height / 2);
+  await page.keyboard.down('Control');
+  await page.mouse.wheel(0, -120);
+  await page.keyboard.up('Control');
+  await expect(dialog.getByRole('button', { name: /Reset diagram zoom/ })).toHaveText('110%');
+  await expect
+    .poll(() => diagramViewport.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(10);
+  const focalAfter = await diagramViewport.evaluate(
+    (element) => (element.scrollLeft + element.clientWidth / 2) / 1.1,
+  );
+  expect(Math.abs(focalAfter - focalBefore)).toBeLessThan(5);
   await page.keyboard.press('Control+Alt+Equal');
   await expect
     .poll(async () => (await page.locator('iframe').first().boundingBox())!.width)
@@ -652,8 +1022,10 @@ test('uses Catppuccin diagram defaults, preserves authored colors and expands sc
         return (
           bounds.right <= window.innerWidth + 1 &&
           bounds.bottom <= window.innerHeight + 1 &&
-          Math.abs(bounds.width - window.innerWidth * 0.75) <= 1 &&
-          Math.abs(bounds.height - window.innerHeight * 0.8) <= 1
+          bounds.width <= window.innerWidth * 0.9 + 1 &&
+          bounds.height <= window.innerHeight * 0.9 + 1 &&
+          Math.abs(bounds.left + bounds.width / 2 - window.innerWidth / 2) <= 2 &&
+          Math.abs(bounds.top + bounds.height / 2 - window.innerHeight / 2) <= 2
         );
       }),
     )
@@ -681,6 +1053,13 @@ test('uses Catppuccin diagram defaults, preserves authored colors and expands sc
     'fill',
     '#cba6f7',
   );
+  await diagrams.nth(3).getByRole('button', { name: 'Expand diagram' }).click();
+  const chart = frame.getByRole('dialog', { name: 'vega-lite diagram' });
+  const chartSvg = chart.locator('svg').first();
+  const chartWidth = (await chartSvg.boundingBox())!.width;
+  await chart.getByRole('button', { name: 'Zoom in diagram' }).click();
+  await expect.poll(async () => (await chartSvg.boundingBox())!.width).toBeGreaterThan(chartWidth);
+  await chart.getByRole('button', { name: 'Close diagram' }).click();
   await page.getByRole('button', { name: 'Toggle color theme' }).click();
   await first.getByRole('button', { name: 'Update diagram theme', exact: true }).click();
   await expect(first.locator('.node rect').first()).toHaveCSS('fill', 'rgb(204, 208, 218)');
@@ -690,6 +1069,163 @@ test('uses Catppuccin diagram defaults, preserves authored colors and expands sc
     frame.getByRole('heading', { name: 'Diagram link target', exact: true }),
   ).toBeVisible();
   await expect(page.locator('.preview-pane.expanded')).toHaveCount(0);
+});
+
+test('sizes expanded diagrams to their content and provides local zoom controls', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile('# Small\n\n```dot\ndigraph { A -> B }\n```'));
+  const frame = page.frameLocator('iframe');
+  await frame.getByRole('button', { name: 'Render dot diagram' }).click();
+  await frame.getByRole('button', { name: 'Expand diagram' }).click();
+  const dialog = frame.getByRole('dialog', { name: 'dot diagram' });
+  await expect
+    .poll(() =>
+      dialog.evaluate((element) => getComputedStyle(element, '::backdrop').backdropFilter),
+    )
+    .toBe('blur(6px)');
+  await expect
+    .poll(() =>
+      dialog.evaluate((element) => getComputedStyle(element, '::backdrop').backgroundColor),
+    )
+    .toBe('rgba(0, 0, 0, 0.65)');
+  const viewport = dialog.locator('.diagram-viewport');
+  const svg = viewport.locator('svg').first();
+  await expect(svg).toBeVisible();
+  const before = await svg.boundingBox();
+  const panel = await viewport.boundingBox();
+  expect(panel!.width - before!.width).toBeLessThan(40);
+  expect(panel!.height - before!.height).toBeLessThan(40);
+  await dialog.getByRole('button', { name: 'Zoom in diagram' }).click();
+  await expect(dialog.getByRole('button', { name: 'Reset diagram zoom' })).toHaveText('110%');
+  await expect.poll(async () => (await svg.boundingBox())!.width).toBeGreaterThan(before!.width);
+  await expect
+    .poll(async () => (await viewport.boundingBox())!.width)
+    .toBeGreaterThan(panel!.width);
+  await expect
+    .poll(() =>
+      dialog.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return (
+          Math.abs(rect.left + rect.width / 2 - window.innerWidth / 2) < 2 &&
+          Math.abs(rect.top + rect.height / 2 - window.innerHeight / 2) < 2
+        );
+      }),
+    )
+    .toBe(true);
+  await dialog.getByRole('button', { name: 'Zoom out diagram' }).click();
+  await expect(dialog.getByRole('button', { name: 'Reset diagram zoom' })).toHaveText('100%');
+  await dialog.getByRole('button', { name: 'Zoom out diagram' }).click();
+  await expect.poll(async () => (await svg.boundingBox())!.width).toBeLessThan(before!.width);
+  await dialog.getByRole('button', { name: 'Reset diagram zoom' }).click();
+  await expect(dialog.getByRole('button', { name: 'Reset diagram zoom' })).toHaveText('100%');
+  await dialog.getByRole('button', { name: 'Reset diagram zoom' }).press('+');
+  await expect(dialog.getByRole('button', { name: 'Reset diagram zoom' })).toHaveText('110%');
+  await dialog.getByRole('button', { name: 'Reset diagram zoom' }).press('-');
+  await expect(dialog.getByRole('button', { name: 'Reset diagram zoom' })).toHaveText('100%');
+  await dialog.getByRole('button', { name: 'Reset diagram zoom' }).press('0');
+  await dialog.getByRole('button', { name: 'Close diagram' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(frame.getByRole('button', { name: 'Expand diagram' })).toBeFocused();
+  await frame.getByRole('button', { name: 'Expand diagram' }).click();
+  await expect(dialog.getByRole('button', { name: 'Reset diagram zoom' })).toHaveText('100%');
+});
+
+test('exports diagrams as SVG and PNG and copies a PNG', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile('# Export\n\n```dot\ndigraph { A -> B }\n```'));
+  const frame = page.frameLocator('iframe');
+  await frame.getByRole('button', { name: 'Render dot diagram' }).click();
+  await frame.getByRole('button', { name: 'Expand diagram' }).click();
+  const dialog = frame.getByRole('dialog', { name: 'dot diagram' });
+  const svgDownload = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Download diagram as SVG' }).click();
+  const svg = await svgDownload;
+  expect(svg.suggestedFilename()).toBe('diagram.svg');
+  expect(await readFile((await svg.path())!, 'utf8')).toContain('<svg');
+  const pngDownload = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Download diagram as PNG' }).click();
+  const png = await pngDownload;
+  expect(png.suggestedFilename()).toBe('diagram.png');
+  expect((await readFile((await png.path())!)).subarray(0, 8)).toEqual(
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+  );
+  await dialog.getByRole('button', { name: 'Copy diagram as PNG' }).click();
+  await expect(dialog.getByRole('status')).toContainText('copied to clipboard');
+  expect(await page.evaluate(async () => (await navigator.clipboard.read())[0].types)).toContain(
+    'image/png',
+  );
+  await page.evaluate(() =>
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true }),
+  );
+  await dialog.getByRole('button', { name: 'Copy diagram as PNG' }).click();
+  await expect(dialog.getByRole('status')).toContainText('Copying images is unavailable');
+  await expect(dialog.getByRole('button', { name: 'Copy diagram as PNG' })).toBeEnabled();
+});
+
+test('routes a desktop diagram download through the native save dialog', async ({ page }) => {
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce');
+    await route.fulfill({ response, body });
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string, args: unknown) => {
+          if (command === 'initial_path') return { path: '/paper.md', directory: false };
+          if (command === 'read_document')
+            return { text: '# Export\n\n```dot\ndigraph { A -> B }\n```', stamp: '1' };
+          if (command === 'list_directory') return [];
+          if (command === 'document_stamp') return '1';
+          if (command === 'save_diagram') {
+            Object.defineProperty(window, 'savedDiagram', { value: args, configurable: true });
+            return true;
+          }
+          throw new Error(`Unexpected native command: ${command}`);
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  const frame = page.frameLocator('iframe');
+  await frame.getByRole('button', { name: 'Render dot diagram' }).click();
+  await frame.getByRole('button', { name: 'Expand diagram' }).click();
+  const dialog = frame.getByRole('dialog', { name: 'dot diagram' });
+  await dialog.getByRole('button', { name: 'Download diagram as SVG' }).click();
+  await expect(dialog.getByRole('status')).toContainText('Diagram saved');
+  const saved = await page.evaluate(
+    () => (window as unknown as { savedDiagram: { format: string; bytes: number[] } }).savedDiagram,
+  );
+  expect(saved.format).toBe('svg');
+  expect(Buffer.from(saved.bytes).toString('utf8')).toContain('<svg');
+});
+
+test('does not expose diagram export to script-enabled documents', async ({ page }) => {
+  await page.goto('/');
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile('# Trusted\n\n```dot\ndigraph { A -> B }\n```'));
+  await page
+    .getByRole('button', { name: 'Safe preview: trust current document for scripts' })
+    .click();
+  await page.getByRole('button', { name: 'Enable scripts for this document' }).click();
+  const frame = page.frameLocator('iframe');
+  await frame.getByRole('button', { name: 'Render dot diagram' }).click();
+  await frame.getByRole('button', { name: 'Expand diagram' }).click();
+  const dialog = frame.getByRole('dialog', { name: 'dot diagram' });
+  await expect(dialog.getByRole('button', { name: 'Download diagram as SVG' })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Copy diagram as PNG' })).toBeDisabled();
+  await expect(dialog.getByRole('status')).toContainText(
+    'unavailable while document scripts are enabled',
+  );
 });
 
 test('keeps fitted content inside the pane while wide blocks scroll locally', async ({ page }) => {
@@ -871,6 +1407,27 @@ test('search preserves SVG and mathematics while highlighting prose and code', a
   await page.getByRole('button', { name: 'Close search', exact: true }).click();
   await expect(frame.locator('mark[data-search]')).toHaveCount(0);
   expect(await svg.innerHTML()).toBe(originalSvg);
+});
+
+test('keeps the latest scroll when switching tabs immediately', async ({ page }) => {
+  await page.goto('/');
+  const paragraphs = 'A paragraph.\n\n'.repeat(150);
+  await page
+    .getByLabel('Import selected files', { exact: true })
+    .setInputFiles([
+      markdownFile('# Alpha\n\n[Beta](./beta.md)\n\n' + paragraphs, 'alpha.md'),
+      markdownFile('# Beta\n\n' + paragraphs, 'beta.md'),
+    ]);
+  const frame = page.frameLocator('iframe');
+  await frame.getByRole('link', { name: 'Beta', exact: true }).click();
+  await expect(frame.getByRole('heading', { name: 'Beta', exact: true })).toBeVisible();
+  await page.locator('.tab-select').filter({ hasText: 'alpha.md' }).click();
+  await expect(frame.getByRole('heading', { name: 'Alpha', exact: true })).toBeVisible();
+  await frame.locator('html').evaluate(() => scrollTo(0, 1800));
+  await page.locator('.tab-select').filter({ hasText: 'beta.md' }).click();
+  await page.locator('.tab-select').filter({ hasText: 'alpha.md' }).click();
+  await expect(frame.getByRole('heading', { name: 'Alpha', exact: true })).toBeVisible();
+  await expect.poll(() => frame.locator('html').evaluate(() => scrollY)).toBe(1800);
 });
 
 test('consumes heading navigation and restores tab scroll positions', async ({ page }) => {

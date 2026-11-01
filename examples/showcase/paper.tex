@@ -1,0 +1,20 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\title{Papyri LaTeX showcase}
+\author{Papyri}
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Mathematics and references}\label{sec:math}
+Search for PAPYRI-NEEDLE. The integral in equation~\eqref{eq:gaussian} and the citation~\cite{example2024} should be resolved after compilation.
+\begin{equation}\label{eq:gaussian}
+\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}.
+\end{equation}
+
+\input{parts/latex-section.tex}
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}
