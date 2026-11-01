@@ -13,6 +13,7 @@ pub struct Entry {
   name: String,
   path: String,
   directory: bool,
+  symlink: bool,
 }
 #[derive(Serialize)]
 pub struct Document {
@@ -69,19 +70,22 @@ pub fn list_directory(path: String) -> Result<Vec<Entry>, String> {
   for entry in entries {
     let entry = entry.map_err(|e| error(&path, e))?;
     let entry_path = entry.path();
-    // Broken symlinks remain visible; following an inaccessible entry reports an error.
-    let directory = entry_path.is_dir();
+    let file_type = entry.file_type().map_err(|e| error(&path, e))?;
+    let symlink = file_type.is_symlink();
+    // Follow directory links while leaving broken symlinks visible.
+    let directory = if symlink {
+      entry_path.is_dir()
+    } else {
+      file_type.is_dir()
+    };
     result.push(Entry {
       name: entry.file_name().to_string_lossy().into_owned(),
       path: entry_path.to_string_lossy().into_owned(),
       directory,
+      symlink,
     });
   }
-  result.sort_by(|a, b| {
-    b.directory
-      .cmp(&a.directory)
-      .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
-  });
+  result.sort_by_cached_key(|entry| (!entry.directory, entry.name.to_lowercase()));
   Ok(result)
 }
 pub fn read_document(path: String) -> Result<Document, String> {
@@ -90,8 +94,11 @@ pub fn read_document(path: String) -> Result<Document, String> {
     .and_then(|e| e.to_str())
     .unwrap_or("")
     .to_lowercase();
-  if !["md", "markdown", "mdown", "mkd"].contains(&extension.as_str()) {
-    return Err(error(&path, "Only Markdown documents can be opened"));
+  if !["md", "markdown", "mdown", "mkd", "typ", "tex"].contains(&extension.as_str()) {
+    return Err(error(
+      &path,
+      "Only Markdown, Typst, and LaTeX source documents can be opened",
+    ));
   }
   let (bytes, metadata) = bounded_read(&path, DOCUMENT_LIMIT)?;
   let text = String::from_utf8(bytes).map_err(|e| error(&path, format!("Expected UTF-8: {e}")))?;
@@ -149,10 +156,44 @@ mod tests {
       .unwrap()
       .iter()
       .any(|e| e.name == ".hidden.md"));
+    let symlink = directory.join("loop");
+    std::os::unix::fs::symlink(&directory, &symlink).unwrap();
+    let broken_link = directory.join("broken");
+    std::os::unix::fs::symlink(directory.join("missing"), &broken_link).unwrap();
+    let entries = list_directory(directory.to_string_lossy().into_owned()).unwrap();
+    assert_eq!(
+      entries
+        .iter()
+        .map(|entry| entry.name.as_str())
+        .collect::<Vec<_>>(),
+      vec!["loop", ".hidden.md", "broken"]
+    );
+    assert!(entries
+      .iter()
+      .any(|entry| entry.name == "loop" && entry.directory && entry.symlink));
+    assert!(entries
+      .iter()
+      .any(|entry| entry.name == "broken" && !entry.directory && entry.symlink));
+    assert!(entries
+      .iter()
+      .any(|entry| entry.name == ".hidden.md" && !entry.directory && !entry.symlink));
+    fs::remove_file(symlink).unwrap();
+    fs::remove_file(broken_link).unwrap();
     fs::write(&file, "# Changed").unwrap();
     assert_eq!(read_document(path.clone()).unwrap().text, "# Changed");
     fs::remove_file(file).unwrap();
     assert!(read_document(path).is_err());
+    for extension in ["typ", "tex"] {
+      let source = directory.join(format!("paper.{extension}"));
+      fs::write(&source, "Document source").unwrap();
+      assert_eq!(
+        read_document(source.to_string_lossy().into_owned())
+          .unwrap()
+          .text,
+        "Document source"
+      );
+      fs::remove_file(source).unwrap();
+    }
     fs::remove_dir(directory).unwrap();
   }
   #[test]

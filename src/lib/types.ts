@@ -2,11 +2,14 @@ export interface Entry {
   name: string;
   path: string;
   directory: boolean;
+  symlink?: boolean;
 }
 export interface FileData {
   text: string;
   stamp: string;
   bytes?: Uint8Array;
+  compilationError?: string;
+  retryCompilation?: boolean;
 }
 export interface Source {
   label: string;
@@ -14,6 +17,7 @@ export interface Source {
   live: boolean;
   list(path: string): Promise<Entry[]>;
   read(path: string): Promise<FileData>;
+  readSource?(path: string): Promise<FileData>;
   stamp?(path: string): Promise<string>;
   asset(path: string): Promise<Uint8Array>;
 }
@@ -23,6 +27,9 @@ export interface Delimiter {
   display: boolean;
 }
 export interface Preferences {
+  typstPath: string;
+  latexEngine: LatexEngine;
+  latexPaths: Record<LatexEngine, string>;
   theme: 'mocha' | 'latte';
   network: boolean;
   documentZoom: number;
@@ -32,6 +39,7 @@ export interface Preferences {
   sidebarWidth: number;
   delimiters: Delimiter[];
 }
+export type LatexEngine = 'lualatex' | 'pdflatex' | 'xelatex';
 export interface Heading {
   id: string;
   text: string;

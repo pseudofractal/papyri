@@ -1,5 +1,5 @@
 //! Compile with the official CLI inside a read-only, network-isolated Linux sandbox.
-use crate::files;
+use crate::{executables, files};
 use std::{
   collections::HashMap,
   fs,
@@ -26,6 +26,36 @@ pub fn is_typst(path: &str) -> bool {
   Path::new(path)
     .extension()
     .is_some_and(|extension| extension.eq_ignore_ascii_case("typ"))
+}
+
+fn discover_in_path(search_path: &std::ffi::OsStr, fallback: Option<&str>) -> Option<PathBuf> {
+  executables::find_in_path("typst", search_path).or_else(|| {
+    fallback
+      .map(PathBuf::from)
+      .filter(|path| executables::is_executable(path))
+  })
+}
+
+/// Discover Typst on PATH, falling back to the compiler bundled by Nix.
+pub fn discover_binary() -> Option<PathBuf> {
+  discover_in_path(
+    &std::env::var_os("PATH").unwrap_or_default(),
+    option_env!("PAPYRI_TYPST_BINARY"),
+  )
+}
+
+fn resolve_binary(configured: &str) -> Result<PathBuf, String> {
+  if configured.is_empty() {
+    return discover_binary()
+      .ok_or_else(|| "Typst was not found on PATH. Set its executable path in settings.".into());
+  }
+  let path = Path::new(configured);
+  if !path.is_absolute() || !executables::is_executable(path) {
+    return Err(format!(
+      "Configured Typst path is not an absolute executable file: {configured}"
+    ));
+  }
+  Ok(path.to_path_buf())
 }
 
 /// Include imported files and images from the last successful compilation in live polling.
@@ -75,7 +105,7 @@ fn bind_packages(command: &mut Command, variable: &str, fallback: &str, destinat
   }
 }
 
-fn drain_bounded(mut pipe: impl Read, limit: usize) -> Result<Vec<u8>, String> {
+pub(crate) fn drain_bounded(mut pipe: impl Read, limit: usize) -> Result<Vec<u8>, String> {
   let mut bytes = Vec::new();
   pipe
     .by_ref()
@@ -87,7 +117,10 @@ fn drain_bounded(mut pipe: impl Read, limit: usize) -> Result<Vec<u8>, String> {
   Ok(bytes)
 }
 
-fn wait_with_timeout(child: &mut Child, timeout: Duration) -> Result<Option<ExitStatus>, String> {
+pub(crate) fn wait_with_timeout(
+  child: &mut Child,
+  timeout: Duration,
+) -> Result<Option<ExitStatus>, String> {
   let started = Instant::now();
   loop {
     match child.try_wait() {
@@ -102,7 +135,7 @@ fn wait_with_timeout(child: &mut Child, timeout: Duration) -> Result<Option<Exit
   }
 }
 
-pub fn compile(path: String) -> Result<Vec<u8>, String> {
+pub fn compile(path: String, configured_path: String) -> Result<Vec<u8>, String> {
   if !is_typst(&path) {
     return Err("Expected a .typ document".into());
   }
@@ -111,10 +144,11 @@ pub fn compile(path: String) -> Result<Vec<u8>, String> {
     .map_err(|_| "Another Typst preview is compiling. Try opening this document again.")?;
   let canonical = fs::canonicalize(&path).map_err(|error| format!("{path}: {error}"))?;
   let project = canonical.parent().ok_or("Document has no parent folder")?;
+  let initial_stamp = stamp(path.clone())?;
   let (source, _) = files::bounded_read(&path, files::DOCUMENT_LIMIT)?;
   std::str::from_utf8(&source).map_err(|error| format!("Expected UTF-8 Typst: {error}"))?;
   let output = OutputDirectory::create()?;
-  let compiler = option_env!("PAPYRI_TYPST_BINARY").unwrap_or("typst");
+  let compiler = resolve_binary(&configured_path)?;
   let sandbox = option_env!("PAPYRI_BWRAP_BINARY").unwrap_or("bwrap");
   let limiter = option_env!("PAPYRI_PRLIMIT_BINARY").unwrap_or("prlimit");
   let mut command = Command::new(limiter);
@@ -131,15 +165,14 @@ pub fn compile(path: String) -> Result<Vec<u8>, String> {
     "--die-with-parent",
     "--cap-drop",
     "ALL",
-    "--ro-bind",
-    "/nix/store",
-    "/nix/store",
     "--proc",
     "/proc",
     "--dev",
     "/dev",
     "--tmpfs",
     "/tmp",
+    "--dir",
+    "/compiler",
     "--dir",
     "/packages/local",
     "--dir",
@@ -151,9 +184,17 @@ pub fn compile(path: String) -> Result<Vec<u8>, String> {
     "--setenv",
     "LANG",
     "C.UTF-8",
-    "--ro-bind",
   ]);
-  command.arg(project).arg("/project");
+  for directory in ["/nix/store", "/usr", "/bin", "/lib", "/lib64"] {
+    if Path::new(directory).exists() {
+      command.args(["--ro-bind", directory, directory]);
+    }
+  }
+  command.arg("--ro-bind").arg(project).arg("/project");
+  command
+    .arg("--ro-bind")
+    .arg(&compiler)
+    .arg("/compiler/typst");
   command.arg("--bind").arg(&output.0).arg("/output");
   bind_packages(
     &mut command,
@@ -166,7 +207,7 @@ pub fn compile(path: String) -> Result<Vec<u8>, String> {
     "--chdir",
     "/project",
     "--",
-    compiler,
+    "/compiler/typst",
     "compile",
     "--root",
     "/project",
@@ -226,6 +267,11 @@ pub fn compile(path: String) -> Result<Vec<u8>, String> {
   if !bytes.starts_with(b"%PDF-") {
     return Err("Typst did not produce a PDF".into());
   }
+  if stamp(path.clone())? != initial_stamp {
+    return Err(
+      "The Typst source or a known dependency changed during compilation. Try again.".into(),
+    );
+  }
   let deps_path = output.0.join("deps.json");
   let (deps, _) = files::bounded_read(&deps_path.to_string_lossy(), DEPENDENCY_LIMIT)?;
   #[derive(serde::Deserialize)]
@@ -261,10 +307,31 @@ pub fn compile(path: String) -> Result<Vec<u8>, String> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::os::unix::fs::PermissionsExt;
+  #[test]
+  fn discovers_typst_and_validates_configured_paths() {
+    let root = OutputDirectory::create().unwrap();
+    let binary = root.0.join("typst");
+    fs::write(&binary, "fixture").unwrap();
+    fs::set_permissions(&binary, fs::Permissions::from_mode(0o755)).unwrap();
+    let search = std::env::join_paths([&root.0]).unwrap();
+    assert_eq!(discover_in_path(&search, None), Some(binary.clone()));
+    assert_eq!(
+      discover_in_path(root.0.join("missing").as_os_str(), binary.to_str()),
+      Some(binary.clone())
+    );
+    assert_eq!(
+      discover_in_path(root.0.join("missing").as_os_str(), None),
+      None
+    );
+    assert_eq!(resolve_binary(binary.to_str().unwrap()).unwrap(), binary);
+    assert!(resolve_binary("relative/typst").is_err());
+    assert!(resolve_binary("/nonexistent/papyri-typst").is_err());
+  }
   #[test]
   fn bounds_process_output_and_requires_typst_extension() {
     assert_eq!(drain_bounded(&b"abcdef"[..], 3).unwrap(), b"abcd");
-    assert!(compile("/etc/passwd".into()).is_err());
+    assert!(compile("/etc/passwd".into(), String::new()).is_err());
   }
   #[test]
   fn terminates_and_reaps_a_timed_out_process() {
@@ -285,20 +352,39 @@ mod tests {
     fs::write(&source, "= Native Typst\n#include \"part.typ\"").unwrap();
     fs::write(&part, "Imported content").unwrap();
     let path = source.to_string_lossy().into_owned();
-    let pdf = compile(path.clone()).unwrap();
+    let pdf = compile(path.clone(), String::new()).unwrap();
     assert!(pdf.starts_with(b"%PDF-"));
+    let binary = discover_binary().unwrap();
+    assert!(compile(path.clone(), binary.to_string_lossy().into_owned())
+      .unwrap()
+      .starts_with(b"%PDF-"));
+    let custom = OutputDirectory::create().unwrap();
+    let custom_binary = custom.0.join("typst");
+    fs::write(
+      &custom_binary,
+      "#!/bin/sh\nprintf 'selected compiler ran\\n' >&2\nexit 29\n",
+    )
+    .unwrap();
+    fs::set_permissions(&custom_binary, fs::Permissions::from_mode(0o755)).unwrap();
+    assert!(
+      compile(path.clone(), custom_binary.to_string_lossy().into_owned())
+        .unwrap_err()
+        .contains("selected compiler ran")
+    );
     assert_eq!(fs::read_dir(&root.0).unwrap().count(), 2);
     let original = stamp(path.clone()).unwrap();
     fs::write(&part, "Changed dependency with a different length").unwrap();
     assert_ne!(stamp(path.clone()).unwrap(), original);
     fs::remove_file(&part).unwrap();
-    assert!(compile(path.clone()).unwrap_err().contains("part.typ"));
+    assert!(compile(path.clone(), String::new())
+      .unwrap_err()
+      .contains("part.typ"));
 
     let secret = OutputDirectory::create().unwrap();
     fs::write(secret.0.join("secret.txt"), "Private sibling content").unwrap();
     std::os::unix::fs::symlink(secret.0.join("secret.txt"), root.0.join("escape.txt")).unwrap();
     fs::write(&source, "#read(\"escape.txt\")").unwrap();
-    assert!(compile(path.clone())
+    assert!(compile(path.clone(), String::new())
       .unwrap_err()
       .contains("Typst compilation failed"));
     fs::write(
@@ -306,9 +392,9 @@ mod tests {
       "#import \"@preview/papyri-nonexistent-package:0.0.0\": *",
     )
     .unwrap();
-    assert!(compile(path.clone()).is_err());
+    assert!(compile(path.clone(), String::new()).is_err());
     fs::write(&source, "#let index = 0\n#while index >= 0 { index += 1 }").unwrap();
-    assert!(compile(path)
+    assert!(compile(path, String::new())
       .unwrap_err()
       .contains("loop seems to be infinite"));
   }

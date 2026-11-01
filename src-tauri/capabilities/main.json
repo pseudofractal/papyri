@@ -4,6 +4,7 @@
   "windows": ["main"],
   "permissions": [
     "allow-initial-path",
+    "allow-startup-trace",
     "allow-list-directory",
     "allow-read-document",
     "allow-read-pdf",

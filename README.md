@@ -1,1 +1,1 @@
-Papyri is a read-only Markdown, PDF, and Typst viewer for Linux with offline math and diagrams.
+Papyri is a read-only Markdown, PDF, Typst, and LaTeX viewer for Linux with offline math and diagrams.

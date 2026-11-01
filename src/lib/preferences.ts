@@ -7,6 +7,9 @@ import {
 } from './view';
 import type { Delimiter, Preferences } from './types';
 export const defaults: Preferences = {
+  typstPath: '',
+  latexEngine: 'lualatex',
+  latexPaths: { lualatex: '', pdflatex: '', xelatex: '' },
   theme: 'mocha',
   network: false,
   documentZoom: 100,
@@ -51,6 +54,16 @@ export function loadPreferences(): Preferences {
     const stored = JSON.parse(localStorage.getItem('papyri.preferences') || 'null');
     if (!stored) return structuredClone(defaults);
     return {
+      typstPath: typeof stored.typstPath === 'string' ? stored.typstPath : '',
+      latexEngine: ['lualatex', 'pdflatex', 'xelatex'].includes(stored.latexEngine)
+        ? stored.latexEngine
+        : 'lualatex',
+      latexPaths: Object.fromEntries(
+        Object.keys(defaults.latexPaths).map((engine) => [
+          engine,
+          typeof stored.latexPaths?.[engine] === 'string' ? stored.latexPaths[engine] : '',
+        ]),
+      ) as Preferences['latexPaths'],
       theme: stored.theme === 'latte' ? 'latte' : 'mocha',
       network: stored.network === true,
       fitWidth: stored.fitWidth === true,

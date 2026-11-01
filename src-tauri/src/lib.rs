@@ -1,28 +1,44 @@
 mod commands;
+mod executables;
 mod files;
+mod latex;
 mod security;
 mod typst;
 use tauri::Manager;
+
+fn trace_native_startup(stage: &str) {
+  if std::env::var_os("PAPYRI_STARTUP_TRACE").is_some_and(|value| value == "1") {
+    eprintln!("PAPYRI_NATIVE {stage}");
+  }
+}
+
 pub fn run() {
+  trace_native_startup("entry");
   let mut bytes = [0u8; 32];
   getrandom::fill(&mut bytes).expect("Unable to create host session token");
   let token: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
   let handler: Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync> =
     Box::new(tauri::generate_handler![
       commands::initial_path,
+      commands::startup_trace,
       commands::list_directory,
       commands::read_document,
       commands::read_pdf,
+      commands::latex_engines,
+      commands::typst_binary,
       commands::read_asset,
       commands::document_stamp,
       commands::pick_path,
+      commands::save_diagram,
       commands::open_external
     ]);
+  trace_native_startup("builder");
   tauri::Builder::default()
     .append_invoke_initialization_script(security::initialization(&token))
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .setup(|app| {
+      trace_native_startup("setup");
       let window = app
         .get_webview_window("main")
         .ok_or("Main window is unavailable")?;
@@ -30,6 +46,7 @@ pub fn run() {
         .default_window_icon()
         .ok_or("Application icon is unavailable")?;
       window.set_icon(icon.clone())?;
+      trace_native_startup("setup-complete");
       Ok(())
     })
     .invoke_handler(move |invoke| {

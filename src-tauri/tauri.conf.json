@@ -30,7 +30,7 @@
     "active": false,
     "icon": ["icons/icon.png", "icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png"],
     "category": "Utility",
-    "shortDescription": "Read-only Markdown, PDF, and Typst viewer",
+    "shortDescription": "Read-only Markdown, PDF, Typst, and LaTeX viewer",
     "linux": {
       "deb": {
         "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]

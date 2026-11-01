@@ -1,7 +1,7 @@
 {
   "name": "papyri",
   "version": "0.1.0",
-  "description": "A read-only Markdown, PDF, and Typst viewer with offline math and diagrams",
+  "description": "A read-only Markdown, PDF, Typst, and LaTeX viewer with offline math and diagrams",
   "license": "MIT",
   "repository": {
     "type": "git",

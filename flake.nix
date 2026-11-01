@@ -1,5 +1,5 @@
 {
-  description = "Papyri — a read-only Markdown, PDF, and Typst viewer";
+  description = "Papyri — a read-only Markdown, PDF, Typst, and LaTeX viewer";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   outputs = { self, nixpkgs }:
     let
@@ -75,11 +75,12 @@
               install -Dm644 icons/128x128@2x.png $out/share/icons/hicolor/256x256/apps/papyri.png
               install -Dm644 icons/icon.png $out/share/icons/hicolor/512x512/apps/papyri.png
             '';
-            meta = { description = "Read-only Markdown, PDF, and Typst viewer"; homepage = "https://github.com/pseudofractal/papyri"; license = lib.licenses.mit; platforms = systems; mainProgram = "papyri"; };
+            meta = { description = "Read-only Markdown, PDF, Typst, and LaTeX viewer"; homepage = "https://github.com/pseudofractal/papyri"; license = lib.licenses.mit; platforms = systems; mainProgram = "papyri"; };
           };
-          quality = web.overrideAttrs (_: {
+          quality = web.overrideAttrs (old: {
             pname = "papyri-quality";
             src = source;
+            nativeBuildInputs = (old.nativeBuildInputs or []) ++ [ pkgs.git ];
             buildPhase = ''
               runHook preBuild
               npm run check
@@ -114,7 +115,7 @@
         in { inherit pkgs web desktop nativeLibraries quality packaging; };
     in {
       packages = eachSystem (system: let p = forSystem system; in { default = p.desktop; papyri = p.desktop; web = p.web; });
-      apps = eachSystem (system: { default = { type = "app"; meta.description = "Open Markdown, PDF, Typst, or a directory"; program = "${self.packages.${system}.default}/bin/papyri"; }; });
+      apps = eachSystem (system: { default = { type = "app"; meta.description = "Open Markdown, PDF, Typst, LaTeX, or a directory"; program = "${self.packages.${system}.default}/bin/papyri"; }; });
       checks = eachSystem (system: let p = forSystem system; in { inherit (p) web quality packaging; linux = p.desktop; });
       devShells = eachSystem (system: let p = forSystem system; in { default = p.pkgs.mkShell {
         packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst bubblewrap util-linux ];

@@ -3,6 +3,19 @@ import { renderMarkdown } from '../src/render/markdown';
 import { validateDelimiters } from '../src/lib/preferences';
 import { resolveLink, sortEntries } from '../src/lib/paths';
 import { framePolicy } from '../src/render/sandbox';
+import { renderSource } from '../src/render/source';
+it.each([
+  ['typst', '#let x = "hello"'],
+  ['latex', '\\section{Hello}'],
+])('highlights %s source and escapes markup', (language, code) => {
+  const rendered = renderSource(
+    `${code}\n<script>alert(1)</script>`,
+    language as 'typst' | 'latex',
+  );
+  expect(rendered.html).toContain('class="hljs-');
+  expect(rendered.html).not.toContain('<script>');
+  expect(rendered.html).toContain('&lt;script&gt;');
+});
 describe('Markdown and mathematics', () => {
   it('renders GFM, footnotes, raw HTML, code, and unique heading anchors', () => {
     const result = renderMarkdown(

@@ -1,5 +1,5 @@
-import { sortEntries, normalize, dirname, basename, isPdf, isTypst } from './paths';
-import type { Source, Entry, FileData } from './types';
+import { sortEntries, normalize, dirname, basename, isPdf, isTypst, isLatex } from './paths';
+import type { Source, Entry, FileData, Preferences } from './types';
 import { invokeHost } from './native';
 import { MAX_DOCUMENT_BYTES, MAX_PDF_BYTES } from './limits';
 const MAX_ASSET_BYTES = 16 * 1024 * 1024;
@@ -9,8 +9,6 @@ function decode(bytes: Uint8Array): string {
   return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
 }
 async function readBrowserDocument(file: File): Promise<FileData> {
-  if (isTypst(file.name))
-    throw new Error('Typst compilation requires the Linux app. Open an exported PDF in web mode.');
   if (isPdf(file.name)) {
     if (file.size > MAX_PDF_BYTES) throw new Error('This PDF exceeds the 64 MiB preview limit.');
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -22,6 +20,9 @@ async function readBrowserDocument(file: File): Promise<FileData> {
   return {
     text: decode(new Uint8Array(await file.arrayBuffer())),
     stamp: `${file.lastModified}:${file.size}`,
+    ...(isLatex(file.name) || isTypst(file.name)
+      ? { compilationError: 'Compilation requires the Linux app. Showing source.' }
+      : {}),
   };
 }
 /** Imported files are snapshots: no paths outside the selected set are reachable. */
@@ -64,7 +65,7 @@ export function importedSource(files: File[]): Source {
   };
 }
 export const native = '__TAURI_INTERNALS__' in window;
-export async function desktopSource(): Promise<{
+export async function desktopSource(getPreferences: () => Preferences): Promise<{
   source: Source;
   initial: { path: string; directory: boolean };
 }> {
@@ -76,14 +77,54 @@ export async function desktopSource(): Promise<{
       label: 'Local filesystem',
       root: '/',
       live: true,
-      stamp: (path) => invokeHost<string>('document_stamp', { path }),
+      async stamp(path) {
+        const stamp = await invokeHost<string>('document_stamp', { path });
+        const prefs = getPreferences();
+        if (isTypst(path)) return `${stamp}|${prefs.typstPath}`;
+        return isLatex(path)
+          ? `${stamp}|${prefs.latexEngine}:${prefs.latexPaths[prefs.latexEngine]}`
+          : stamp;
+      },
       list: (path) => invokeHost<Entry[]>('list_directory', { path }),
+      readSource: (path) => invokeHost<FileData>('read_document', { path }),
       async read(path) {
-        if (!isPdf(path) && !isTypst(path)) return invokeHost<FileData>('read_document', { path });
+        if (!isPdf(path) && !isTypst(path) && !isLatex(path))
+          return invokeHost<FileData>('read_document', { path });
+        const prefs = getPreferences();
+        const engine = prefs.latexEngine;
+        const compilerPath = isTypst(path) ? prefs.typstPath : prefs.latexPaths[engine];
         let stamp = await invokeHost<string>('document_stamp', { path });
-        const bytes = new Uint8Array(await invokeHost<ArrayBuffer>('read_pdf', { path }));
-        if (isTypst(path)) stamp = await invokeHost<string>('document_stamp', { path });
-        return { text: '', bytes, stamp };
+        try {
+          const bytes = new Uint8Array(
+            await invokeHost<ArrayBuffer>('read_pdf', { path, engine, compilerPath }),
+          );
+          if (isTypst(path) || isLatex(path)) {
+            const latestStamp = await invokeHost<string>('document_stamp', { path });
+            if (stamp.split('|', 1)[0] !== latestStamp.split('|', 1)[0])
+              throw new Error('Document changed during compilation. Try again.');
+            stamp = latestStamp;
+          }
+          if (isTypst(path)) {
+            if (getPreferences().typstPath !== compilerPath)
+              throw new Error('Typst compiler settings changed during compilation. Try again.');
+            stamp += `|${compilerPath}`;
+          }
+          if (isLatex(path)) {
+            const current = getPreferences();
+            if (current.latexEngine !== engine || current.latexPaths[engine] !== compilerPath)
+              throw new Error('LaTeX compiler settings changed during compilation. Try again.');
+            stamp += `|${engine}:${compilerPath}`;
+          }
+          return { text: '', bytes, stamp };
+        } catch (error) {
+          if (isPdf(path)) throw error;
+          const file = await invokeHost<FileData>('read_document', { path });
+          return {
+            ...file,
+            compilationError: `Compilation failed. Showing source. ${String(error)}`,
+            retryCompilation: true,
+          };
+        }
       },
       asset: async (path) => new Uint8Array(await invokeHost<number[]>('read_asset', { path })),
     },

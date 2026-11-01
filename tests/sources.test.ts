@@ -59,14 +59,21 @@ it('reads PDFs as binary without UTF-8 decoding and enforces the PDF allocation 
   expect(read).not.toHaveBeenCalled();
 });
 
-it('rejects PDF buffers that grow beyond the limit and explains browser Typst restrictions', async () => {
+it('rejects PDF buffers that grow beyond the limit', async () => {
   const pdf = new File(['small'], 'paper.pdf');
   vi.spyOn(pdf, 'arrayBuffer').mockResolvedValue(new ArrayBuffer(MAX_PDF_BYTES + 1));
   for (const source of await documentSources(pdf))
     await expect(source.read('/paper.pdf')).rejects.toThrow('64 MiB');
-  const typst = new File(['= Heading'], 'paper.typ');
-  const read = vi.spyOn(typst, 'arrayBuffer');
-  for (const source of await documentSources(typst))
-    await expect(source.read('/paper.typ')).rejects.toThrow('requires the Linux app');
-  expect(read).not.toHaveBeenCalled();
+});
+
+it.each([
+  ['paper.typ', '= Heading'],
+  ['paper.tex', '\\section{Heading}'],
+])('opens %s as source in both browser modes', async (name, text) => {
+  const file = new File([text], name);
+  for (const source of await documentSources(file))
+    await expect(source.read('/' + name)).resolves.toMatchObject({
+      text,
+      compilationError: expect.stringContaining('requires the Linux app'),
+    });
 });
