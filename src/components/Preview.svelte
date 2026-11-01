@@ -17,6 +17,7 @@
   import { native } from '../lib/sources';
   import { mayContainMath, warmMathFonts } from '../render/math-fonts';
   import { loadPdfResource } from '../render/pdf-resources';
+  import { SCROLL_ACK_TIMEOUT_MS } from '../lib/control-timings';
   let {
     tab,
     scrollPosition,
@@ -86,7 +87,7 @@
       const timeout = setTimeout(() => {
         pendingScrolls.delete(request);
         reject(new Error('The preview did not acknowledge the scroll.'));
-      }, 2000);
+      }, SCROLL_ACK_TIMEOUT_MS);
       pendingScrolls.set(request, { resolve, reject, timeout });
       frame?.contentWindow?.postMessage({ type: 'scroll', request, ...payload }, '*');
     });
@@ -173,6 +174,8 @@
         activeChannel = channel;
         allowsMessages = !trust;
         srcdoc = document;
+        // Recreate the iframe so a load already in flight for an older
+        // document cannot win over this render and leave the host waiting.
         frameGeneration++;
         onheadings(headings);
         loading = false;

@@ -5,6 +5,10 @@ export interface AnchorTarget {
   id: string;
   request: number;
 }
+function describeCompilationFailure(error: string | undefined, retained: boolean): string {
+  if (!error) return '';
+  return `${error} ${retained ? 'Last preview retained.' : 'Showing source.'}`;
+}
 export interface Tab {
   path: string;
   text: string;
@@ -94,7 +98,7 @@ export class Workspace {
           bytes: file.bytes,
           stamp: file.stamp,
           scroll: 0,
-          error: file.compilationError || '',
+          error: describeCompilationFailure(file.compilationError, false),
           compilationError: file.compilationError,
           retryCompilation: file.retryCompilation,
           revision: 0,
@@ -133,7 +137,7 @@ export class Workspace {
             bytes: file.bytes,
             stamp: file.stamp,
             scroll: 0,
-            error: file.compilationError || '',
+            error: describeCompilationFailure(file.compilationError, false),
             compilationError: file.compilationError,
             retryCompilation: file.retryCompilation,
             revision: 0,
@@ -185,8 +189,8 @@ export class Workspace {
       if (this.source !== source || !this.tabs.includes(tab) || tab.bytes !== previousBytes) return;
       tab.text = file.text;
       tab.bytes = undefined;
-      tab.compilationError = `PDF preview failed. Showing source. ${reason}`;
-      tab.error = tab.compilationError;
+      tab.compilationError = `PDF preview failed. ${reason}`;
+      tab.error = describeCompilationFailure(tab.compilationError, false);
       tab.retryCompilation = false;
       tab.revision++;
     } catch (error) {
@@ -206,7 +210,7 @@ export class Workspace {
       if (!tab) continue;
       try {
         if (!tab.retryCompilation && source.stamp && (await source.stamp(path)) === tab.stamp) {
-          tab.error = tab.compilationError || '';
+          tab.error = describeCompilationFailure(tab.compilationError, !!tab.bytes);
           continue;
         }
         const file = await source.read(path);
@@ -214,8 +218,8 @@ export class Workspace {
         // A failed compile after a successful one keeps the last PDF visible.
         // The error banner explains the retained preview and refresh retries.
         if (tab.bytes && file.compilationError && !file.bytes) {
-          tab.error = file.compilationError.replace('Showing source.', 'Last preview retained.');
-          tab.compilationError = tab.error;
+          tab.error = describeCompilationFailure(file.compilationError, true);
+          tab.compilationError = file.compilationError;
           tab.retryCompilation = file.retryCompilation;
           continue;
         }
@@ -225,7 +229,7 @@ export class Workspace {
           tab.stamp = file.stamp;
           tab.revision++;
         }
-        tab.error = file.compilationError || '';
+        tab.error = describeCompilationFailure(file.compilationError, false);
         tab.compilationError = file.compilationError;
         tab.retryCompilation = file.retryCompilation;
       } catch (error) {

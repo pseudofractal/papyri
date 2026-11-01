@@ -40,31 +40,19 @@
   import Settings from './components/Settings.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { invokeHost } from './lib/native';
-  import { Workspace, type Tab } from './lib/workspace.svelte';
+  import { Workspace } from './lib/workspace.svelte';
   import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
   import { demoSource } from './lib/demo';
   import { loadPreferences, mergePreferences } from './lib/preferences';
   import { traceStartup } from './lib/startup-trace';
-  import {
-    basename,
-    dirname,
-    isDocument,
-    isLatex,
-    isMarkdown,
-    isTypst,
-    normalize,
-    resolveLink,
-  } from './lib/paths';
+  import { basename, dirname, isDocument, isMarkdown, normalize, resolveLink } from './lib/paths';
   import type { Heading, LatexEngine, Preferences, Source } from './lib/types';
   import type { PaletteCommand } from './lib/palette';
-  import {
-    createControlExecutor,
-    type ControlActions,
-    type ControlState,
-    type ControlTab,
-    type ScrollTarget,
-  } from './lib/control';
+  import { createControlExecutor, type ControlActions, type ControlState } from './lib/control';
   import { installControl, markControlReady, publishControlEvent } from './lib/control-host';
+  import { HEADINGS_POLL_MS, HEADINGS_READY_TIMEOUT_MS } from './lib/control-timings';
+  import { buildControlState } from './lib/control-state';
+  import { scrollPreview, waitForPreview, type PreviewControls } from './lib/preview-control';
   const workspace = new Workspace();
   let preferences = $state(loadPreferences());
   let sidebar = $state(window.innerWidth >= 760);
@@ -88,11 +76,6 @@
   let searchInput = $state<HTMLInputElement>();
   let refreshing = false;
   let viewportWidth = $state(window.innerWidth);
-  type PreviewControls = {
-    scrollTo(y: number): Promise<number>;
-    scrollBy(dy: number): Promise<number>;
-    documentPath(): string;
-  };
   let primaryPreview = $state<PreviewControls>();
   let secondaryPreview = $state<PreviewControls>();
   let resolveWorkspaceReady = () => {};
@@ -555,45 +538,11 @@
     if (key === '\\') split();
     if (key === ',') settings = !settings;
   }
-  function documentKind(tab: Tab): ControlTab['kind'] {
-    if (tab.bytes) return 'pdf';
-    if (isTypst(tab.path)) return 'typst-source';
-    if (isLatex(tab.path)) return 'latex-source';
-    return 'markdown';
-  }
-  async function scrollPreview(preview: PreviewControls, target: ScrollTarget) {
-    const deadline = Date.now() + 10_000;
-    for (;;) {
-      try {
-        if ('y' in target) return await preview.scrollTo(target.y);
-        if ('dy' in target) return await preview.scrollBy(target.dy);
-        if ('top' in target) return await preview.scrollTo(0);
-        return await preview.scrollTo(100_000_000);
-      } catch (error) {
-        const waiting = error instanceof Error && error.message.includes('not ready');
-        if (!waiting || Date.now() >= deadline) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-    }
-  }
   function controlState(): ControlState {
-    const source = workspace.source;
-    return {
-      protocol: 1,
-      active: workspace.active || null,
-      secondary: workspace.secondary || null,
-      tabs: workspace.tabs.map((tab) => ({
-        path: tab.path,
-        kind: documentKind(tab),
-        active: tab.path === workspace.active,
-        secondary: tab.path === workspace.secondary,
-        scroll: Math.round(tab.scroll),
-        error: tab.error || null,
-      })),
-      pdf:
-        pagedDocument && pdfPage.path === workspace.active && pdfPage.total
-          ? { path: pdfPage.path, page: pdfPage.page, total: pdfPage.total }
-          : null,
+    return buildControlState({
+      workspace,
+      pdfPage,
+      pagedDocument,
       view: {
         sidebar,
         outline,
@@ -604,11 +553,7 @@
         query,
       },
       preferences: $state.snapshot(preferences) as Preferences,
-      directory: workspace.directory,
-      source: source ? { label: source.label, root: source.root, live: source.live } : null,
-      busy: workspace.busy,
-      error: workspace.error || null,
-    };
+    });
   }
   function applyPreferencePatch(patch: Record<string, unknown>): Preferences {
     const next = mergePreferences($state.snapshot(preferences) as Preferences, patch);
@@ -620,9 +565,9 @@
     async headings() {
       await workspaceReady;
       if (!workspace.active) throw new Error('No document is open.');
-      const deadline = Date.now() + 10_000;
+      const deadline = Date.now() + HEADINGS_READY_TIMEOUT_MS;
       while (headingsPath !== workspace.active && Date.now() < deadline)
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, HEADINGS_POLL_MS));
       if (headingsPath !== workspace.active)
         throw new Error('The document is still rendering its headings.');
       return {
@@ -708,22 +653,11 @@
     },
     async scroll(pane, target) {
       await workspaceReady;
-      const deadline = Date.now() + 10_000;
-      let preview: PreviewControls | undefined;
-      while (Date.now() < deadline) {
-        const expected = pane === 'secondary' ? workspace.secondary : workspace.active;
-        if (!expected)
-          throw new Error(
-            pane === 'secondary' ? 'The split pane is empty.' : 'No document is open.',
-          );
-        const candidate = pane === 'secondary' ? secondaryPreview : primaryPreview;
-        if (candidate?.documentPath() === expected) {
-          preview = candidate;
-          break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 25));
-      }
-      if (!preview) throw new Error('The preview is not ready yet.');
+      const preview = await waitForPreview(
+        () => (pane === 'secondary' ? workspace.secondary : workspace.active),
+        () => (pane === 'secondary' ? secondaryPreview : primaryPreview),
+        pane === 'secondary' ? 'The split pane is empty.' : 'No document is open.',
+      );
       const y = await scrollPreview(preview, target);
       return { pane, y: Math.round(y) };
     },
@@ -758,7 +692,6 @@
       return controlState();
     },
     panel: async (name, action) => {
-      await workspaceReady;
       const desired = (current: boolean) =>
         action === 'on' ? true : action === 'off' ? false : !current;
       switch (name) {
@@ -772,6 +705,7 @@
           settings = desired(settings);
           break;
         case 'palette':
+          await workspaceReady;
           if (!workspace.source) throw new Error('No folder or document source is available.');
           paletteOpen = desired(paletteOpen);
           break;
@@ -780,6 +714,7 @@
           if (!searchOpen) query = '';
           break;
         case 'split':
+          await workspaceReady;
           if (!workspace.active) throw new Error('No document is open.');
           if (action === 'off') workspace.secondary = '';
           else if (action === 'on')
@@ -793,7 +728,6 @@
       return controlState();
     },
     search: async (value) => {
-      await workspaceReady;
       query = value;
       searchOpen = value.trim().length > 0;
       return controlState();
@@ -820,7 +754,6 @@
       return controlState();
     },
     async preferences(patch) {
-      await workspaceReady;
       return { preferences: applyPreferencePatch(patch) };
     },
     refresh: async () => {

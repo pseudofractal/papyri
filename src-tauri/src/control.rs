@@ -318,6 +318,8 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
     .state::<ControlState>()
     .next_connection
     .fetch_add(1, Ordering::Relaxed);
+  // Responses use blocking sends so a full event queue cannot drop them.
+  // Broadcast events use try_send instead, disconnecting slow subscribers.
   let (sender, receiver) = mpsc::sync_channel::<String>(SUBSCRIBER_QUEUE);
   let writer_stream = match stream.try_clone() {
     Ok(stream) => stream,
@@ -345,7 +347,7 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
       Ok(_) => {}
     }
     if line.len() > MAX_REQUEST_BYTES {
-      let _ = sender.try_send(response_line(
+      let _ = sender.send(response_line(
         Value::Null,
         Reply::failure("request-too-large", "Control request exceeds 256 KiB."),
       ));
@@ -354,7 +356,7 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
     let request: Request = match serde_json::from_str(line.trim()) {
       Ok(request) => request,
       Err(error) => {
-        let _ = sender.try_send(response_line(
+        let _ = sender.send(response_line(
           Value::Null,
           Reply::failure("bad-request", format!("Invalid JSON request: {error}")),
         ));
@@ -363,7 +365,7 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
     };
     if request.id.is_null() {
       // Keep JSON-RPC-style clients working while still returning an id.
-      let _ = sender.try_send(response_line(
+      let _ = sender.send(response_line(
         Value::Null,
         Reply::failure("bad-request", "Requests need an id."),
       ));
@@ -380,13 +382,13 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
           "socket": socket_path().to_string_lossy(),
           "ready": state.is_ready(),
         });
-        let _ = sender.try_send(response_line(request.id, Reply::success(result)));
+        let _ = sender.send(response_line(request.id, Reply::success(result)));
       }
       "subscribe" => match parse_subscription(&request.params) {
         Ok(events) => {
           let reply = dispatch(&app, "state", json!({}));
           if let Some(error) = reply.error {
-            let _ = sender.try_send(response_line(
+            let _ = sender.send(response_line(
               request.id,
               Reply {
                 result: None,
@@ -397,7 +399,7 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
           }
           // Queue the response before registering so the first line a client
           // reads is always the subscription reply, not a concurrent event.
-          let _ = sender.try_send(response_line(
+          let _ = sender.send(response_line(
             request.id,
             Reply::success(json!({
               "subscribed": true,
@@ -415,7 +417,7 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
           }
         }
         Err(error) => {
-          let _ = sender.try_send(response_line(
+          let _ = sender.send(response_line(
             request.id,
             Reply {
               result: None,
@@ -428,7 +430,7 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
         if let Ok(mut subscribers) = app.state::<ControlState>().subscribers.lock() {
           subscribers.retain(|subscriber| subscriber.connection != connection);
         }
-        let _ = sender.try_send(response_line(
+        let _ = sender.send(response_line(
           request.id,
           Reply::success(json!({ "subscribed": false })),
         ));
@@ -447,10 +449,10 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
           Ok(value) => Reply::success(value),
           Err(message) => Reply::failure("window-unavailable", message),
         };
-        let _ = sender.try_send(response_line(request.id, reply));
+        let _ = sender.send(response_line(request.id, reply));
       }
       "quit" => {
-        let _ = sender.try_send(response_line(
+        let _ = sender.send(response_line(
           request.id,
           Reply::success(json!({ "quitting": true })),
         ));
@@ -463,7 +465,7 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
       }
       _ => {
         let reply = dispatch(&app, &request.method, request.params);
-        let _ = sender.try_send(response_line(request.id, reply));
+        let _ = sender.send(response_line(request.id, reply));
       }
     }
   }

@@ -15,15 +15,46 @@ export type ControlExecutor = (method: string, params: Record<string, unknown>) 
  */
 export async function installControl(execute: ControlExecutor): Promise<UnlistenFn> {
   const readOnly = new Set(['state', 'headings', 'commands']);
-  let mutations = Promise.resolve();
-  const dispatch = (method: string, params: Record<string, unknown>) => {
-    if (readOnly.has(method)) return execute(method, params);
-    const task = mutations.then(() => execute(method, params));
-    mutations = task.then(
+  const viewMethods = new Set(['theme', 'zoom', 'fit-width', 'preferences.set', 'search']);
+  const documentMethods = new Set([
+    'open',
+    'close',
+    'focus',
+    'tab.next',
+    'tab.previous',
+    'tab.activate',
+    'tab.close',
+    'scroll.to',
+    'scroll.by',
+    'scroll.top',
+    'scroll.bottom',
+    'heading',
+    'page',
+    'command',
+    'refresh',
+  ]);
+  // Document and view mutations use separate queues: opening a slow document
+  // must not block theme, zoom, settings, or panel changes.
+  let documentMutations = Promise.resolve();
+  let viewMutations = Promise.resolve();
+  const enqueue = (queue: 'document' | 'view', operation: () => Promise<unknown>) => {
+    const current = queue === 'document' ? documentMutations : viewMutations;
+    const task = current.then(operation);
+    const settled = task.then(
       () => undefined,
       () => undefined,
     );
+    if (queue === 'document') documentMutations = settled;
+    else viewMutations = settled;
     return task;
+  };
+  const dispatch = (method: string, params: Record<string, unknown>) => {
+    if (readOnly.has(method)) return execute(method, params);
+    const isDocument =
+      documentMethods.has(method) ||
+      (method === 'panel' && params.name === 'split') ||
+      (!viewMethods.has(method) && method !== 'panel');
+    return enqueue(isDocument ? 'document' : 'view', () => execute(method, params));
   };
   return listen<ControlRequest>('papyri-control-request', (event) => {
     const { id, method, params } = event.payload;

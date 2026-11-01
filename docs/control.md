@@ -75,9 +75,10 @@ Event subscriptions receive separate lines:
 
 The window marks itself ready after the host UI has installed its control
 listener. Requests wait up to 20 seconds for that readiness, so a client may
-connect immediately after the socket appears. Commands that change state are
-serialized in arrival order; `state`, `headings`, and `commands` are read-only
-and may run while another command is in flight. `ping` is handled by the native
+connect immediately after the socket appears. Document mutations are serialized
+in arrival order; view, theme, zoom, and preference changes use a separate queue
+so they do not wait behind a slow document open. `state`, `headings`, and
+`commands` are read-only and may run while another command is in flight. `ping` is handled by the native
 layer and reports `ready` without touching the webview. Readiness covers the
 control listener, not the initial document: use `state.busy` and `state.active`
 while startup finishes. Document actions also wait for the initial folder and

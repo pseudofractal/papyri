@@ -21,7 +21,7 @@ async function readBrowserDocument(file: File): Promise<FileData> {
     text: decode(new Uint8Array(await file.arrayBuffer())),
     stamp: `${file.lastModified}:${file.size}`,
     ...(isLatex(file.name) || isTypst(file.name)
-      ? { compilationError: 'Compilation requires the Linux app. Showing source.' }
+      ? { compilationError: 'Compilation requires the Linux app.' }
       : {}),
   };
 }
@@ -121,7 +121,7 @@ export async function desktopSource(getPreferences: () => Preferences): Promise<
           const file = await invokeHost<FileData>('read_document', { path });
           return {
             ...file,
-            compilationError: `Compilation failed. Showing source. ${String(error)}`,
+            compilationError: `Compilation failed. ${String(error)}`,
             retryCompilation: true,
           };
         }

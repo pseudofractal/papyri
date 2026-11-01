@@ -1,4 +1,6 @@
 mod cli;
+mod cli_args;
+mod cli_output;
 mod commands;
 mod control;
 mod executables;

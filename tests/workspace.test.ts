@@ -57,7 +57,7 @@ describe('workspace navigation and live updates', () => {
     await workspace.open('/paper.typ');
     expect(workspace.activeTab).toMatchObject({
       text: '#let x = 1',
-      error: 'Compiler unavailable',
+      error: 'Compiler unavailable Showing source.',
     });
     files.set('/paper.typ', { text: '', stamp: '1', bytes: Uint8Array.of(1, 2) });
     await workspace.refresh();
@@ -81,7 +81,7 @@ describe('workspace navigation and live updates', () => {
     files.set('/paper.typ', {
       text: '#let broken =',
       stamp: '2',
-      compilationError: 'Compilation failed. Showing source. Syntax error',
+      compilationError: 'Compilation failed. Syntax error',
       retryCompilation: true,
     });
     await workspace.refresh();
