@@ -77,6 +77,11 @@ it('reserves unshifted Ctrl = for width and supports bidirectional tab shortcuts
   });
   expect(viewShortcut(keyboard('=', { altKey: true }))).toEqual({ target: 'ui', action: 'in' });
   expect(viewShortcut(keyboard('Tab'))).toEqual({ target: 'tabs', action: 'next' });
+  expect(viewShortcut(keyboard('k'))).toEqual({ target: 'palette', action: 'open' });
+  expect(viewShortcut(keyboard('Unidentified', { code: 'KeyK' }))).toEqual({
+    target: 'palette',
+    action: 'open',
+  });
   expect(viewShortcut(keyboard('Tab', { shiftKey: true }))).toEqual({
     target: 'tabs',
     action: 'previous',

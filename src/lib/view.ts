@@ -15,10 +15,17 @@ export interface ZoomCommand {
 export type ViewCommand =
   | ZoomCommand
   | { target: 'document'; action: 'fit-width' }
+  | { target: 'palette'; action: 'open' }
   | { target: 'tabs'; action: 'next' | 'previous' };
 
 export function viewShortcut(event: KeyboardEvent): ViewCommand | null {
   if (!(event.ctrlKey || event.metaKey)) return null;
+  if (
+    !event.altKey &&
+    !event.shiftKey &&
+    (event.key.toLowerCase() === 'k' || event.code === 'KeyK')
+  )
+    return { target: 'palette', action: 'open' };
   // WebKitGTK can report Shift+Tab as Unidentified while preserving its physical code.
   if ((event.key === 'Tab' || event.code === 'Tab') && !event.altKey)
     return { target: 'tabs', action: event.shiftKey ? 'previous' : 'next' };

@@ -34,6 +34,73 @@ function memorySource(): { source: Source; files: Map<string, FileData> } {
   };
 }
 describe('workspace navigation and live updates', () => {
+  it('keeps recently opened files in order and clears them when the source changes', async () => {
+    const workspace = new Workspace();
+    workspace.changeSource(memorySource().source);
+    await workspace.open('/a.md');
+    await workspace.open('/b.md');
+    await workspace.open('/a.md');
+    expect(workspace.recentFiles).toEqual(['/a.md', '/b.md']);
+    workspace.changeSource(memorySource().source);
+    expect(workspace.recentFiles).toEqual([]);
+  });
+  it('retries failed compilation and switches from source back to the PDF', async () => {
+    const { source, files } = memorySource();
+    files.set('/paper.typ', {
+      text: '#let x = 1',
+      stamp: '1',
+      compilationError: 'Compiler unavailable',
+      retryCompilation: true,
+    });
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    await workspace.open('/paper.typ');
+    expect(workspace.activeTab).toMatchObject({
+      text: '#let x = 1',
+      error: 'Compiler unavailable',
+    });
+    files.set('/paper.typ', { text: '', stamp: '1', bytes: Uint8Array.of(1, 2) });
+    await workspace.refresh();
+    expect(workspace.activeTab).toMatchObject({
+      bytes: Uint8Array.of(1, 2),
+      error: '',
+      revision: 1,
+    });
+  });
+
+  it('shows source when the PDF renderer fails', async () => {
+    const { source, files } = memorySource();
+    files.set('/paper.tex', { text: '', stamp: '1', bytes: Uint8Array.of(1) });
+    source.readSource = async () => ({ text: '\\section{Hello}', stamp: '1' });
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    await workspace.open('/paper.tex');
+    await workspace.showSource('/paper.tex', 'Renderer unavailable');
+    expect(workspace.activeTab).toMatchObject({
+      text: '\\section{Hello}',
+      bytes: undefined,
+      error: expect.stringContaining('Renderer unavailable'),
+    });
+    await workspace.refresh();
+    expect(workspace.activeTab?.error).toContain('Renderer unavailable');
+  });
+  it('keeps each split pane position independently and clears it when the tab closes', async () => {
+    const { source } = memorySource();
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    await workspace.open('/a.md');
+    workspace.setScroll('/a.md', 300);
+    workspace.secondary = '/a.md';
+    expect(workspace.secondaryPosition).toBe(300);
+    workspace.setSecondaryScroll('/a.md', 900);
+    workspace.setScroll('/a.md', 400);
+    expect(workspace.activeTab?.scroll).toBe(400);
+    expect(workspace.secondaryPosition).toBe(900);
+    workspace.close('/a.md');
+    await workspace.open('/a.md');
+    workspace.secondary = '/a.md';
+    expect(workspace.secondaryPosition).toBe(0);
+  });
   it('refreshes changed documents and retains scroll and stale preview on deletion', async () => {
     const { source, files } = memorySource();
     const workspace = new Workspace();
@@ -64,6 +131,21 @@ describe('workspace navigation and live updates', () => {
     expect(workspace.active).toBe('/a.md');
     expect(workspace.tabs).toHaveLength(1);
     expect(workspace.busy).toBe(false);
+  });
+  it('cancels pending navigation when the active tab is closed', async () => {
+    const { source } = memorySource();
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    await workspace.open('/a.md');
+    let complete!: (file: FileData) => void;
+    source.read = () => new Promise((resolve) => (complete = resolve));
+    const pending = workspace.open('/b.md');
+    workspace.close('/a.md');
+    expect(workspace.busy).toBe(false);
+    complete({ text: '# Late', stamp: '1' });
+    await pending;
+    expect(workspace.active).toBe('');
+    expect(workspace.tabs).toHaveLength(0);
   });
   it('invalidates pending reads when switching sources and closes split tabs coherently', async () => {
     const { source } = memorySource();
@@ -200,6 +282,6 @@ it('opens PDF and Typst tabs, refreshes binary previews, and retains them on com
   expect(workspace.activeTab?.error).toContain('Last preview retained');
   expect(workspace.activeTab?.bytes).toEqual(Uint8Array.of(4, 5));
   await workspace.open('/unsupported.txt');
-  expect(workspace.error).toContain('Markdown, PDF, or Typst');
+  expect(workspace.error).toContain('Markdown, PDF, Typst, or LaTeX');
   expect(workspace.active).toBe('/paper.typ');
 });

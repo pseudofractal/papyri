@@ -38,13 +38,16 @@
   import Explorer from './components/Explorer.svelte';
   import Preview from './components/Preview.svelte';
   import Settings from './components/Settings.svelte';
+  import CommandPalette from './components/CommandPalette.svelte';
   import { invokeHost } from './lib/native';
   import { Workspace } from './lib/workspace.svelte';
   import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
   import { demoSource } from './lib/demo';
   import { loadPreferences } from './lib/preferences';
+  import { traceStartup } from './lib/startup-trace';
   import { basename, dirname, isDocument, isMarkdown, normalize, resolveLink } from './lib/paths';
-  import type { Heading, Preferences, Source } from './lib/types';
+  import type { Heading, LatexEngine, Preferences, Source } from './lib/types';
+  import type { PaletteCommand } from './lib/palette';
   const workspace = new Workspace();
   let preferences = $state(loadPreferences());
   let sidebar = $state(window.innerWidth >= 760);
@@ -52,9 +55,13 @@
   let settings = $state(false);
   let help = $state(false);
   let searchOpen = $state(false);
+  let paletteOpen = $state(false);
   let query = $state('');
   let pathInput = $derived(workspace.directory);
   let headings = $state<Heading[]>([]);
+  let headingsPath = $state('');
+  let recentCommands = $state<string[]>([]);
+  let pdfPage = $state({ path: '', page: 0, total: 0 });
   let trustedPath = $state('');
   let trustedRevision = $state(-1);
   let trustedSource = $state.raw<Source | null>(null);
@@ -71,11 +78,22 @@
   );
   const sidebarWidth = $derived(Math.min(preferences.sidebarWidth, maximumSidebarWidth));
   $effect(() => {
+    void workspace.source;
+    void workspace.active;
+    headings = [];
+    headingsPath = '';
+    pdfPage = { path: '', page: 0, total: 0 };
+  });
+  $effect(() => {
     document.documentElement.dataset.theme = preferences.theme;
     document.documentElement.style.zoom = String(uiScale);
     document.documentElement.style.setProperty('--ui-scale', String(uiScale));
   });
   function viewCommand(command: ViewCommand) {
+    if (command.target === 'palette') {
+      if (workspace.source && !settings && !help && !trustDialog) paletteOpen = true;
+      return;
+    }
     if (command.target === 'tabs') {
       if (!workspace.tabs.length) return;
       const current = workspace.tabs.findIndex((tab) => tab.path === workspace.active);
@@ -129,6 +147,7 @@
         const selected = await invokeHost<string | null>('pick_path', { directory: true });
         if (typeof selected === 'string') {
           workspace.directory = selected;
+          workspace.searchRoot = selected;
           workspace.treeRevision++;
         }
       } else await workspace.selectSource(await browserDirectory());
@@ -142,6 +161,7 @@
         const selected = await invokeHost<string | null>('pick_path', { directory: false });
         if (typeof selected === 'string') {
           workspace.directory = dirname(selected);
+          workspace.searchRoot = dirname(selected);
           await workspace.open(selected);
         }
       } else fileInput.click();
@@ -169,7 +189,7 @@
     }
     if (target.kind === 'local') {
       if (!isDocument(target.path)) {
-        workspace.error = 'This link is not a supported Markdown, PDF, or Typst document.';
+        workspace.error = 'This link is not a supported Markdown, PDF, Typst, or LaTeX document.';
         return;
       }
       await workspace.open(target.path, target.anchor);
@@ -200,7 +220,284 @@
       ? ''
       : workspace.tabs.find((tab) => tab.path !== workspace.active)?.path || workspace.active;
   }
+  const paletteCommands = $derived.by(() => {
+    const commands: PaletteCommand[] = [
+      { id: 'open-file', label: 'Open file', shortcut: 'Ctrl O', run: () => void chooseFile() },
+      {
+        id: 'open-folder',
+        label: 'Open folder',
+        shortcut: 'Ctrl Shift O',
+        run: () => void chooseFolder(),
+      },
+      {
+        id: 'explorer',
+        label: 'Toggle explorer',
+        shortcut: 'Ctrl B',
+        keywords: 'sidebar file tree',
+        run: () => (sidebar = !sidebar),
+      },
+      {
+        id: 'outline',
+        label: 'Toggle table of contents',
+        keywords: 'outline headings',
+        run: () => (outline = !outline),
+      },
+      {
+        id: 'theme',
+        label: 'Toggle color theme',
+        keywords: 'light dark appearance',
+        run: () =>
+          updatePreferences({
+            ...preferences,
+            theme: preferences.theme === 'mocha' ? 'latte' : 'mocha',
+          }),
+      },
+      {
+        id: 'light',
+        label: 'Use light theme',
+        keywords: 'latte appearance',
+        run: () => updatePreferences({ ...preferences, theme: 'latte' }),
+      },
+      {
+        id: 'dark',
+        label: 'Use dark theme',
+        keywords: 'mocha appearance',
+        run: () => updatePreferences({ ...preferences, theme: 'mocha' }),
+      },
+      {
+        id: 'network',
+        label: preferences.network ? 'Block external resources' : 'Allow external resources',
+        keywords: 'network images links privacy',
+        run: () => updatePreferences({ ...preferences, network: !preferences.network }),
+      },
+      {
+        id: 'settings',
+        label: 'Open settings',
+        shortcut: 'Ctrl ,',
+        keywords: 'preferences configuration',
+        run: () => (settings = true),
+      },
+      {
+        id: 'refresh',
+        label: 'Refresh files',
+        keywords: 'reload rescan',
+        run: () => void refresh(),
+      },
+      {
+        id: 'help',
+        label: 'Keyboard shortcuts and help',
+        keywords: 'keys help',
+        run: () => (help = true),
+      },
+      {
+        id: 'ui-in',
+        label: 'Zoom in interface',
+        shortcut: 'Ctrl Alt +',
+        keywords: 'increase ui size',
+        run: () => zoom({ target: 'ui', action: 'in' }),
+      },
+      {
+        id: 'ui-out',
+        label: 'Zoom out interface',
+        shortcut: 'Ctrl Alt -',
+        keywords: 'decrease ui size',
+        run: () => zoom({ target: 'ui', action: 'out' }),
+      },
+      {
+        id: 'ui-reset',
+        label: 'Reset interface zoom',
+        shortcut: 'Ctrl Alt 0',
+        keywords: 'ui size 100',
+        run: () => zoom({ target: 'ui', action: 'reset' }),
+      },
+    ];
+    if (!native)
+      commands.push({
+        id: 'import-folder',
+        label: 'Import folder snapshot',
+        keywords: 'upload directory',
+        run: () => folderInput.click(),
+      });
+    if (native)
+      for (const engine of ['lualatex', 'pdflatex', 'xelatex'] as LatexEngine[])
+        commands.push({
+          id: `latex-${engine}`,
+          label: `Use ${engine} for LaTeX`,
+          keywords: 'compiler engine tex',
+          run: () => updatePreferences({ ...preferences, latexEngine: engine }),
+        });
+    if (workspace.directory !== '/' && workspace.directory !== workspace.source?.root)
+      commands.push({
+        id: 'parent',
+        label: 'Go to parent folder',
+        keywords: 'directory up',
+        run: () => {
+          workspace.directory = dirname(workspace.directory);
+          workspace.treeRevision++;
+        },
+      });
+    if (workspace.active) {
+      commands.push(
+        {
+          id: 'search',
+          label: 'Find in document',
+          shortcut: 'Ctrl F',
+          keywords: 'search text',
+          run: () => {
+            searchOpen = true;
+            setTimeout(() => searchInput?.focus());
+          },
+        },
+        {
+          id: 'split',
+          label: 'Toggle split view',
+          shortcut: 'Ctrl \\',
+          keywords: 'panes',
+          run: split,
+        },
+        {
+          id: 'fit',
+          label: 'Toggle fit to width',
+          shortcut: 'Ctrl =',
+          keywords: 'wrap document',
+          run: () => viewCommand({ target: 'document', action: 'fit-width' }),
+        },
+        {
+          id: 'document-in',
+          label: 'Zoom in document',
+          shortcut: 'Ctrl +',
+          keywords: 'increase text page size',
+          run: () => zoom({ target: 'document', action: 'in' }),
+        },
+        {
+          id: 'document-out',
+          label: 'Zoom out document',
+          shortcut: 'Ctrl -',
+          keywords: 'decrease text page size',
+          run: () => zoom({ target: 'document', action: 'out' }),
+        },
+        {
+          id: 'document-reset',
+          label: 'Reset document zoom',
+          shortcut: 'Ctrl 0',
+          keywords: 'text page size 100',
+          run: () => zoom({ target: 'document', action: 'reset' }),
+        },
+        {
+          id: 'close-tab',
+          label: 'Close current tab',
+          shortcut: 'Ctrl W',
+          keywords: 'document file',
+          run: () => workspace.close(workspace.active),
+        },
+        {
+          id: 'show-folder',
+          label: 'Show current document folder',
+          keywords: 'reveal directory explorer',
+          run: () => {
+            workspace.directory = dirname(workspace.active);
+            workspace.treeRevision++;
+            sidebar = true;
+          },
+        },
+      );
+    }
+    if (pagedDocument && pdfPage.path === workspace.active && pdfPage.total) {
+      commands.push(
+        { id: 'pdf-first', label: 'First PDF page', run: () => workspace.navigateAnchor('page=1') },
+        {
+          id: 'pdf-previous',
+          label: 'Previous PDF page',
+          run: () => workspace.navigateAnchor(`page=${Math.max(1, pdfPage.page - 1)}`),
+        },
+        {
+          id: 'pdf-next',
+          label: 'Next PDF page',
+          run: () => workspace.navigateAnchor(`page=${Math.min(pdfPage.total, pdfPage.page + 1)}`),
+        },
+        {
+          id: 'pdf-last',
+          label: 'Last PDF page',
+          run: () => workspace.navigateAnchor(`page=${pdfPage.total}`),
+        },
+        { id: 'pdf-go-page', label: 'Go to PDF page…', keywords: 'page number', run: () => {} },
+      );
+    }
+    if (searchOpen)
+      commands.push({
+        id: 'close-search',
+        label: 'Close document search',
+        run: () => {
+          searchOpen = false;
+          query = '';
+        },
+      });
+    if (workspace.secondary)
+      commands.push({
+        id: 'close-split',
+        label: 'Close split view',
+        keywords: 'pane',
+        run: () => (workspace.secondary = ''),
+      });
+    if (workspace.tabs.length > 1)
+      commands.push(
+        {
+          id: 'next-tab',
+          label: 'Next tab',
+          shortcut: 'Ctrl Tab',
+          keywords: 'next document',
+          run: () => viewCommand({ target: 'tabs', action: 'next' }),
+        },
+        {
+          id: 'previous-tab',
+          label: 'Previous tab',
+          shortcut: 'Ctrl Shift Tab',
+          keywords: 'previous document',
+          run: () => viewCommand({ target: 'tabs', action: 'previous' }),
+        },
+        {
+          id: 'close-others',
+          label: 'Close other tabs',
+          keywords: 'documents',
+          run: () => {
+            for (const tab of [...workspace.tabs])
+              if (tab.path !== workspace.active) workspace.close(tab.path);
+          },
+        },
+      );
+    if (workspace.tabs.length)
+      commands.push({
+        id: 'close-all',
+        label: 'Close all tabs',
+        keywords: 'documents',
+        run: () => {
+          for (const tab of [...workspace.tabs]) workspace.close(tab.path);
+        },
+      });
+    const groupFor = (id: string) => {
+      if (id.startsWith('pdf-')) return 'PDF';
+      if (
+        ['open-file', 'open-folder', 'import-folder', 'parent', 'show-folder', 'refresh'].includes(
+          id,
+        )
+      )
+        return 'Files';
+      if (['next-tab', 'previous-tab', 'close-tab', 'close-others', 'close-all'].includes(id))
+        return 'Tabs';
+      if (['settings', 'network', 'help'].includes(id) || id.startsWith('latex-'))
+        return 'Settings';
+      return 'View';
+    };
+    return commands.map((command) => ({ ...command, group: groupFor(command.id) }));
+  });
+  function runPaletteCommand(id: string) {
+    const command = paletteCommands.find((item) => item.id === id);
+    if (!command) return;
+    recentCommands = [id, ...recentCommands.filter((item) => item !== id)].slice(0, 20);
+    command.run();
+  }
   function keyboard(event: KeyboardEvent) {
+    if (paletteOpen) return;
     const command = viewShortcut(event);
     if (command) {
       event.preventDefault();
@@ -235,13 +532,16 @@
     (async () => {
       try {
         if (native) {
-          const { source, initial } = await desktopSource();
+          const { source, initial } = await desktopSource(() => preferences);
+          traceStartup('source-ready');
           if (disposed) return;
           await workspace.changeSource(source);
-          if (initial.directory) workspace.directory = initial.path;
+          if (initial.directory) workspace.directory = workspace.searchRoot = initial.path;
           else {
             workspace.directory = dirname(initial.path);
+            workspace.searchRoot = dirname(initial.path);
             await workspace.open(initial.path);
+            if (workspace.active === initial.path) traceStartup('file-ready');
           }
         } else {
           await workspace.changeSource(demoSource());
@@ -270,6 +570,12 @@
       >
     </div>
     <div class="header-actions">
+      <button
+        class="icon-button"
+        aria-label="Open command palette"
+        title="Command palette (Ctrl K)"
+        onclick={() => (paletteOpen = true)}><Search size={18} /></button
+      >
       <button
         class="btn btn-ghost btn-sm open-folder"
         aria-label="Open folder"
@@ -444,8 +750,16 @@
             disabled={!workspace.active}
             onclick={() => (trusted ? (trustedPath = '') : (trustDialog = true))}
             ><Shield size={13} /><span>{trusted ? 'Scripts enabled' : 'Safe preview'}</span></button
-          >{:else}<span class="trust-button paged-status" title="PDF preview · scripts disabled"
-            ><Shield size={13} /><span>PDF preview · scripts disabled</span></span
+          >{:else}<span
+            class="trust-button paged-status"
+            title={pagedDocument
+              ? 'PDF preview · scripts disabled'
+              : 'Source preview · scripts disabled'}
+            ><Shield size={13} /><span
+              >{pagedDocument
+                ? 'PDF preview · scripts disabled'
+                : 'Source preview · scripts disabled'}</span
+            ></span
           >{/if}
       </div>
       {#if searchOpen}<div class="search-bar">
@@ -491,7 +805,14 @@
                 onlink={(href) => follow(href, workspace.activeTab!.path)}
                 oncommand={viewCommand}
                 onscroll={(path, y) => workspace.setScroll(path, y)}
-                onheadings={(value) => (headings = value)}
+                onrendererror={(path, error) => void workspace.showSource(path, error)}
+                onheadings={(value) => {
+                  headings = value;
+                  headingsPath = workspace.active;
+                }}
+                onpdfpage={(path, page, total) => {
+                  if (path === workspace.active) pdfPage = { path, page, total };
+                }}
                 onpdfscale={(value) => {
                   const pdfZoom = clampZoom(value, MIN_PDF_ZOOM, MAX_PDF_ZOOM);
                   if (pdfZoom !== preferences.pdfZoom)
@@ -511,6 +832,7 @@
                   </div>{/if}
                 <Preview
                   tab={workspace.secondaryTab}
+                  scrollPosition={workspace.secondaryPosition}
                   source={workspace.source}
                   {preferences}
                   trusted={false}
@@ -518,14 +840,15 @@
                   anchor={null}
                   onlink={(href) => follow(href, workspace.secondaryTab!.path)}
                   oncommand={viewCommand}
-                  onscroll={(path, y) => workspace.setScroll(path, y)}
+                  onscroll={(path, y) => workspace.setSecondaryScroll(path, y)}
+                  onrendererror={(path, error) => void workspace.showSource(path, error)}
                   onheadings={() => {}}
                 />
               </div>{/if}
           {:else}<div class="empty-state">
               <span class="empty-icon" aria-hidden="true"><span class="app-logo"></span></span>
               <h1>No document open</h1>
-              <p>Open a Markdown, PDF, or Typst document, or choose a folder.</p>
+              <p>Open a Markdown, PDF, Typst, or LaTeX document, or choose a folder.</p>
               <button class="btn btn-primary" onclick={chooseFile}
                 ><FileText size={17} />Open a document</button
               ><button class="btn btn-ghost btn-sm" onclick={chooseFolder}>Browse a folder</button>
@@ -588,6 +911,27 @@
     onclose={() => (settings = false)}
     onchange={updatePreferences}
   />{/if}
+{#if paletteOpen && workspace.source}<CommandPalette
+    source={workspace.source}
+    directory={workspace.directory}
+    workspaceRoot={workspace.searchRoot}
+    commands={paletteCommands}
+    headings={headingsPath === workspace.active ? headings : []}
+    tabs={workspace.tabs.map((tab) => tab.path)}
+    recentFiles={workspace.recentFiles}
+    {recentCommands}
+    pdfPages={pdfPage.path === workspace.active && pagedDocument ? pdfPage.total : 0}
+    onclose={() => (paletteOpen = false)}
+    onopen={(path) => void openDocument(path)}
+    oncommand={runPaletteCommand}
+    onheading={(id) => workspace.navigateAnchor(id)}
+    oncontent={(path, text) => {
+      query = text;
+      searchOpen = true;
+      void openDocument(path);
+    }}
+    onpage={(page) => workspace.navigateAnchor(`page=${page}`)}
+  />{/if}
 {#if trustDialog}<dialog
     use:openDialog
     class="modal modal-open"
@@ -631,6 +975,8 @@
     <div class="modal-box">
       <h2 id="help-title">Keyboard shortcuts</h2>
       <dl class="shortcuts">
+        <dt>Command palette and file search</dt>
+        <dd>Ctrl K</dd>
         <dt>Open file</dt>
         <dd>Ctrl O</dd>
         <dt>Open folder</dt>

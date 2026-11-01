@@ -1,5 +1,5 @@
 import type { Source } from './types';
-import { isDocument, normalize } from './paths';
+import { isDocument, isLatex, isTypst, normalize } from './paths';
 import { listDirectory } from './directories';
 export interface AnchorTarget {
   id: string;
@@ -12,6 +12,8 @@ export interface Tab {
   stamp: string;
   scroll: number;
   error: string;
+  compilationError?: string;
+  retryCompilation?: boolean;
   revision: number;
 }
 /** Owns navigation and live refresh; frame messages never have access to this object. */
@@ -20,13 +22,19 @@ export class Workspace {
   tabs = $state<Tab[]>([]);
   active = $state('');
   secondary = $state('');
+  secondaryScroll = $state<Record<string, number>>({});
   directory = $state('/');
+  searchRoot = $state('/');
+  recentFiles = $state<string[]>([]);
   error = $state('');
   busy = $state(false);
   treeRevision = $state(0);
   anchor = $state<AnchorTarget | null>(null);
   activeTab = $derived(this.tabs.find((tab) => tab.path === this.active));
   secondaryTab = $derived(this.tabs.find((tab) => tab.path === this.secondary));
+  secondaryPosition = $derived(
+    this.secondaryScroll[this.secondary] ?? this.secondaryTab?.scroll ?? 0,
+  );
   private navigation = 0;
   changeSource(source: Source) {
     this.navigation++;
@@ -34,8 +42,11 @@ export class Workspace {
     this.tabs = [];
     this.active = '';
     this.secondary = '';
+    this.secondaryScroll = {};
     this.anchor = null;
     this.directory = source.root;
+    this.searchRoot = source.root;
+    this.recentFiles = [];
     this.error = '';
     this.busy = false;
     this.treeRevision++;
@@ -56,7 +67,7 @@ export class Workspace {
   async open(path: string, anchor = '') {
     path = normalize(path);
     if (!isDocument(path)) {
-      this.error = 'Open a Markdown, PDF, or Typst document.';
+      this.error = 'Open a Markdown, PDF, Typst, or LaTeX document.';
       return;
     }
     const request = ++this.navigation;
@@ -64,6 +75,7 @@ export class Workspace {
     const existing = this.tabs.find((tab) => tab.path === path);
     if (existing) {
       this.active = path;
+      this.rememberFile(path);
       this.busy = false;
       this.anchor = anchor ? { id: anchor, request } : null;
       return;
@@ -80,10 +92,13 @@ export class Workspace {
         bytes: file.bytes,
         stamp: file.stamp,
         scroll: 0,
-        error: '',
+        error: file.compilationError || '',
+        compilationError: file.compilationError,
+        retryCompilation: file.retryCompilation,
         revision: 0,
       });
       this.active = path;
+      this.rememberFile(path);
       this.anchor = anchor ? { id: anchor, request } : null;
       this.error = '';
     } catch (error) {
@@ -91,6 +106,9 @@ export class Workspace {
     } finally {
       if (request === this.navigation) this.busy = false;
     }
+  }
+  private rememberFile(path: string) {
+    this.recentFiles = [path, ...this.recentFiles.filter((item) => item !== path)].slice(0, 20);
   }
   /** Queue a one-time heading command for the active preview, including repeated clicks. */
   navigateAnchor(id: string) {
@@ -105,14 +123,39 @@ export class Workspace {
     const index = this.tabs.findIndex((tab) => tab.path === path);
     this.tabs = this.tabs.filter((tab) => tab.path !== path);
     if (this.active === path) {
+      this.navigation++;
+      this.busy = false;
       this.anchor = null;
       this.active = this.tabs[Math.min(index, this.tabs.length - 1)]?.path || '';
     }
     if (this.secondary === path) this.secondary = '';
+    delete this.secondaryScroll[path];
   }
   setScroll(path: string, y: number) {
     const tab = this.tabs.find((tab) => tab.path === path);
     if (tab) tab.scroll = y;
+  }
+  setSecondaryScroll(path: string, y: number) {
+    if (this.secondary === path) this.secondaryScroll[path] = y;
+  }
+  async showSource(path: string, reason: string) {
+    const source = this.source;
+    const tab = this.tabs.find((item) => item.path === path);
+    if (!source?.readSource || !tab?.bytes || !(isTypst(path) || isLatex(path))) return;
+    const previousBytes = tab.bytes;
+    try {
+      const file = await source.readSource(path);
+      if (this.source !== source || !this.tabs.includes(tab) || tab.bytes !== previousBytes) return;
+      tab.text = file.text;
+      tab.bytes = undefined;
+      tab.compilationError = `PDF preview failed. Showing source. ${reason}`;
+      tab.error = tab.compilationError;
+      tab.retryCompilation = false;
+      tab.revision++;
+    } catch (error) {
+      if (this.source === source && this.tabs.includes(tab))
+        tab.error = `PDF preview failed. Could not read source. ${String(error)}`;
+    }
   }
   async refresh() {
     const source = this.source;
@@ -125,22 +168,24 @@ export class Workspace {
       const tab = this.tabs.find((tab) => tab.path === path);
       if (!tab) continue;
       try {
-        if (source.stamp && (await source.stamp(path)) === tab.stamp) {
-          tab.error = '';
+        if (!tab.retryCompilation && source.stamp && (await source.stamp(path)) === tab.stamp) {
+          tab.error = tab.compilationError || '';
           continue;
         }
         const file = await source.read(path);
         if (source !== this.source || !this.tabs.includes(tab)) continue;
-        if (file.stamp !== tab.stamp || file.text !== tab.text) {
+        if (file.stamp !== tab.stamp || file.text !== tab.text || !!file.bytes !== !!tab.bytes) {
           tab.text = file.text;
           tab.bytes = file.bytes;
           tab.stamp = file.stamp;
           tab.revision++;
         }
-        tab.error = '';
+        tab.error = file.compilationError || '';
+        tab.compilationError = file.compilationError;
+        tab.retryCompilation = file.retryCompilation;
       } catch (error) {
         if (source === this.source)
-          tab.error = `File unavailable. Last preview retained. ${String(error)}`;
+          tab.error = `${isLatex(path) ? 'LaTeX refresh failed.' : 'File unavailable.'} Last preview retained. ${String(error)}`;
       }
     }
   }
