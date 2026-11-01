@@ -1,10 +1,12 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { createMutationQueue } from './control-queue';
 import { invokeHost } from './native';
 
 interface ControlRequest {
   id: number;
   method: string;
   params?: Record<string, unknown>;
+  deadline?: number;
 }
 
 export type ControlExecutor = (method: string, params: Record<string, unknown>) => Promise<unknown>;
@@ -35,32 +37,22 @@ export async function installControl(execute: ControlExecutor): Promise<Unlisten
   ]);
   // Document and view mutations use separate queues: opening a slow document
   // must not block theme, zoom, settings, or panel changes.
-  let documentMutations = Promise.resolve();
-  let viewMutations = Promise.resolve();
-  const enqueue = (queue: 'document' | 'view', operation: () => Promise<unknown>) => {
-    const current = queue === 'document' ? documentMutations : viewMutations;
-    const task = current.then(operation);
-    const settled = task.then(
-      () => undefined,
-      () => undefined,
-    );
-    if (queue === 'document') documentMutations = settled;
-    else viewMutations = settled;
-    return task;
-  };
-  const dispatch = (method: string, params: Record<string, unknown>) => {
+  const enqueueDocument = createMutationQueue();
+  const enqueueView = createMutationQueue();
+  const dispatch = (method: string, params: Record<string, unknown>, deadline?: number) => {
     if (readOnly.has(method)) return execute(method, params);
     const isDocument =
       documentMethods.has(method) ||
       (method === 'panel' && params.name === 'split') ||
       (!viewMethods.has(method) && method !== 'panel');
-    return enqueue(isDocument ? 'document' : 'view', () => execute(method, params));
+    const enqueue = isDocument ? enqueueDocument : enqueueView;
+    return enqueue(() => execute(method, params), deadline);
   };
   return listen<ControlRequest>('papyri-control-request', (event) => {
-    const { id, method, params } = event.payload;
+    const { id, method, params, deadline } = event.payload;
     void (async () => {
       try {
-        const result = await dispatch(method, params ?? {});
+        const result = await dispatch(method, params ?? {}, deadline);
         await invokeHost('control_respond', { id, ok: true, result: result ?? null });
       } catch (error) {
         await invokeHost('control_respond', {

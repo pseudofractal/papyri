@@ -11,6 +11,7 @@ import {
   MAX_ZOOM,
   MIN_PDF_ZOOM,
   MIN_ZOOM,
+  NARROW_VIEWPORT,
   type ZoomCommand,
 } from './view';
 import type { Workspace } from './workspace.svelte';
@@ -47,6 +48,23 @@ export interface ControlContext {
 /** Build the host-side control actions from the app's current state. */
 export function createControlActions(context: ControlContext): ControlActions {
   const { workspace, view } = context;
+  const closeTarget = async (path?: string) => {
+    await context.workspaceReady;
+    const target = path ? normalize(path) : workspace.active;
+    if (!target) throw new Error('No tab is open.');
+    if (!workspace.tabs.some((tab) => tab.path === target))
+      throw new Error(`Tab is not open: ${target}`);
+    workspace.close(target);
+    return context.state();
+  };
+  const reveal = async (path: string) => {
+    await context.workspaceReady;
+    const target = normalize(path);
+    await workspace.open(target);
+    if (workspace.active !== target)
+      throw new Error(workspace.error || `Could not open ${target}.`);
+    return context.state();
+  };
   return {
     state: context.state,
     async headings() {
@@ -88,26 +106,11 @@ export function createControlActions(context: ControlContext): ControlActions {
       await workspace.open(target, options.anchor || '');
       if (workspace.active !== target)
         throw new Error(workspace.error || `Could not open ${target}.`);
-      if (window.innerWidth < 760) view.sidebar = false;
+      if (window.innerWidth < NARROW_VIEWPORT) view.sidebar = false;
       return context.state();
     },
-    async close(path) {
-      await context.workspaceReady;
-      const target = path ? normalize(path) : workspace.active;
-      if (!target) throw new Error('No tab is open.');
-      if (!workspace.tabs.some((tab) => tab.path === target))
-        throw new Error(`Tab is not open: ${target}`);
-      workspace.close(target);
-      return context.state();
-    },
-    async focus(path) {
-      await context.workspaceReady;
-      const target = normalize(path);
-      await workspace.open(target);
-      if (workspace.active !== target)
-        throw new Error(workspace.error || `Could not open ${target}.`);
-      return context.state();
-    },
+    close: closeTarget,
+    focus: reveal,
     async tab(direction) {
       await context.workspaceReady;
       const tabs = workspace.tabs;
@@ -121,23 +124,8 @@ export function createControlActions(context: ControlContext): ControlActions {
       await workspace.open(next.path);
       return context.state();
     },
-    async activate(path) {
-      await context.workspaceReady;
-      const target = normalize(path);
-      await workspace.open(target);
-      if (workspace.active !== target)
-        throw new Error(workspace.error || `Could not open ${target}.`);
-      return context.state();
-    },
-    async closeTab(path) {
-      await context.workspaceReady;
-      const target = path ? normalize(path) : workspace.active;
-      if (!target) throw new Error('No tab is open.');
-      if (!workspace.tabs.some((tab) => tab.path === target))
-        throw new Error(`Tab is not open: ${target}`);
-      workspace.close(target);
-      return context.state();
-    },
+    activate: reveal,
+    closeTab: closeTarget,
     async scroll(pane, target) {
       await context.workspaceReady;
       const preview = await waitForPreview(

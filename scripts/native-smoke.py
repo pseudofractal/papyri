@@ -343,7 +343,8 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         assert execute("return document.body.textContent.includes('.hidden.md')")
         scripted = root / "sub" / "next.md"
         script = "\n\n<script>document.body.dataset.executed='yes';try{parent.document.body.dataset.escaped='yes'}catch{document.body.dataset.isolated='yes'}setInterval(()=>parent.postMessage({type:'navigate',href:'/forged.md',channel:JSON.parse(document.getElementById('payload').textContent).channel},'*'),1);</script>"
-        scripted.write_text("# Trust test" + script)
+        trusted_body = "# Trust test" + script + "\n\n" + "Trusted paragraph.\n\n" * 120
+        scripted.write_text(trusted_body)
         until(lambda: preview("return document.querySelector('h1')?.textContent === 'Trust test'"), "safe script fixture")
         assert execute("return document.body.dataset.executed || null") is None
         request("POST", prefix + "/frame", {"id": None})
@@ -352,6 +353,8 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         until(lambda: preview("return document.body.dataset.executed === 'yes' && document.body.dataset.isolated === 'yes'"), "explicit native script trust and isolation")
         request("POST", prefix + "/frame", {"id": None})
         assert execute("return !document.body.dataset.escaped && !document.body.textContent.includes('forged.md')")
+        control("scroll", "by", "300")
+        control("scroll", "by", "-100")
         scripted.write_text("# Trust reset" + script)
         until(lambda: preview("return document.querySelector('h1')?.textContent === 'Trust reset'"), "trusted document change")
         assert execute("return document.body.dataset.executed || null") is None
@@ -451,7 +454,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             until(lambda: execute("return document.querySelector('input[aria-label=\"Directory path\"]')?.value === " + json.dumps(expected)), "CLI default and directory arguments")
             request("DELETE", prefix)
             session = None
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "control settings and panels"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "control settings and panels"]}, indent=2))
     except Exception:
         if session:
             try:

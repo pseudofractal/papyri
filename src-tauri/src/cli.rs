@@ -6,10 +6,11 @@
 
 use crate::cli_args::*;
 use crate::cli_output::print_result;
-use crate::control::{self, Request};
+use crate::control::{self, ProtocolError, Request};
 use clap::Parser;
 use serde_json::{json, Value};
 use std::{
+  fmt,
   io::{BufRead, BufReader, Write},
   path::{Path, PathBuf},
   process::{Command, Stdio},
@@ -19,14 +20,66 @@ use std::{
 
 const MAX_WAIT_SECONDS: f64 = 86_400.0;
 
+#[derive(Debug)]
+struct CliError {
+  code: String,
+  message: String,
+}
+
+impl CliError {
+  fn new(code: &str, message: impl Into<String>) -> Self {
+    Self {
+      code: code.into(),
+      message: message.into(),
+    }
+  }
+}
+
+impl From<String> for CliError {
+  fn from(message: String) -> Self {
+    Self::new("error", message)
+  }
+}
+
+impl From<&str> for CliError {
+  fn from(message: &str) -> Self {
+    Self::new("error", message)
+  }
+}
+
+impl From<ProtocolError> for CliError {
+  fn from(error: ProtocolError) -> Self {
+    Self::new(&error.code, error.message)
+  }
+}
+
+impl fmt::Display for CliError {
+  fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(formatter, "{}", self.message)
+  }
+}
+
+fn fail(error: CliError, json_output: bool) -> ! {
+  if json_output {
+    print_result(
+      "error",
+      json!({ "error": { "code": error.code, "message": error.message } }),
+      true,
+    );
+  } else {
+    eprintln!("error: {}", error.message);
+  }
+  std::process::exit(1);
+}
+
 /// Returns true when the process should exit instead of starting the GUI.
 pub fn intercept() -> bool {
   let cli = Cli::parse();
   match cli.command {
     Some(TopCommand::Ctl(args)) => {
+      let json_output = args.json;
       if let Err(error) = run_ctl(args) {
-        eprintln!("error: {error}");
-        std::process::exit(1);
+        fail(error, json_output);
       }
       true
     }
@@ -34,8 +87,7 @@ pub fn intercept() -> bool {
       Some(path) => {
         if control::is_running() {
           if let Err(error) = forward_path(&path) {
-            eprintln!("error: {error}");
-            std::process::exit(1);
+            fail(error, false);
           }
           true
         } else {
@@ -45,8 +97,7 @@ pub fn intercept() -> bool {
       None => {
         if control::is_running() {
           if let Err(error) = control::request("raise", json!({}), Duration::from_secs_f64(0.0)) {
-            eprintln!("error: {error}");
-            std::process::exit(1);
+            fail(error.into(), false);
           }
           true
         } else {
@@ -57,7 +108,7 @@ pub fn intercept() -> bool {
   }
 }
 
-fn run_ctl(args: CtlArgs) -> Result<(), String> {
+fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
   let wait = seconds(args.wait);
   match args.command {
     CtlCommand::Ping => print_result("ping", ping(wait)?, args.json),
@@ -198,12 +249,12 @@ fn run_ctl(args: CtlArgs) -> Result<(), String> {
   Ok(())
 }
 
-fn request(method: &str, params: Value, wait: Duration) -> Result<Value, String> {
-  control::request(method, params, wait)
+fn request(method: &str, params: Value, wait: Duration) -> Result<Value, CliError> {
+  control::request(method, params, wait).map_err(CliError::from)
 }
 
 /// Wait for the socket, then keep polling until the host UI reports ready.
-fn ping(wait: Duration) -> Result<Value, String> {
+fn ping(wait: Duration) -> Result<Value, CliError> {
   let deadline = Instant::now() + wait;
   let mut value = request("ping", json!({}), wait)?;
   if wait.is_zero() {
@@ -214,17 +265,20 @@ fn ping(wait: Duration) -> Result<Value, String> {
       return Ok(value);
     }
     if Instant::now() >= deadline {
-      return Err(format!(
-        "Papyri is running but its control bridge was not ready after {:.1} seconds.",
-        wait.as_secs_f64()
-      ));
+      return Err(
+        format!(
+          "Papyri is running but its control bridge was not ready after {:.1} seconds.",
+          wait.as_secs_f64()
+        )
+        .into(),
+      );
     }
     thread::sleep(Duration::from_millis(50));
     value = request("ping", json!({}), Duration::ZERO)?;
   }
 }
 
-fn open_document(args: OpenArgs, wait: Duration) -> Result<Value, String> {
+fn open_document(args: OpenArgs, wait: Duration) -> Result<Value, CliError> {
   let path = resolve_path(&args.path)?;
   let directory = path.is_dir();
   let mut params = json!({
@@ -239,10 +293,13 @@ fn open_document(args: OpenArgs, wait: Duration) -> Result<Value, String> {
     return request("open", params, wait);
   }
   if args.no_launch {
-    return Err(format!(
-      "Papyri is not running (no control socket at {}).",
-      control::socket_path().display()
-    ));
+    return Err(
+      format!(
+        "Papyri is not running (no control socket at {}).",
+        control::socket_path().display()
+      )
+      .into(),
+    );
   }
   launch(&path)?;
   let timeout = args
@@ -253,7 +310,7 @@ fn open_document(args: OpenArgs, wait: Duration) -> Result<Value, String> {
   request("open", params, timeout)
 }
 
-fn forward_path(path: &Path) -> Result<(), String> {
+fn forward_path(path: &Path) -> Result<(), CliError> {
   let path = resolve_path(path)?;
   let directory = path.is_dir();
   request(
@@ -361,11 +418,12 @@ fn seconds(value: f64) -> Duration {
   Duration::from_secs_f64(value)
 }
 
-fn run_watch(args: WatchArgs, wait: Duration) -> Result<(), String> {
-  let mut stream = control::connect(wait)?;
+fn run_watch(args: WatchArgs, wait: Duration) -> Result<(), CliError> {
+  let mut stream =
+    control::connect(wait).map_err(|message| CliError::new("unavailable", message))?;
   stream
     .set_read_timeout(None)
-    .map_err(|error| error.to_string())?;
+    .map_err(|error| CliError::new("io-error", error.to_string()))?;
   control::send_request(
     &mut stream,
     &Request {
@@ -377,22 +435,29 @@ fn run_watch(args: WatchArgs, wait: Duration) -> Result<(), String> {
         json!({ "events": args.events })
       },
     },
-  )?;
+  )
+  .map_err(|message| CliError::new("io-error", message))?;
   let mut reader = BufReader::new(stream);
   let mut line = String::new();
-  reader
-    .read_line(&mut line)
-    .map_err(|error| format!("Could not read the subscription response: {error}"))?;
-  let response: Value = serde_json::from_str(line.trim())
-    .map_err(|error| format!("Invalid subscription response: {error}"))?;
+  reader.read_line(&mut line).map_err(|error| {
+    CliError::new(
+      "io-error",
+      format!("Could not read the subscription response: {error}"),
+    )
+  })?;
+  let response: Value = serde_json::from_str(line.trim()).map_err(|error| {
+    CliError::new(
+      "protocol-error",
+      format!("Invalid subscription response: {error}"),
+    )
+  })?;
   if let Some(error) = response.get("error") {
-    return Err(
-      error
-        .get("message")
-        .and_then(Value::as_str)
-        .unwrap_or("The window rejected the subscription.")
-        .to_string(),
-    );
+    let code = error.get("code").and_then(Value::as_str).unwrap_or("error");
+    let message = error
+      .get("message")
+      .and_then(Value::as_str)
+      .unwrap_or("The window rejected the subscription.");
+    return Err(CliError::new(code, message));
   }
   let mut stdout = std::io::stdout();
   if !args.no_initial {
@@ -417,7 +482,7 @@ fn run_watch(args: WatchArgs, wait: Duration) -> Result<(), String> {
           return Ok(());
         }
       }
-      Err(error) => return Err(format!("Control stream failed: {error}")),
+      Err(error) => return Err(format!("Control stream failed: {error}").into()),
     }
   }
 }
@@ -568,5 +633,15 @@ mod tests {
         ..
       }))
     ));
+  }
+
+  #[test]
+  fn preserves_protocol_error_codes_for_cli_output() {
+    let error = CliError::from(ProtocolError {
+      code: "timeout".into(),
+      message: "The request timed out.".into(),
+    });
+    assert_eq!(error.code, "timeout");
+    assert_eq!(error.message, "The request timed out.");
   }
 }

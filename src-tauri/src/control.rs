@@ -21,15 +21,17 @@ use std::{
     mpsc, Condvar, Mutex,
   },
   thread,
-  time::{Duration, Instant},
+  time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Emitter, Manager};
 
+/// Keep in sync with `CONTROL_PROTOCOL` in `src/lib/control.ts`.
 pub const PROTOCOL_VERSION: u64 = 1;
 pub const REQUEST_EVENT: &str = "papyri-control-request";
 const MAX_REQUEST_BYTES: usize = 256 * 1024;
 const MAX_EVENT_BYTES: usize = 1024 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
+const RESPONSE_GRACE: Duration = Duration::from_secs(5);
 const READY_TIMEOUT: Duration = Duration::from_secs(20);
 const SUBSCRIBER_QUEUE: usize = 256;
 
@@ -65,6 +67,14 @@ impl ProtocolError {
     }
   }
 }
+
+impl std::fmt::Display for ProtocolError {
+  fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(formatter, "{}", self.message)
+  }
+}
+
+impl std::error::Error for ProtocolError {}
 
 #[derive(Debug)]
 struct Reply {
@@ -148,6 +158,8 @@ impl ControlState {
 
   fn broadcast(&self, event: &str, line: String) -> usize {
     let mut subscribers = self.subscribers.lock().unwrap();
+    // A subscriber that cannot keep up is dropped from the event stream rather
+    // than blocking other clients or the app. It can reconnect and resubscribe.
     subscribers.retain(|subscriber| {
       if !event_matches(&subscriber.events, event) {
         return true;
@@ -219,8 +231,19 @@ pub fn start(app: AppHandle) -> Result<PathBuf, String> {
   if path.exists() {
     match UnixStream::connect(&path) {
       Ok(_) => return Err(format!("Another Papyri instance owns {}", path.display())),
-      Err(_) => {
+      Err(error)
+        if matches!(
+          error.kind(),
+          std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused
+        ) =>
+      {
         let _ = fs::remove_file(&path);
+      }
+      Err(error) => {
+        return Err(format!(
+          "Could not inspect the existing control socket at {}: {error}",
+          path.display()
+        ));
       }
     }
   }
@@ -287,11 +310,11 @@ pub fn send_request(stream: &mut UnixStream, request: &Request) -> Result<(), St
 }
 
 /// Send one request and wait for its response. Handles `ping` and `state`.
-pub fn request(method: &str, params: Value, wait: Duration) -> Result<Value, String> {
-  let mut stream = connect(wait)?;
+pub fn request(method: &str, params: Value, wait: Duration) -> Result<Value, ProtocolError> {
+  let mut stream = connect(wait).map_err(|message| ProtocolError::new("unavailable", message))?;
   stream
-    .set_read_timeout(Some(REQUEST_TIMEOUT + Duration::from_secs(5)))
-    .map_err(|error| error.to_string())?;
+    .set_read_timeout(Some(REQUEST_TIMEOUT + RESPONSE_GRACE))
+    .map_err(|error| ProtocolError::new("io-error", error.to_string()))?;
   send_request(
     &mut stream,
     &Request {
@@ -299,16 +322,24 @@ pub fn request(method: &str, params: Value, wait: Duration) -> Result<Value, Str
       method: method.to_string(),
       params,
     },
-  )?;
+  )
+  .map_err(|message| ProtocolError::new("io-error", message))?;
   let mut reader = BufReader::new(stream);
   let mut line = String::new();
-  reader
-    .read_line(&mut line)
-    .map_err(|error| format!("Could not read the control response: {error}"))?;
-  let response: Response = serde_json::from_str(line.trim())
-    .map_err(|error| format!("Invalid control response: {error}"))?;
+  reader.read_line(&mut line).map_err(|error| {
+    ProtocolError::new(
+      "io-error",
+      format!("Could not read the control response: {error}"),
+    )
+  })?;
+  let response: Response = serde_json::from_str(line.trim()).map_err(|error| {
+    ProtocolError::new(
+      "protocol-error",
+      format!("Invalid control response: {error}"),
+    )
+  })?;
   if let Some(error) = response.error {
-    return Err(error.message);
+    return Err(error);
   }
   Ok(response.result.unwrap_or(Value::Null))
 }
@@ -349,7 +380,10 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
     if line.len() > MAX_REQUEST_BYTES {
       let _ = sender.send(response_line(
         Value::Null,
-        Reply::failure("request-too-large", "Control request exceeds 256 KiB."),
+        Reply::failure(
+          "request-too-large",
+          format!("Control request exceeds {} KiB.", MAX_REQUEST_BYTES / 1024),
+        ),
       ));
       break;
     }
@@ -409,6 +443,9 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
           let state = app.state::<ControlState>();
           {
             let mut subscribers = state.subscribers.lock().unwrap();
+            // Re-subscribing replaces the connection's filter instead of
+            // delivering every matching event once per subscription.
+            subscribers.retain(|subscriber| subscriber.connection != connection);
             subscribers.push(Subscriber {
               connection,
               events,
@@ -528,6 +565,12 @@ fn response_line(id: Value, reply: Reply) -> String {
   })
 }
 
+fn unix_millis() -> u64 {
+  SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .map_or(0, |duration| duration.as_millis() as u64)
+}
+
 fn dispatch(app: &AppHandle, method: &str, params: Value) -> Reply {
   if method.is_empty() || method.len() > 64 {
     return Reply::failure("bad-method", "Method names must be 1-64 characters.");
@@ -542,7 +585,13 @@ fn dispatch(app: &AppHandle, method: &str, params: Value) -> Reply {
   let request = state.next_request.fetch_add(1, Ordering::Relaxed);
   let (sender, receiver) = mpsc::sync_channel(1);
   state.pending.lock().unwrap().insert(request, sender);
-  let event = json!({ "id": request, "method": method, "params": params });
+  let deadline = unix_millis().saturating_add(REQUEST_TIMEOUT.as_millis() as u64);
+  let event = json!({
+    "id": request,
+    "method": method,
+    "params": params,
+    "deadline": deadline,
+  });
   if let Err(error) = app.emit_to("main", REQUEST_EVENT, event) {
     let _ = state.take_reply(request);
     return Reply::failure("window-unavailable", error.to_string());
@@ -553,7 +602,10 @@ fn dispatch(app: &AppHandle, method: &str, params: Value) -> Reply {
       let _ = state.take_reply(request);
       Reply::failure(
         "timeout",
-        format!("Papyri did not respond to `{method}` within 60 seconds."),
+        format!(
+          "Papyri did not respond to `{method}` within {} seconds.",
+          REQUEST_TIMEOUT.as_secs()
+        ),
       )
     }
   }
@@ -602,7 +654,10 @@ pub fn control_emit(
   let line = serde_json::to_string(&json!({ "event": event, "data": data }))
     .map_err(|error| error.to_string())?;
   if line.len() > MAX_EVENT_BYTES {
-    return Err("Control event exceeds 1 MiB.".into());
+    return Err(format!(
+      "Control event exceeds {} MiB.",
+      MAX_EVENT_BYTES / (1024 * 1024)
+    ));
   }
   Ok(state.broadcast(&event, line))
 }

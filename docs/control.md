@@ -48,8 +48,9 @@ is running raises that window.
 | Last resort | `$TMPDIR/papyri-<uid>/control.sock`                                     |
 
 Set `PAPYRI_CONTROL_SOCKET` to use another path. The parent directory is created
-with mode `0700` and the socket with mode `0600`, so only the same user can
-connect. There is no network listener.
+with mode `0700` when absent and the socket with mode `0600`, so only the same
+user can connect. Keep an overridden socket directory private. There is no
+network listener.
 
 Each line is one JSON object. Requests carry an `id` chosen by the client and a
 method name:
@@ -83,7 +84,9 @@ layer and reports `ready` without touching the webview. Readiness covers the
 control listener, not the initial document: use `state.busy` and `state.active`
 while startup finishes. Document actions also wait for the initial folder and
 document selection to finish, so an `open` sent during startup is applied after
-Papyri finishes opening its initial path.
+Papyri finishes opening its initial path. Queued mutations carry the request
+deadline; one that expires before reaching the front of the queue is skipped,
+while work already underway may finish after the client has timed out.
 
 ## Methods
 
@@ -121,7 +124,10 @@ Papyri finishes opening its initial path.
 can use new methods without waiting for a CLI update. An `open` with
 `pane: "secondary"` opens in the split pane when a document is already active;
 with no active document it opens in the main pane so the preview is visible.
-The `anchor` option applies to the main pane only.
+The `anchor` option applies to the main pane only. Documents with scripts enabled
+do not update the saved scroll bookmark, but a control-initiated scroll still
+resolves with the frame's resulting position so `papyri ctl scroll` can report
+success.
 
 ### State shape
 
@@ -206,7 +212,25 @@ Direct socket clients subscribe with:
 
 The response contains `{"subscribed":true,"state":{...}}`, and later lines are
 events. Omit `events` to receive all event types. Sending `unsubscribe` on the
-same connection stops the stream.
+same connection stops the stream. Subscribing again on the same connection
+replaces the previous filter. A subscriber whose event queue cannot keep up is
+removed from the event stream rather than blocking the app or other clients;
+reconnect and subscribe again after a stalled consumer.
+
+## Errors
+
+Control failures use the protocol error shape shown above. With `--json`, the
+CLI writes a single object to stdout and exits nonzero:
+
+```json
+{
+  "error": { "code": "timeout", "message": "Papyri did not respond to `state` within 60 seconds." }
+}
+```
+
+Without `--json`, errors are printed to stderr as `error: <message>` and the
+exit status is nonzero. A closed output pipe is treated as a normal end of
+output, not an error.
 
 ## Neovim
 

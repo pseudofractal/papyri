@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CONTROL_PROTOCOL } from '../src/lib/control';
 import { buildControlState } from '../src/lib/control-state';
 import { defaults } from '../src/lib/preferences';
 import type { Workspace } from '../src/lib/workspace.svelte';
@@ -39,6 +40,7 @@ describe('control state snapshots', () => {
       view,
       preferences: structuredClone(defaults),
     });
+    expect(state.protocol).toBe(CONTROL_PROTOCOL);
     expect(state.active).toBe('/notes.md');
     expect(state.tabs.map((tab) => tab.kind)).toEqual(['markdown', 'pdf', 'typst-source']);
     expect(state.tabs[0].scroll).toBe(12);

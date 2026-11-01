@@ -1,7 +1,7 @@
 import { isLatex, isTypst } from './paths';
+import { CONTROL_PROTOCOL, type ControlState, type ControlTab } from './control';
 import type { Preferences } from './types';
 import type { Tab, Workspace } from './workspace.svelte';
-import type { ControlState, ControlTab } from './control';
 
 export interface ControlStateInput {
   workspace: Workspace;
@@ -27,7 +27,7 @@ export function buildControlState({
   preferences,
 }: ControlStateInput): ControlState {
   return {
-    protocol: 1,
+    protocol: CONTROL_PROTOCOL,
     active: workspace.active || null,
     secondary: workspace.secondary || null,
     tabs: workspace.tabs.map((tab) => ({

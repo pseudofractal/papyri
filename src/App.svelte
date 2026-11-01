@@ -31,6 +31,7 @@
     MAX_PDF_ZOOM,
     MIN_ZOOM,
     MAX_ZOOM,
+    NARROW_VIEWPORT,
     clampZoom,
     type ZoomCommand,
     type ViewCommand,
@@ -51,11 +52,12 @@
   import { createControlExecutor, type ControlState } from './lib/control';
   import { installControl, markControlReady, publishControlEvent } from './lib/control-host';
   import { buildControlState } from './lib/control-state';
+  import { CONTROL_PUBLISH_INTERVAL_MS } from './lib/control-timings';
   import type { PreviewControls } from './lib/preview-control';
   import { createControlActions, type ControlViewState } from './lib/control-actions';
   const workspace = new Workspace();
   let preferences = $state(loadPreferences());
-  let sidebar = $state(window.innerWidth >= 760);
+  let sidebar = $state(window.innerWidth >= NARROW_VIEWPORT);
   let outline = $state(window.innerWidth >= 1100);
   let settings = $state(false);
   let help = $state(false);
@@ -191,7 +193,7 @@
   }
   async function openDocument(path: string) {
     await workspace.open(path);
-    if (window.innerWidth < 760) sidebar = false;
+    if (window.innerWidth < NARROW_VIEWPORT) sidebar = false;
   }
   async function follow(href: string, documentPath = workspace.active) {
     const target = resolveLink(documentPath, href);
@@ -625,7 +627,7 @@
       if (key === lastPublishedState) return;
       lastPublishedState = key;
       publishControlEvent('state', state);
-    }, 100);
+    }, CONTROL_PUBLISH_INTERVAL_MS);
   }
   $effect(() => {
     if (!native) return;

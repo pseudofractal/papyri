@@ -3,10 +3,8 @@ import {
   clampSidebarWidth,
   DEFAULT_SIDEBAR_WIDTH,
   MAX_PDF_ZOOM,
-  MAX_SIDEBAR_WIDTH,
   MAX_ZOOM,
   MIN_PDF_ZOOM,
-  MIN_SIDEBAR_WIDTH,
   MIN_ZOOM,
 } from './view';
 import type { Delimiter, Preferences } from './types';
@@ -97,10 +95,14 @@ function migrateDelimiters(stored: { delimiters: unknown; version?: number }): D
   return !stored.version && unchangedDefaults ? validateDelimiters(defaults.delimiters) : pairs;
 }
 
-function preferenceNumber(value: unknown, minimum: number, maximum: number, name: string) {
+function finitePreference(value: unknown, name: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value))
     throw new Error(`\`${name}\` must be a finite number.`);
-  return clampZoom(value, minimum, maximum);
+  return value;
+}
+
+function preferenceNumber(value: unknown, minimum: number, maximum: number, name: string) {
+  return clampZoom(finitePreference(value, name), minimum, maximum);
 }
 
 /** Validate a partial settings update, returning a new preferences object. */
@@ -134,12 +136,7 @@ export function mergePreferences(
         next.uiZoom = preferenceNumber(value, MIN_ZOOM, MAX_ZOOM, 'uiZoom');
         break;
       case 'sidebarWidth':
-        next.sidebarWidth = preferenceNumber(
-          value,
-          MIN_SIDEBAR_WIDTH,
-          MAX_SIDEBAR_WIDTH,
-          'sidebarWidth',
-        );
+        next.sidebarWidth = clampSidebarWidth(finitePreference(value, 'sidebarWidth'));
         break;
       case 'typstPath':
         if (typeof value !== 'string') throw new Error('`typstPath` must be a string.');

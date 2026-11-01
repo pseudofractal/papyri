@@ -18,6 +18,8 @@
   import { mayContainMath, warmMathFonts } from '../render/math-fonts';
   import { loadPdfResource } from '../render/pdf-resources';
   import { SCROLL_ACK_TIMEOUT_MS } from '../lib/control-timings';
+  import { PreviewNotReadyError } from '../lib/preview-control';
+  import { MAX_SCROLL_POSITION } from '../lib/view';
   let {
     tab,
     scrollPosition,
@@ -81,7 +83,7 @@
     return tab.path;
   }
   function requestScroll(payload: { y?: number; dy?: number }): Promise<number> {
-    if (!frame || !frameReady) return Promise.reject(new Error('The preview is not ready yet.'));
+    if (!frame || !frameReady) return Promise.reject(new PreviewNotReadyError());
     const request = ++scrollRequest;
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -314,6 +316,22 @@
       expanded = data.expanded;
       return;
     }
+    if (
+      data.type === 'scroll-done' &&
+      Number.isSafeInteger(data.request) &&
+      Number.isFinite(data.y)
+    ) {
+      const pending = pendingScrolls.get(data.request);
+      if (pending) {
+        pendingScrolls.delete(data.request);
+        clearTimeout(pending.timeout);
+        pending.resolve(data.y);
+        // Trusted frames acknowledge control scrolling but do not update the
+        // host's scroll bookmark; that policy keeps scripted documents inert.
+        if (allowsMessages) onscroll(tab.path, Math.max(0, Math.min(data.y, MAX_SCROLL_POSITION)));
+      }
+      return;
+    }
     if (!allowsMessages) return;
     if (
       data.type === 'diagram-export' &&
@@ -343,22 +361,8 @@
     }
     if (data.type === 'navigate' && typeof data.href === 'string' && data.href.length < 8192)
       onlink(data.href);
-    if (
-      data.type === 'scroll-done' &&
-      Number.isSafeInteger(data.request) &&
-      Number.isFinite(data.y)
-    ) {
-      const pending = pendingScrolls.get(data.request);
-      if (pending) {
-        pendingScrolls.delete(data.request);
-        clearTimeout(pending.timeout);
-        pending.resolve(data.y);
-        onscroll(tab.path, Math.max(0, Math.min(data.y, 100_000_000)));
-      }
-      return;
-    }
     if (data.type === 'scroll' && Number.isFinite(data.y))
-      onscroll(tab.path, Math.max(0, Math.min(data.y, 100_000_000)));
+      onscroll(tab.path, Math.max(0, Math.min(data.y, MAX_SCROLL_POSITION)));
   }
   // WebKitGTK retargets wheel events over an iframe to the host without scrolling
   // the frame. Forward the delta using positions relative to the frame viewport.

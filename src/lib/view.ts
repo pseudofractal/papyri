@@ -6,6 +6,8 @@ export const ZOOM_STEP = 10;
 export const DEFAULT_SIDEBAR_WIDTH = 254;
 export const MIN_SIDEBAR_WIDTH = 180;
 export const MAX_SIDEBAR_WIDTH = 600;
+export const NARROW_VIEWPORT = 760;
+export const MAX_SCROLL_POSITION = 100_000_000;
 export type ZoomTarget = 'document' | 'ui';
 export type ZoomAction = 'in' | 'out' | 'reset';
 export interface ZoomCommand {

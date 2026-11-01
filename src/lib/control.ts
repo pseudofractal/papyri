@@ -1,5 +1,8 @@
 import type { Preferences } from './types';
 
+/** Keep in sync with `PROTOCOL_VERSION` in `src-tauri/src/control.rs`. */
+export const CONTROL_PROTOCOL = 1;
+
 /** State exposed to the control socket and `papyri ctl state`. */
 export interface ControlState {
   protocol: number;
