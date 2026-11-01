@@ -9,11 +9,14 @@ Use the locked Nix development environment and dependencies:
 ```sh
 nix develop
 npm ci --ignore-scripts
+git config --local core.hooksPath .githooks
 npm run dev
 # Or: npm run tauri dev
 ```
 
 Use TypeScript and the existing Svelte 5 patterns. Use maintained Markdown, math and diagram libraries rather than adding a custom parser or rendering engine. Keep UI text functional and direct. Use theme variables for UI colors; the app mark should inherit its surrounding color.
+
+The configured pre-push hook runs the full browser suite in the Nix development environment and blocks the push if it fails. Install dependencies first with `npm ci --ignore-scripts`. For pushes containing commits, the hook requires a clean working tree and each pushed ref to point to the checked-out commit; check out and push other commits separately. Deletion-only pushes do not run the suite. Git hooks are local to each clone and do not run for changes made directly on GitHub. GitHub Actions continues to run the flake checks, but not the browser suite.
 
 Before proposing a change, run:
 

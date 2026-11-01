@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+
+cd "$(git rev-parse --show-toplevel)"
+head_commit=$(git rev-parse --verify 'HEAD^{commit}')
+has_updates=false
+while read -r local_ref local_oid remote_ref remote_oid; do
+  [ "$local_ref" = '(delete)' ] && continue
+  if ! pushed_commit=$(git rev-parse --verify "$local_oid^{commit}" 2>/dev/null) ||
+    [ "$pushed_commit" != "$head_commit" ]; then
+    printf '%s\n' 'Push only the checked-out commit so the browser tests cover it.' >&2
+    exit 1
+  fi
+  has_updates=true
+done
+
+[ "$has_updates" = true ] || exit 0
+working_tree_changes=$(git status --porcelain --untracked-files=normal)
+if [ -n "$working_tree_changes" ]; then
+  printf '%s\n' 'Commit or remove working-tree changes before pushing so the browser tests cover the commit.' >&2
+  exit 1
+fi
+
+printf '%s\n' 'Running browser tests before push...'
+if command -v nix >/dev/null 2>&1; then
+  nix_command=nix
+elif [ -x /nix/var/nix/profiles/default/bin/nix ]; then
+  nix_command=/nix/var/nix/profiles/default/bin/nix
+else
+  printf '%s\n' 'Nix is required to run the browser tests. See CONTRIBUTING.md.' >&2
+  exit 1
+fi
+"$nix_command" develop -c npm run test:e2e -- --workers=2
