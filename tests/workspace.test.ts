@@ -68,6 +68,38 @@ describe('workspace navigation and live updates', () => {
     });
   });
 
+  it('retains the last compiled preview when a refresh fails to compile', async () => {
+    const { source, files } = memorySource();
+    files.set('/paper.typ', {
+      text: '= Native Typst',
+      stamp: '1',
+      bytes: Uint8Array.of(1, 2),
+    });
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    await workspace.open('/paper.typ');
+    files.set('/paper.typ', {
+      text: '#let broken =',
+      stamp: '2',
+      compilationError: 'Compilation failed. Showing source. Syntax error',
+      retryCompilation: true,
+    });
+    await workspace.refresh();
+    expect(workspace.activeTab).toMatchObject({
+      text: '= Native Typst',
+      bytes: Uint8Array.of(1, 2),
+      error: expect.stringContaining('Last preview retained'),
+      retryCompilation: true,
+      revision: 0,
+    });
+    files.set('/paper.typ', { text: '', stamp: '3', bytes: Uint8Array.of(3, 4) });
+    await workspace.refresh();
+    expect(workspace.activeTab).toMatchObject({
+      bytes: Uint8Array.of(3, 4),
+      error: '',
+      revision: 1,
+    });
+  });
   it('shows source when the PDF renderer fails', async () => {
     const { source, files } = memorySource();
     files.set('/paper.tex', { text: '', stamp: '1', bytes: Uint8Array.of(1) });

@@ -207,6 +207,14 @@ export class Workspace {
         }
         const file = await source.read(path);
         if (source !== this.source || !this.tabs.includes(tab)) continue;
+        // A failed compile after a successful one keeps the last PDF visible.
+        // The error banner explains the retained preview and refresh retries.
+        if (tab.bytes && file.compilationError && !file.bytes) {
+          tab.error = file.compilationError.replace('Showing source.', 'Last preview retained.');
+          tab.compilationError = tab.error;
+          tab.retryCompilation = file.retryCompilation;
+          continue;
+        }
         if (file.stamp !== tab.stamp || file.text !== tab.text || !!file.bytes !== !!tab.bytes) {
           tab.text = file.text;
           tab.bytes = file.bytes;
