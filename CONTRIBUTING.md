@@ -1,6 +1,6 @@
 # Contributing
 
-Papyri is a read-only Markdown, PDF, and Typst viewer for Linux with a shared static web frontend. Keep changes focused on these formats, navigation and supported embedded content. Android, document editing and general-purpose file viewing are outside the current scope. See [PDF and Typst support](docs/documents.md) for compiler requirements and deployment differences.
+Papyri is a read-only Markdown, PDF, Typst, and LaTeX viewer for Linux with a shared static web frontend. Keep changes focused on these formats, navigation and supported embedded content. Android, document editing and general-purpose file viewing are outside the current scope. See [document support](docs/documents.md) for compiler requirements and deployment differences.
 
 ## Development
 
