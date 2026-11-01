@@ -162,6 +162,15 @@ Inline \(e^2\) and [label](https://example.org).`,
     expect(html).toContain('<code>(7) [1]</code>');
     expect(html).toContain('[This is ordinary prose.]');
   });
+  it('keeps bibliography numbering across nested lists', () => {
+    const html = renderMarkdown(
+      'See [1], [2], and [3].\n\n## References\n\n1. First\n   1. Detail\n   2. More detail\n2. Second\n   - Note\n3. Third',
+    ).html;
+    expect(html).toContain('<li id="reference-1" data-papyri-target="reference-1">First');
+    expect(html).toContain('<li id="reference-2" data-papyri-target="reference-2">Second');
+    expect(html).toContain('<li id="reference-3" data-papyri-target="reference-3">Third');
+    expect((html.match(/data-papyri-target="reference-/g) || []).length).toBe(3);
+  });
 });
 
 it('keeps links, images and trailing prose before later display equations intact', () => {

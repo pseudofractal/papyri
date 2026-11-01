@@ -6,7 +6,8 @@ export function configureReferences(markdown: InstanceType<typeof MarkdownIt>) {
     const equations = new Map<string, string>();
     let bibliographyLevel = 0;
     let orderedNumber = 0;
-    let inBibliographyList = false;
+    let listDepth = 0;
+    let bibliographyListDepth = 0;
     for (let index = 0; index < state.tokens.length; index++) {
       const token = state.tokens[index];
       if (token.type === 'heading_open') {
@@ -16,12 +17,18 @@ export function configureReferences(markdown: InstanceType<typeof MarkdownIt>) {
           bibliographyLevel = level;
         else if (bibliographyLevel && level <= bibliographyLevel) bibliographyLevel = 0;
       }
-      if (token.type === 'ordered_list_open' && bibliographyLevel) {
-        orderedNumber = Number(token.attrGet('start') || 1);
-        inBibliographyList = true;
+      if (token.type === 'ordered_list_open' || token.type === 'bullet_list_open') {
+        listDepth++;
+        if (token.type === 'ordered_list_open' && bibliographyLevel && !bibliographyListDepth) {
+          orderedNumber = Number(token.attrGet('start') || 1);
+          bibliographyListDepth = listDepth;
+        }
       }
-      if (token.type === 'ordered_list_close') inBibliographyList = false;
-      if (token.type === 'list_item_open' && inBibliographyList) {
+      if (token.type === 'ordered_list_close' || token.type === 'bullet_list_close') {
+        if (listDepth === bibliographyListDepth) bibliographyListDepth = 0;
+        listDepth--;
+      }
+      if (token.type === 'list_item_open' && bibliographyListDepth === listDepth && listDepth) {
         const number = String(orderedNumber++);
         const id = `reference-${number}`;
         if (!references.has(number)) {
