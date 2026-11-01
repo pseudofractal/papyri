@@ -312,7 +312,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         assert execute("const bounds=document.querySelector('iframe').getBoundingClientRect();return Math.abs(bounds.width-innerWidth)<2 && Math.abs(bounds.height-innerHeight)<2")
         frame()
         until(lambda: execute("const bounds=document.querySelector('.diagram-dialog').getBoundingClientRect();return bounds.x>=0&&bounds.y>=0&&bounds.right<=innerWidth+1&&bounds.bottom<=innerHeight+1&&bounds.width<=innerWidth*.75+1&&bounds.height<=innerHeight*.8+1"), "expanded diagram fits 75% width and 80% height of the actual viewport")
-        execute("document.querySelector('.diagram-dialog button').click()")
+        execute("document.querySelector('.diagram-dialog [aria-label=\"Close diagram\"]').click()")
         execute("window.dispatchEvent(new KeyboardEvent('keydown',{key:'0',ctrlKey:true,altKey:true}))")
         until(lambda: execute("return !document.querySelector('.diagram-dialog')"), "native diagram close")
         execute("document.querySelectorAll('.diagram')[1].querySelector('button').click()")
@@ -415,6 +415,25 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         control("scroll", "by", "300")
         state = json.loads(control("state", "--json"))
         assert next(tab for tab in state["tabs"] if tab["active"])["scroll"] > 0, state
+        before = state["preferences"]
+        control("preferences", "set", json.dumps({"theme": "latte", "network": True, "documentZoom": 120}), "--json")
+        state = json.loads(control("state", "--json"))
+        assert state["preferences"]["theme"] == "latte", state["preferences"]
+        assert state["preferences"]["network"] is True, state["preferences"]
+        assert state["preferences"]["documentZoom"] == 120, state["preferences"]
+        control("panel", "sidebar", "off")
+        state = json.loads(control("state", "--json"))
+        assert state["view"]["sidebar"] is False, state["view"]
+        control("panel", "sidebar", "on")
+        control("search", "Imported")
+        state = json.loads(control("state", "--json"))
+        assert state["view"]["search"] is True and state["view"]["query"] == "Imported", state["view"]
+        control("search", "")
+        control("fit-width", "on")
+        state = json.loads(control("state", "--json"))
+        assert state["preferences"]["fitWidth"] is True, state["preferences"]
+        control("fit-width", "off")
+        control("preferences", "set", json.dumps({"theme": before["theme"], "network": before["network"], "documentZoom": before["documentZoom"], "fitWidth": before["fitWidth"]}), "--json")
         request("DELETE", prefix)
         session = None
         for args, expected in [([], str(Path.cwd())), ([str(root)], str(root))]:
@@ -424,7 +443,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             until(lambda: execute("return document.querySelector('input[aria-label=\"Directory path\"]')?.value === " + json.dumps(expected)), "CLI default and directory arguments")
             request("DELETE", prefix)
             session = None
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "control settings and panels"]}, indent=2))
     except Exception:
         if session:
             try:

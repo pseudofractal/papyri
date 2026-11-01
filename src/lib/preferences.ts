@@ -2,8 +2,12 @@ import {
   clampZoom,
   clampSidebarWidth,
   DEFAULT_SIDEBAR_WIDTH,
-  MIN_PDF_ZOOM,
   MAX_PDF_ZOOM,
+  MAX_SIDEBAR_WIDTH,
+  MAX_ZOOM,
+  MIN_PDF_ZOOM,
+  MIN_SIDEBAR_WIDTH,
+  MIN_ZOOM,
 } from './view';
 import type { Delimiter, Preferences } from './types';
 export const defaults: Preferences = {
@@ -91,4 +95,80 @@ function migrateDelimiters(stored: { delimiters: unknown; version?: number }): D
       legacyDefaults.some((legacy) => JSON.stringify(legacy) === JSON.stringify(pair)),
     );
   return !stored.version && unchangedDefaults ? validateDelimiters(defaults.delimiters) : pairs;
+}
+
+function preferenceNumber(value: unknown, minimum: number, maximum: number, name: string) {
+  if (typeof value !== 'number' || !Number.isFinite(value))
+    throw new Error(`\`${name}\` must be a finite number.`);
+  return clampZoom(value, minimum, maximum);
+}
+
+/** Validate a partial settings update, returning a new preferences object. */
+export function mergePreferences(
+  current: Preferences,
+  patch: Record<string, unknown>,
+): Preferences {
+  const next = structuredClone(current);
+  for (const [key, value] of Object.entries(patch)) {
+    switch (key) {
+      case 'theme':
+        if (value !== 'latte' && value !== 'mocha')
+          throw new Error('`theme` must be "latte" or "mocha".');
+        next.theme = value;
+        break;
+      case 'network':
+        if (typeof value !== 'boolean') throw new Error('`network` must be a boolean.');
+        next.network = value;
+        break;
+      case 'fitWidth':
+        if (typeof value !== 'boolean') throw new Error('`fitWidth` must be a boolean.');
+        next.fitWidth = value;
+        break;
+      case 'documentZoom':
+        next.documentZoom = preferenceNumber(value, MIN_ZOOM, MAX_ZOOM, 'documentZoom');
+        break;
+      case 'pdfZoom':
+        next.pdfZoom = preferenceNumber(value, MIN_PDF_ZOOM, MAX_PDF_ZOOM, 'pdfZoom');
+        break;
+      case 'uiZoom':
+        next.uiZoom = preferenceNumber(value, MIN_ZOOM, MAX_ZOOM, 'uiZoom');
+        break;
+      case 'sidebarWidth':
+        next.sidebarWidth = preferenceNumber(
+          value,
+          MIN_SIDEBAR_WIDTH,
+          MAX_SIDEBAR_WIDTH,
+          'sidebarWidth',
+        );
+        break;
+      case 'typstPath':
+        if (typeof value !== 'string') throw new Error('`typstPath` must be a string.');
+        next.typstPath = value;
+        break;
+      case 'latexEngine':
+        if (!['lualatex', 'pdflatex', 'xelatex'].includes(value as string))
+          throw new Error('`latexEngine` must be lualatex, pdflatex, or xelatex.');
+        next.latexEngine = value as Preferences['latexEngine'];
+        break;
+      case 'latexPaths': {
+        if (!value || typeof value !== 'object' || Array.isArray(value))
+          throw new Error('`latexPaths` must be an object.');
+        const paths = value as Record<string, unknown>;
+        for (const [engine, compiler] of Object.entries(paths)) {
+          if (!(engine in next.latexPaths))
+            throw new Error(`Unknown LaTeX engine in latexPaths: ${engine}`);
+          if (typeof compiler !== 'string')
+            throw new Error(`\`latexPaths.${engine}\` must be a string.`);
+          next.latexPaths[engine as Preferences['latexEngine']] = compiler;
+        }
+        break;
+      }
+      case 'delimiters':
+        next.delimiters = validateDelimiters(value);
+        break;
+      default:
+        throw new Error(`Unknown preference: ${key}`);
+    }
+  }
+  return next;
 }

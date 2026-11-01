@@ -28,7 +28,7 @@ npm run test:e2e -- --workers=2
 nix flake check --cores 4
 ```
 
-Run `npm run format` and `cargo fmt --manifest-path src-tauri/Cargo.toml` when needed. Add regression coverage for changed behavior, especially local paths, live refresh, math delimiters and sandbox boundaries. Native behavior requires the [Linux WebDriver smoke test](scripts/native-smoke.py); Chromium alone cannot validate WebKit or Tauri IPC isolation.
+Run `npm run format` and `cargo fmt --manifest-path src-tauri/Cargo.toml` when needed. Add regression coverage for changed behavior, especially local paths, live refresh, math delimiters and sandbox boundaries. Native behavior requires the [Linux WebDriver smoke test](scripts/native-smoke.py); Chromium alone cannot validate WebKit or Tauri IPC isolation. Run it from the development shell with `PAPYRI_BINARY=$(nix build --print-out-paths .#papyri)/bin/papyri ./scripts/native-smoke.sh`; the wrapper brings up a 96-DPI Xvfb display and sets the WebKit test environment.
 
 For process-to-window and first-document measurements, see the [startup performance rubric and native benchmark](docs/startup-performance.md).
 

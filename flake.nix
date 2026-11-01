@@ -28,6 +28,22 @@
               ./packaging/papyri.svg ./packaging/papyri-symbolic.svg
             ];
           };
+          tauriDriver = pkgs.rustPlatform.buildRustPackage {
+            pname = "tauri-driver";
+            version = "2.1.0";
+            src = pkgs.fetchCrate {
+              pname = "tauri-driver";
+              version = "2.1.0";
+              sha256 = "sha256-Ttik3t/IUnze3SHcpH9zPS1UwW9B/V70Wvel+eBHhOE=";
+            };
+            cargoHash = "sha256-x7cz2KLNLJRlPqahV/BwyYJcncfUyhIp6/gORhvudZI=";
+            meta = {
+              description = "WebDriver server for Tauri applications";
+              homepage = "https://tauri.app";
+              license = with lib.licenses; [ asl20 mit ];
+              mainProgram = "tauri-driver";
+            };
+          };
           web = pkgs.buildNpmPackage {
             pname = "papyri-web";
             version = manifest.version;
@@ -112,13 +128,13 @@
             desktop-file-validate packaging/papyri.desktop
             touch $out
           '';
-        in { inherit pkgs web desktop nativeLibraries quality packaging; };
+        in { inherit pkgs web desktop nativeLibraries quality packaging tauriDriver; };
     in {
-      packages = eachSystem (system: let p = forSystem system; in { default = p.desktop; papyri = p.desktop; web = p.web; });
+      packages = eachSystem (system: let p = forSystem system; in { default = p.desktop; papyri = p.desktop; web = p.web; tauri-driver = p.tauriDriver; });
       apps = eachSystem (system: { default = { type = "app"; meta.description = "Open Markdown, PDF, Typst, LaTeX, or a directory"; program = "${self.packages.${system}.default}/bin/papyri"; }; });
       checks = eachSystem (system: let p = forSystem system; in { inherit (p) web quality packaging; linux = p.desktop; });
       devShells = eachSystem (system: let p = forSystem system; in { default = p.pkgs.mkShell {
-        packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst bubblewrap util-linux ];
+        packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst bubblewrap util-linux xdotool p.tauriDriver ];
         PAPYRI_TYPST_BINARY = "${p.pkgs.typst}/bin/typst";
         PAPYRI_BWRAP_BINARY = "${p.pkgs.bubblewrap}/bin/bwrap";
         PAPYRI_PRLIMIT_BINARY = "${p.pkgs.util-linux}/bin/prlimit";
@@ -128,6 +144,7 @@
         shellHook = ''
           export PATH="$PWD/node_modules/.bin:$PATH"
           echo "papyri: npm ci; npm run dev (web) or npm run tauri dev (native)"
+          echo "native smoke: PAPYRI_BINARY=... ./scripts/native-smoke.sh"
         '';
       }; });
       nixosModules.default = { config, lib, pkgs, ... }: {

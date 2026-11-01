@@ -43,7 +43,7 @@
   import { Workspace, type Tab } from './lib/workspace.svelte';
   import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
   import { demoSource } from './lib/demo';
-  import { loadPreferences } from './lib/preferences';
+  import { loadPreferences, mergePreferences } from './lib/preferences';
   import { traceStartup } from './lib/startup-trace';
   import {
     basename,
@@ -609,95 +609,8 @@
       error: workspace.error || null,
     };
   }
-  function preferenceNumber(value: unknown, minimum: number, maximum: number, name: string) {
-    if (typeof value !== 'number' || !Number.isFinite(value))
-      throw new Error(`\`${name}\` must be a finite number.`);
-    return clampZoom(value, minimum, maximum);
-  }
   function applyPreferencePatch(patch: Record<string, unknown>): Preferences {
-    const next = { ...$state.snapshot(preferences) } as Preferences;
-    for (const [key, value] of Object.entries(patch)) {
-      switch (key) {
-        case 'theme':
-          if (value !== 'latte' && value !== 'mocha')
-            throw new Error('`theme` must be "latte" or "mocha".');
-          next.theme = value;
-          break;
-        case 'network':
-          if (typeof value !== 'boolean') throw new Error('`network` must be a boolean.');
-          next.network = value;
-          break;
-        case 'fitWidth':
-          if (typeof value !== 'boolean') throw new Error('`fitWidth` must be a boolean.');
-          next.fitWidth = value;
-          break;
-        case 'documentZoom':
-          next.documentZoom = preferenceNumber(value, MIN_ZOOM, MAX_ZOOM, 'documentZoom');
-          break;
-        case 'pdfZoom':
-          next.pdfZoom = preferenceNumber(value, MIN_PDF_ZOOM, MAX_PDF_ZOOM, 'pdfZoom');
-          break;
-        case 'uiZoom':
-          next.uiZoom = preferenceNumber(value, MIN_ZOOM, MAX_ZOOM, 'uiZoom');
-          break;
-        case 'sidebarWidth':
-          next.sidebarWidth = preferenceNumber(
-            value,
-            MIN_SIDEBAR_WIDTH,
-            MAX_SIDEBAR_WIDTH,
-            'sidebarWidth',
-          );
-          break;
-        case 'typstPath':
-          if (typeof value !== 'string') throw new Error('`typstPath` must be a string.');
-          next.typstPath = value;
-          break;
-        case 'latexEngine':
-          if (!['lualatex', 'pdflatex', 'xelatex'].includes(value as string))
-            throw new Error('`latexEngine` must be lualatex, pdflatex, or xelatex.');
-          next.latexEngine = value as LatexEngine;
-          break;
-        case 'latexPaths': {
-          if (!value || typeof value !== 'object' || Array.isArray(value))
-            throw new Error('`latexPaths` must be an object.');
-          const paths = value as Record<string, unknown>;
-          for (const engine of ['lualatex', 'pdflatex', 'xelatex'] as LatexEngine[]) {
-            if (!(engine in paths)) continue;
-            if (typeof paths[engine] !== 'string')
-              throw new Error(`\`latexPaths.${engine}\` must be a string.`);
-            next.latexPaths[engine] = paths[engine] as string;
-          }
-          break;
-        }
-        case 'delimiters': {
-          if (!Array.isArray(value) || value.length > 32)
-            throw new Error('`delimiters` must be an array of at most 32 delimiters.');
-          next.delimiters = value.map((item, index) => {
-            if (!item || typeof item !== 'object' || Array.isArray(item))
-              throw new Error(`\`delimiters[${index}]\` must be an object.`);
-            const delimiter = item as Record<string, unknown>;
-            if (
-              typeof delimiter.left !== 'string' ||
-              !delimiter.left ||
-              typeof delimiter.right !== 'string' ||
-              !delimiter.right ||
-              typeof delimiter.display !== 'boolean'
-            )
-              throw new Error(
-                `\`delimiters[${index}]\` needs string left/right values and a display boolean.`,
-              );
-            return {
-              left: delimiter.left,
-              right: delimiter.right,
-              display: delimiter.display,
-            };
-          });
-          break;
-        }
-        default:
-          throw new Error(`Unknown preference: ${key}`);
-      }
-    }
+    const next = mergePreferences($state.snapshot(preferences) as Preferences, patch);
     updatePreferences(next);
     return next;
   }

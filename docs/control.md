@@ -23,6 +23,7 @@ papyri ctl fit-width on
 papyri ctl zoom set 120 --target document
 papyri ctl search "theorem"
 papyri ctl command next-tab
+papyri ctl preferences set '{"theme":"latte","documentZoom":120}'
 ```
 
 Run `papyri ctl --help` for the complete list. Paths are resolved against the
@@ -170,7 +171,13 @@ shown after a compilation failure.
 keys are `theme`, `network`, `fitWidth`, `documentZoom`, `pdfZoom`, `uiZoom`,
 `sidebarWidth`, `typstPath`, `latexEngine`, `latexPaths`, and `delimiters`.
 Numeric zoom and sidebar values are clamped to the same limits as the settings
-dialog.
+dialog. For example:
+
+```sh
+papyri ctl preferences get
+papyri ctl preferences set '{"theme":"latte","network":true,"documentZoom":120}'
+papyri ctl preferences set '{"latexEngine":"xelatex","latexPaths":{"xelatex":"/opt/xelatex"}}'
+```
 
 ## Events
 

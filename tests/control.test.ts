@@ -150,7 +150,25 @@ describe('control executor', () => {
     await expect(execute('panel', { name: 'drawer' })).rejects.toThrow('`name`');
     await expect(execute('page', { page: 0 })).rejects.toThrow('positive integer');
     await expect(execute('page', { page: 2 })).resolves.toEqual(sampleState());
+    const patch = { theme: 'latte', documentZoom: 120 };
+    await execute('preferences.set', { patch });
+    expect(actions.preferences).toHaveBeenCalledWith(patch);
     await expect(execute('preferences.set', { patch: [] })).rejects.toThrow('object');
+  });
+
+  it('dispatches document and view methods', async () => {
+    const actions = sampleActions();
+    const execute = createControlExecutor(actions);
+    await execute('search', { query: '' });
+    await execute('heading', { id: 'intro' });
+    await execute('command', { id: 'next-tab' });
+    await execute('close', { path: '/notes.md' });
+    await execute('refresh', {});
+    expect(actions.search).toHaveBeenCalledWith('');
+    expect(actions.heading).toHaveBeenCalledWith('intro');
+    expect(actions.command).toHaveBeenCalledWith('next-tab');
+    expect(actions.close).toHaveBeenCalledWith('/notes.md');
+    expect(actions.refresh).toHaveBeenCalled();
   });
 
   it('rejects unknown methods', async () => {
