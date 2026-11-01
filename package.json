@@ -19,7 +19,8 @@
     "format": "prettier --write .",
     "icons": "node scripts/build-icons.mjs",
     "tauri": "tauri",
-    "bench": "node scripts/benchmark.mjs"
+    "bench": "node scripts/benchmark.mjs",
+    "bench:startup": "node scripts/benchmark-startup.mjs"
   },
   "dependencies": {
     "@lucide/svelte": "1.63.0",

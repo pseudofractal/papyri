@@ -3,7 +3,9 @@
   import { listDirectory } from '../lib/directories';
   import { ChevronRight, ChevronDown, Folder, FileText, File } from '@lucide/svelte';
   import type { Entry, Source } from '../lib/types';
-  import { isDocument } from '../lib/paths';
+  import { isDocument, isMarkdown } from '../lib/paths';
+  import { traceStartupPaint } from '../lib/startup-trace';
+  import { prewarmDocumentParser } from '../render/client';
   let {
     source,
     path,
@@ -26,6 +28,9 @@
   let limit = $state(200);
   let listedSource: Source | undefined;
   let listedPath: string | undefined;
+  function prepareDocument(entry: Entry) {
+    if (!entry.directory && isMarkdown(entry.path)) prewarmDocumentParser();
+  }
   $effect(() => {
     const current = source;
     const directory = path;
@@ -46,6 +51,7 @@
           entries = value;
           error = '';
           loading = false;
+          if (depth === 0) traceStartupPaint('folder');
         }
       })
       .catch((reason) => {
@@ -72,6 +78,8 @@
         style:padding-left="{12 + depth * 16}px"
         disabled={!entry.directory && !isDocument(entry.path)}
         aria-expanded={entry.directory ? expanded.includes(entry.path) : undefined}
+        onpointerenter={() => prepareDocument(entry)}
+        onfocus={() => prepareDocument(entry)}
         onclick={() =>
           entry.directory
             ? (expanded = expanded.includes(entry.path)

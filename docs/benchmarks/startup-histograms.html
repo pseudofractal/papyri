@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Papyri startup timing distributions</title>
+    <style>
+      body {
+        font: 14px var(--font-sans, system-ui, sans-serif);
+        color: var(--foreground, #202733);
+        margin: 0;
+      }
+      p {
+        color: var(--muted-foreground, #596472);
+        line-height: 1.45;
+      }
+      .heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .heading span {
+        color: var(--muted-foreground, #596472);
+        font-size: 12px;
+      }
+      section {
+        margin: 12px 0;
+      }
+      svg {
+        width: 100%;
+        height: 92px;
+        display: block;
+      }
+      .note {
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      Fresh app process and profile per launch · attempted targeted cache eviction · 30 launches
+      each
+    </p>
+    <section>
+      <div class="heading">
+        <strong>App shell (folder launch)</strong><span>median 649 ms · p95 667 ms · n=30</span>
+      </div>
+      <svg
+        viewBox="0 0 680 92"
+        role="img"
+        aria-label="Histogram for App shell (folder launch) with 50 millisecond bins"
+      >
+        <g font-size="11" fill="var(--muted-foreground, #596472)">
+          <line x1="40.0" x2="40.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="40.0" y="84" text-anchor="middle">0</text>
+          <line x1="130.0" x2="130.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="130.0" y="84" text-anchor="middle">200</text>
+          <line x1="220.0" x2="220.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="220.0" y="84" text-anchor="middle">400</text>
+          <line x1="310.0" x2="310.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="310.0" y="84" text-anchor="middle">600</text>
+          <line x1="400.0" x2="400.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="400.0" y="84" text-anchor="middle">800</text>
+          <line x1="490.0" x2="490.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="490.0" y="84" text-anchor="middle">1000</text>
+          <line x1="580.0" x2="580.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="580.0" y="84" text-anchor="middle">1200</text>
+          <line x1="670.0" x2="670.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="670.0" y="84" text-anchor="middle">1400</text>
+          <text x="33" y="10" text-anchor="end">26</text>
+          <text x="33" y="68" text-anchor="end">0</text>
+        </g>
+        <rect x="311.0" y="31.1" width="20.5" height="36.9" fill="var(--chart-1, #4b78a8)">
+          <title>600–650 ms: 16 launches</title>
+        </rect>
+        <rect x="333.5" y="35.7" width="20.5" height="32.3" fill="var(--chart-1, #4b78a8)">
+          <title>650–700 ms: 14 launches</title>
+        </rect>
+        <line x1="40" x2="670" y1="68" y2="68" stroke="var(--foreground, #222)" />
+      </svg>
+    </section>
+    <section>
+      <div class="heading">
+        <strong>Folder</strong><span>median 693 ms · p95 711 ms · n=30</span>
+      </div>
+      <svg
+        viewBox="0 0 680 92"
+        role="img"
+        aria-label="Histogram for Folder with 50 millisecond bins"
+      >
+        <g font-size="11" fill="var(--muted-foreground, #596472)">
+          <line x1="40.0" x2="40.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="40.0" y="84" text-anchor="middle">0</text>
+          <line x1="130.0" x2="130.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="130.0" y="84" text-anchor="middle">200</text>
+          <line x1="220.0" x2="220.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="220.0" y="84" text-anchor="middle">400</text>
+          <line x1="310.0" x2="310.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="310.0" y="84" text-anchor="middle">600</text>
+          <line x1="400.0" x2="400.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="400.0" y="84" text-anchor="middle">800</text>
+          <line x1="490.0" x2="490.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="490.0" y="84" text-anchor="middle">1000</text>
+          <line x1="580.0" x2="580.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="580.0" y="84" text-anchor="middle">1200</text>
+          <line x1="670.0" x2="670.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="670.0" y="84" text-anchor="middle">1400</text>
+          <text x="33" y="10" text-anchor="end">26</text>
+          <text x="33" y="68" text-anchor="end">0</text>
+        </g>
+        <rect x="333.5" y="21.8" width="20.5" height="46.2" fill="var(--chart-1, #4b78a8)">
+          <title>650–700 ms: 20 launches</title>
+        </rect>
+        <rect x="356.0" y="44.9" width="20.5" height="23.1" fill="var(--chart-1, #4b78a8)">
+          <title>700–750 ms: 10 launches</title>
+        </rect>
+        <line x1="40" x2="670" y1="68" y2="68" stroke="var(--foreground, #222)" />
+      </svg>
+    </section>
+    <section>
+      <div class="heading">
+        <strong>Markdown</strong><span>median 968 ms · p95 1004 ms · n=30</span>
+      </div>
+      <svg
+        viewBox="0 0 680 92"
+        role="img"
+        aria-label="Histogram for Markdown with 50 millisecond bins"
+      >
+        <g font-size="11" fill="var(--muted-foreground, #596472)">
+          <line x1="40.0" x2="40.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="40.0" y="84" text-anchor="middle">0</text>
+          <line x1="130.0" x2="130.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="130.0" y="84" text-anchor="middle">200</text>
+          <line x1="220.0" x2="220.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="220.0" y="84" text-anchor="middle">400</text>
+          <line x1="310.0" x2="310.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="310.0" y="84" text-anchor="middle">600</text>
+          <line x1="400.0" x2="400.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="400.0" y="84" text-anchor="middle">800</text>
+          <line x1="490.0" x2="490.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="490.0" y="84" text-anchor="middle">1000</text>
+          <line x1="580.0" x2="580.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="580.0" y="84" text-anchor="middle">1200</text>
+          <line x1="670.0" x2="670.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="670.0" y="84" text-anchor="middle">1400</text>
+          <text x="33" y="10" text-anchor="end">26</text>
+          <text x="33" y="68" text-anchor="end">0</text>
+        </g>
+        <rect x="446.0" y="58.8" width="20.5" height="9.2" fill="var(--chart-1, #4b78a8)">
+          <title>900–950 ms: 4 launches</title>
+        </rect>
+        <rect x="468.5" y="14.9" width="20.5" height="53.1" fill="var(--chart-1, #4b78a8)">
+          <title>950–1000 ms: 23 launches</title>
+        </rect>
+        <rect x="491.0" y="61.1" width="20.5" height="6.9" fill="var(--chart-1, #4b78a8)">
+          <title>1000–1050 ms: 3 launches</title>
+        </rect>
+        <line x1="40" x2="670" y1="68" y2="68" stroke="var(--foreground, #222)" />
+      </svg>
+    </section>
+    <section>
+      <div class="heading">
+        <strong>PDF</strong><span>median 1071 ms · p95 1092 ms · n=30</span>
+      </div>
+      <svg viewBox="0 0 680 92" role="img" aria-label="Histogram for PDF with 50 millisecond bins">
+        <g font-size="11" fill="var(--muted-foreground, #596472)">
+          <line x1="40.0" x2="40.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="40.0" y="84" text-anchor="middle">0</text>
+          <line x1="130.0" x2="130.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="130.0" y="84" text-anchor="middle">200</text>
+          <line x1="220.0" x2="220.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="220.0" y="84" text-anchor="middle">400</text>
+          <line x1="310.0" x2="310.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="310.0" y="84" text-anchor="middle">600</text>
+          <line x1="400.0" x2="400.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="400.0" y="84" text-anchor="middle">800</text>
+          <line x1="490.0" x2="490.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="490.0" y="84" text-anchor="middle">1000</text>
+          <line x1="580.0" x2="580.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="580.0" y="84" text-anchor="middle">1200</text>
+          <line x1="670.0" x2="670.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="670.0" y="84" text-anchor="middle">1400</text>
+          <text x="33" y="10" text-anchor="end">26</text>
+          <text x="33" y="68" text-anchor="end">0</text>
+        </g>
+        <rect x="491.0" y="56.5" width="20.5" height="11.5" fill="var(--chart-1, #4b78a8)">
+          <title>1000–1050 ms: 5 launches</title>
+        </rect>
+        <rect x="513.5" y="10.3" width="20.5" height="57.7" fill="var(--chart-1, #4b78a8)">
+          <title>1050–1100 ms: 25 launches</title>
+        </rect>
+        <line x1="40" x2="670" y1="68" y2="68" stroke="var(--foreground, #222)" />
+      </svg>
+    </section>
+    <section>
+      <div class="heading">
+        <strong>Typst</strong><span>median 1244 ms · p95 1338 ms · n=30</span>
+      </div>
+      <svg
+        viewBox="0 0 680 92"
+        role="img"
+        aria-label="Histogram for Typst with 50 millisecond bins"
+      >
+        <g font-size="11" fill="var(--muted-foreground, #596472)">
+          <line x1="40.0" x2="40.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="40.0" y="84" text-anchor="middle">0</text>
+          <line x1="130.0" x2="130.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="130.0" y="84" text-anchor="middle">200</text>
+          <line x1="220.0" x2="220.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="220.0" y="84" text-anchor="middle">400</text>
+          <line x1="310.0" x2="310.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="310.0" y="84" text-anchor="middle">600</text>
+          <line x1="400.0" x2="400.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="400.0" y="84" text-anchor="middle">800</text>
+          <line x1="490.0" x2="490.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="490.0" y="84" text-anchor="middle">1000</text>
+          <line x1="580.0" x2="580.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="580.0" y="84" text-anchor="middle">1200</text>
+          <line x1="670.0" x2="670.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="670.0" y="84" text-anchor="middle">1400</text>
+          <text x="33" y="10" text-anchor="end">26</text>
+          <text x="33" y="68" text-anchor="end">0</text>
+        </g>
+        <rect x="558.5" y="61.1" width="20.5" height="6.9" fill="var(--chart-1, #4b78a8)">
+          <title>1150–1200 ms: 3 launches</title>
+        </rect>
+        <rect x="581.0" y="38.0" width="20.5" height="30.0" fill="var(--chart-1, #4b78a8)">
+          <title>1200–1250 ms: 13 launches</title>
+        </rect>
+        <rect x="603.5" y="65.7" width="20.5" height="2.3" fill="var(--chart-1, #4b78a8)">
+          <title>1250–1300 ms: 1 launches</title>
+        </rect>
+        <rect x="626.0" y="40.3" width="20.5" height="27.7" fill="var(--chart-1, #4b78a8)">
+          <title>1300–1350 ms: 12 launches</title>
+        </rect>
+        <rect x="648.5" y="65.7" width="20.5" height="2.3" fill="var(--chart-1, #4b78a8)">
+          <title>1350–1400 ms: 1 launches</title>
+        </rect>
+        <line x1="40" x2="670" y1="68" y2="68" stroke="var(--foreground, #222)" />
+      </svg>
+    </section>
+    <section>
+      <div class="heading">
+        <strong>LaTeX source fallback</strong><span>median 826 ms · p95 878 ms · n=30</span>
+      </div>
+      <svg
+        viewBox="0 0 680 92"
+        role="img"
+        aria-label="Histogram for LaTeX source fallback with 50 millisecond bins"
+      >
+        <g font-size="11" fill="var(--muted-foreground, #596472)">
+          <line x1="40.0" x2="40.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="40.0" y="84" text-anchor="middle">0</text>
+          <line x1="130.0" x2="130.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="130.0" y="84" text-anchor="middle">200</text>
+          <line x1="220.0" x2="220.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="220.0" y="84" text-anchor="middle">400</text>
+          <line x1="310.0" x2="310.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="310.0" y="84" text-anchor="middle">600</text>
+          <line x1="400.0" x2="400.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="400.0" y="84" text-anchor="middle">800</text>
+          <line x1="490.0" x2="490.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="490.0" y="84" text-anchor="middle">1000</text>
+          <line x1="580.0" x2="580.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="580.0" y="84" text-anchor="middle">1200</text>
+          <line x1="670.0" x2="670.0" y1="4" y2="68" stroke="var(--border, #d3d8df)" />
+          <text x="670.0" y="84" text-anchor="middle">1400</text>
+          <text x="33" y="10" text-anchor="end">26</text>
+          <text x="33" y="68" text-anchor="end">0</text>
+        </g>
+        <rect x="401.0" y="8.0" width="20.5" height="60.0" fill="var(--chart-1, #4b78a8)">
+          <title>800–850 ms: 26 launches</title>
+        </rect>
+        <rect x="423.5" y="58.8" width="20.5" height="9.2" fill="var(--chart-1, #4b78a8)">
+          <title>850–900 ms: 4 launches</title>
+        </rect>
+        <line x1="40" x2="670" y1="68" y2="68" stroke="var(--foreground, #222)" />
+      </svg>
+    </section>
+    <p class="note">
+      Horizontal axis: milliseconds from process launch. Vertical axis: number of launches per 50 ms
+      bin (same scale in every panel). Hover a bar for its count. PDF and Typst end at the first PDF
+      page; Markdown and LaTeX fallback end at the source preview. LaTeX compilation was
+      unavailable. Eviction is advisory; executable and shared-library cache state were not
+      verified. p95 is the nearest-rank sample and is uncertain with 30 observations.
+    </p>
+  </body>
+</html>

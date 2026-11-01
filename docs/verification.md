@@ -52,7 +52,7 @@ A five-sample parse benchmark with Node 24.21.0 and the real Markdown-it/highlig
 
 The corpus repeats headings, paragraphs, links, code and tables. These are parser measurements on one machine, not startup, DOM layout, memory or diagram benchmarks. Browser tests separately exercise 1,000-file paging and host controls during a roughly 1 MiB parse. Parsing runs in a cancellable worker with a 15-second timeout. Large document DOM layout and expensive diagrams can still consume substantial resources; there is no complete document virtualization or hard diagram CPU sandbox.
 
-The frame runtime is approximately 36 KiB JS plus 1.4 MiB CSS/fonts. Diagram engines are a separate deferred 7.3 MiB bundle; ordinary documents never fetch them. Host JS is approximately 101 kB, CSS 105 kB, and the parsing worker 804 kB. Exact sizes vary with the locked toolchain's output. Bundled assets provide offline rendering without CDNs.
+At the time of this measurement, the frame runtime was approximately 36 KiB JS plus 1.4 MiB CSS/fonts. Diagram engines are a separate deferred 7.3 MiB bundle. Host JS was approximately 101 kB, CSS 105 kB, and the parsing worker 804 kB. Exact sizes vary with the locked toolchain and subsequent changes. Bundled assets provide offline rendering without CDNs; see [startup performance](startup-performance.md) for the current measurement method.
 
 ## Deployment and remaining limits
 

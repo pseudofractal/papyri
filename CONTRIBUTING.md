@@ -27,6 +27,8 @@ nix flake check --cores 4
 
 Run `npm run format` and `cargo fmt --manifest-path src-tauri/Cargo.toml` when needed. Add regression coverage for changed behavior, especially local paths, live refresh, math delimiters and sandbox boundaries. Native behavior requires the [Linux WebDriver smoke test](scripts/native-smoke.py); Chromium alone cannot validate WebKit or Tauri IPC isolation.
 
+For process-to-window and first-document measurements, see the [startup performance rubric and native benchmark](docs/startup-performance.md).
+
 Keep npm, Cargo and Nix lockfiles in sync when changing dependencies. The app is not distributed through npm; `private: true` prevents accidental npm publication. See [icon regeneration](docs/design/README.md) for branding changes.
 
 ## Bug reports

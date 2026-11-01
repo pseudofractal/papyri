@@ -1,0 +1,747 @@
+{
+  "binary": "/nix/store/3wrxyg0ygpfllzag4c82i0fknwkz2ba2-papyri-0.1.0/bin/papyri",
+  "document": "/home/pseudofractal/GitHub/papyri/examples/showcase/markdown.md",
+  "samples": 12,
+  "summary": {
+    "native-entry": {
+      "medianMs": 84,
+      "p95Ms": 87,
+      "samplesMs": [81, 83, 83, 83, 84, 84, 84, 84, 84, 85, 85, 87]
+    },
+    "native-builder": {
+      "medianMs": 84,
+      "p95Ms": 87,
+      "samplesMs": [81, 83, 83, 83, 84, 84, 84, 84, 84, 85, 85, 87]
+    },
+    "native-setup": {
+      "medianMs": 219,
+      "p95Ms": 235,
+      "samplesMs": [217, 217, 218, 218, 218, 218, 219, 219, 220, 220, 220, 235]
+    },
+    "native-setup-complete": {
+      "medianMs": 219,
+      "p95Ms": 235,
+      "samplesMs": [217, 218, 218, 219, 219, 219, 219, 219, 220, 220, 220, 235]
+    },
+    "source-ready": {
+      "medianMs": 533,
+      "p95Ms": 588,
+      "samplesMs": [519, 520, 527, 528, 529, 531, 535, 541, 546, 547, 562, 588],
+      "navigationMedianMs": 134,
+      "preNavigationEstimateMedianMs": 396
+    },
+    "preview-start": {
+      "medianMs": 545,
+      "p95Ms": 599,
+      "samplesMs": [530, 532, 539, 540, 540, 542, 548, 552, 557, 561, 575, 599],
+      "navigationMedianMs": 146,
+      "preNavigationEstimateMedianMs": 396
+    },
+    "file-ready": {
+      "medianMs": 546,
+      "p95Ms": 600,
+      "samplesMs": [531, 533, 540, 541, 541, 543, 548, 553, 558, 568, 577, 600],
+      "navigationMedianMs": 146,
+      "preNavigationEstimateMedianMs": 396
+    },
+    "shell": {
+      "medianMs": 568,
+      "p95Ms": 654,
+      "samplesMs": [560, 562, 563, 564, 564, 565, 571, 575, 580, 598, 599, 654],
+      "navigationMedianMs": 170,
+      "preNavigationEstimateMedianMs": 397
+    },
+    "renderer-ready": {
+      "medianMs": 619,
+      "p95Ms": 705,
+      "samplesMs": [611, 611, 613, 615, 617, 617, 620, 625, 631, 632, 655, 705],
+      "navigationMedianMs": 220,
+      "preNavigationEstimateMedianMs": 396
+    },
+    "folder": {
+      "medianMs": 647,
+      "p95Ms": 730,
+      "samplesMs": [639, 639, 642, 645, 645, 646, 647, 656, 659, 660, 684, 730],
+      "navigationMedianMs": 243,
+      "preNavigationEstimateMedianMs": 403
+    },
+    "parser-ready": {
+      "medianMs": 656,
+      "p95Ms": 740,
+      "samplesMs": [648, 648, 650, 654, 654, 655, 657, 665, 669, 671, 696, 740],
+      "navigationMedianMs": 254,
+      "preNavigationEstimateMedianMs": 400
+    },
+    "assets-ready": {
+      "medianMs": 673,
+      "p95Ms": 755,
+      "samplesMs": [664, 665, 668, 671, 672, 672, 673, 681, 685, 689, 713, 755],
+      "navigationMedianMs": 276,
+      "preNavigationEstimateMedianMs": 396
+    },
+    "frame-built": {
+      "medianMs": 674,
+      "p95Ms": 756,
+      "samplesMs": [666, 666, 669, 673, 673, 674, 674, 683, 686, 690, 715, 756],
+      "navigationMedianMs": 277,
+      "preNavigationEstimateMedianMs": 396
+    },
+    "document": {
+      "medianMs": 863,
+      "p95Ms": 949,
+      "samplesMs": [852, 857, 857, 859, 860, 861, 866, 872, 873, 904, 906, 949],
+      "navigationMedianMs": 466,
+      "preNavigationEstimateMedianMs": 396
+    }
+  },
+  "markers": [
+    {
+      "native-entry": {
+        "launchMs": 81.07296493835747
+      },
+      "native-builder": {
+        "launchMs": 81.07296493835747
+      },
+      "native-setup": {
+        "launchMs": 234.66108296997845
+      },
+      "native-setup-complete": {
+        "launchMs": 235.00484507530928
+      },
+      "source-ready": {
+        "launchMs": 588.165343971923,
+        "navigationMs": 132.0
+      },
+      "preview-start": {
+        "launchMs": 598.943643970415,
+        "navigationMs": 143.0
+      },
+      "file-ready": {
+        "launchMs": 600.0792749691755,
+        "navigationMs": 144.0
+      },
+      "shell": {
+        "launchMs": 653.7774510215968,
+        "navigationMs": 198.0
+      },
+      "renderer-ready": {
+        "launchMs": 705.2232918795198,
+        "navigationMs": 244.0
+      },
+      "folder": {
+        "launchMs": 729.8552449792624,
+        "navigationMs": 268.0
+      },
+      "parser-ready": {
+        "launchMs": 739.6695849020034,
+        "navigationMs": 278.0
+      },
+      "assets-ready": {
+        "launchMs": 754.8219510354102,
+        "navigationMs": 299.0
+      },
+      "frame-built": {
+        "launchMs": 756.0889550950378,
+        "navigationMs": 300.0
+      },
+      "document": {
+        "launchMs": 948.9443509373814,
+        "navigationMs": 492.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 84.25950701348484
+      },
+      "native-builder": {
+        "launchMs": 84.25950701348484
+      },
+      "native-setup": {
+        "launchMs": 218.47749897278845
+      },
+      "native-setup-complete": {
+        "launchMs": 218.9220441505313
+      },
+      "source-ready": {
+        "launchMs": 546.9390670768917,
+        "navigationMs": 135.0
+      },
+      "preview-start": {
+        "launchMs": 560.8837241306901,
+        "navigationMs": 149.0
+      },
+      "file-ready": {
+        "launchMs": 567.7734999917448,
+        "navigationMs": 150.0
+      },
+      "shell": {
+        "launchMs": 598.4093521256,
+        "navigationMs": 187.0
+      },
+      "renderer-ready": {
+        "launchMs": 630.8209381531924,
+        "navigationMs": 219.0
+      },
+      "folder": {
+        "launchMs": 659.4580521341413,
+        "navigationMs": 242.0
+      },
+      "parser-ready": {
+        "launchMs": 669.4482541643083,
+        "navigationMs": 253.0
+      },
+      "assets-ready": {
+        "launchMs": 685.0637421011925,
+        "navigationMs": 273.0
+      },
+      "frame-built": {
+        "launchMs": 686.4999739918858,
+        "navigationMs": 275.0
+      },
+      "document": {
+        "launchMs": 872.0646309666336,
+        "navigationMs": 460.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 84.716274170205
+      },
+      "native-builder": {
+        "launchMs": 84.716274170205
+      },
+      "native-setup": {
+        "launchMs": 218.71852409094572
+      },
+      "native-setup-complete": {
+        "launchMs": 219.17494107037783
+      },
+      "source-ready": {
+        "launchMs": 545.7429520320147,
+        "navigationMs": 134.0
+      },
+      "preview-start": {
+        "launchMs": 557.2744279634207,
+        "navigationMs": 145.0
+      },
+      "file-ready": {
+        "launchMs": 558.1932701170444,
+        "navigationMs": 146.0
+      },
+      "shell": {
+        "launchMs": 580.0070981495082,
+        "navigationMs": 168.0
+      },
+      "renderer-ready": {
+        "launchMs": 632.0008491165936,
+        "navigationMs": 220.0
+      },
+      "folder": {
+        "launchMs": 660.3701179847121,
+        "navigationMs": 243.0
+      },
+      "parser-ready": {
+        "launchMs": 671.2869850452989,
+        "navigationMs": 254.0
+      },
+      "assets-ready": {
+        "launchMs": 688.7890449725091,
+        "navigationMs": 277.0
+      },
+      "frame-built": {
+        "launchMs": 690.2465780731291,
+        "navigationMs": 278.0
+      },
+      "document": {
+        "launchMs": 905.5809071287513,
+        "navigationMs": 492.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 83.76921596936882
+      },
+      "native-builder": {
+        "launchMs": 83.76921596936882
+      },
+      "native-setup": {
+        "launchMs": 218.30058912746608
+      },
+      "native-setup-complete": {
+        "launchMs": 218.75714603811502
+      },
+      "source-ready": {
+        "launchMs": 540.594827150926,
+        "navigationMs": 129.0
+      },
+      "preview-start": {
+        "launchMs": 551.8903769552708,
+        "navigationMs": 140.0
+      },
+      "file-ready": {
+        "launchMs": 553.1964229885489,
+        "navigationMs": 141.0
+      },
+      "shell": {
+        "launchMs": 575.1168990973383,
+        "navigationMs": 163.0
+      },
+      "renderer-ready": {
+        "launchMs": 625.0403930898756,
+        "navigationMs": 213.0
+      },
+      "folder": {
+        "launchMs": 655.7760501746088,
+        "navigationMs": 238.0
+      },
+      "parser-ready": {
+        "launchMs": 665.3993020299822,
+        "navigationMs": 249.0
+      },
+      "assets-ready": {
+        "launchMs": 681.3563180621713,
+        "navigationMs": 269.0
+      },
+      "frame-built": {
+        "launchMs": 682.6898821163923,
+        "navigationMs": 271.0
+      },
+      "document": {
+        "launchMs": 873.0557579547167,
+        "navigationMs": 460.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 82.55612989887595
+      },
+      "native-builder": {
+        "launchMs": 82.55612989887595
+      },
+      "native-setup": {
+        "launchMs": 216.91401582211256
+      },
+      "native-setup-complete": {
+        "launchMs": 217.33648981899023
+      },
+      "source-ready": {
+        "launchMs": 562.1093118097633,
+        "navigationMs": 146.0
+      },
+      "preview-start": {
+        "launchMs": 575.4707187879831,
+        "navigationMs": 159.0
+      },
+      "file-ready": {
+        "launchMs": 576.9545128569007,
+        "navigationMs": 161.0
+      },
+      "shell": {
+        "launchMs": 599.2714818567038,
+        "navigationMs": 183.0
+      },
+      "renderer-ready": {
+        "launchMs": 654.6772948931903,
+        "navigationMs": 238.0
+      },
+      "folder": {
+        "launchMs": 684.1748629231006,
+        "navigationMs": 262.0
+      },
+      "parser-ready": {
+        "launchMs": 695.9023848176003,
+        "navigationMs": 275.0
+      },
+      "assets-ready": {
+        "launchMs": 713.4013727772981,
+        "navigationMs": 297.0
+      },
+      "frame-built": {
+        "launchMs": 714.9162457790226,
+        "navigationMs": 299.0
+      },
+      "document": {
+        "launchMs": 904.4444379396737,
+        "navigationMs": 488.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 83.83703208528459
+      },
+      "native-builder": {
+        "launchMs": 83.83703208528459
+      },
+      "native-setup": {
+        "launchMs": 218.7107710633427
+      },
+      "native-setup-complete": {
+        "launchMs": 219.12905503995717
+      },
+      "source-ready": {
+        "launchMs": 531.055455096066,
+        "navigationMs": 135.0
+      },
+      "preview-start": {
+        "launchMs": 542.0641631353647,
+        "navigationMs": 146.0
+      },
+      "file-ready": {
+        "launchMs": 542.9762999992818,
+        "navigationMs": 147.0
+      },
+      "shell": {
+        "launchMs": 564.7383751347661,
+        "navigationMs": 168.0
+      },
+      "renderer-ready": {
+        "launchMs": 617.2495861537755,
+        "navigationMs": 221.0
+      },
+      "folder": {
+        "launchMs": 645.2019680291414,
+        "navigationMs": 243.0
+      },
+      "parser-ready": {
+        "launchMs": 654.1999951004982,
+        "navigationMs": 254.0
+      },
+      "assets-ready": {
+        "launchMs": 671.1410142015666,
+        "navigationMs": 275.0
+      },
+      "frame-built": {
+        "launchMs": 672.5050990935415,
+        "navigationMs": 276.0
+      },
+      "document": {
+        "launchMs": 861.1229001544416,
+        "navigationMs": 465.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 86.6337870247662
+      },
+      "native-builder": {
+        "launchMs": 86.6337870247662
+      },
+      "native-setup": {
+        "launchMs": 219.50829797424376
+      },
+      "native-setup-complete": {
+        "launchMs": 219.92790885269642
+      },
+      "source-ready": {
+        "launchMs": 528.4683669451624,
+        "navigationMs": 135.0
+      },
+      "preview-start": {
+        "launchMs": 539.903671015054,
+        "navigationMs": 146.0
+      },
+      "file-ready": {
+        "launchMs": 540.8724499866366,
+        "navigationMs": 147.0
+      },
+      "shell": {
+        "launchMs": 563.5135560296476,
+        "navigationMs": 169.0
+      },
+      "renderer-ready": {
+        "launchMs": 617.4118989147246,
+        "navigationMs": 223.0
+      },
+      "folder": {
+        "launchMs": 646.108727902174,
+        "navigationMs": 247.0
+      },
+      "parser-ready": {
+        "launchMs": 654.9764289520681,
+        "navigationMs": 258.0
+      },
+      "assets-ready": {
+        "launchMs": 672.3744950722903,
+        "navigationMs": 279.0
+      },
+      "frame-built": {
+        "launchMs": 673.6669219098985,
+        "navigationMs": 280.0
+      },
+      "document": {
+        "launchMs": 865.7237440347672,
+        "navigationMs": 472.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 83.24875286780298
+      },
+      "native-builder": {
+        "launchMs": 83.24875286780298
+      },
+      "native-setup": {
+        "launchMs": 218.02115091122687
+      },
+      "native-setup-complete": {
+        "launchMs": 218.51332788355649
+      },
+      "source-ready": {
+        "launchMs": 520.4748779069632,
+        "navigationMs": 128.0
+      },
+      "preview-start": {
+        "launchMs": 531.8535389378667,
+        "navigationMs": 139.0
+      },
+      "file-ready": {
+        "launchMs": 532.7750348951668,
+        "navigationMs": 140.0
+      },
+      "shell": {
+        "launchMs": 563.189557986334,
+        "navigationMs": 170.0
+      },
+      "renderer-ready": {
+        "launchMs": 615.1869408786297,
+        "navigationMs": 222.0
+      },
+      "folder": {
+        "launchMs": 644.7931828442961,
+        "navigationMs": 247.0
+      },
+      "parser-ready": {
+        "launchMs": 653.9463978260756,
+        "navigationMs": 257.0
+      },
+      "assets-ready": {
+        "launchMs": 671.5931720100343,
+        "navigationMs": 279.0
+      },
+      "frame-built": {
+        "launchMs": 672.7265678346157,
+        "navigationMs": 280.0
+      },
+      "document": {
+        "launchMs": 858.9627558831125,
+        "navigationMs": 466.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 85.43222397565842
+      },
+      "native-builder": {
+        "launchMs": 85.43222397565842
+      },
+      "native-setup": {
+        "launchMs": 220.02701414749026
+      },
+      "native-setup-complete": {
+        "launchMs": 220.4853871371597
+      },
+      "source-ready": {
+        "launchMs": 535.2887189947069,
+        "navigationMs": 141.0
+      },
+      "preview-start": {
+        "launchMs": 547.5641521625221,
+        "navigationMs": 153.0
+      },
+      "file-ready": {
+        "launchMs": 548.4683969989419,
+        "navigationMs": 155.0
+      },
+      "shell": {
+        "launchMs": 570.9417429752648,
+        "navigationMs": 177.0
+      },
+      "renderer-ready": {
+        "launchMs": 620.1031210366637,
+        "navigationMs": 226.0
+      },
+      "folder": {
+        "launchMs": 647.3888610489666,
+        "navigationMs": 248.0
+      },
+      "parser-ready": {
+        "launchMs": 656.6280520055443,
+        "navigationMs": 259.0
+      },
+      "assets-ready": {
+        "launchMs": 673.1628011912107,
+        "navigationMs": 279.0
+      },
+      "frame-built": {
+        "launchMs": 674.4726181495935,
+        "navigationMs": 281.0
+      },
+      "document": {
+        "launchMs": 859.6918371040374,
+        "navigationMs": 466.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 82.71760400384665
+      },
+      "native-builder": {
+        "launchMs": 82.71760400384665
+      },
+      "native-setup": {
+        "launchMs": 217.7776121534407
+      },
+      "native-setup-complete": {
+        "launchMs": 218.22997904382646
+      },
+      "source-ready": {
+        "launchMs": 519.448968116194,
+        "navigationMs": 127.0
+      },
+      "preview-start": {
+        "launchMs": 530.184525065124,
+        "navigationMs": 138.0
+      },
+      "file-ready": {
+        "launchMs": 531.1317921150476,
+        "navigationMs": 139.0
+      },
+      "shell": {
+        "launchMs": 559.5864781644195,
+        "navigationMs": 167.0
+      },
+      "renderer-ready": {
+        "launchMs": 611.0540400259197,
+        "navigationMs": 218.0
+      },
+      "folder": {
+        "launchMs": 638.9168850146234,
+        "navigationMs": 241.0
+      },
+      "parser-ready": {
+        "launchMs": 648.1789841782302,
+        "navigationMs": 252.0
+      },
+      "assets-ready": {
+        "launchMs": 664.5360551774502,
+        "navigationMs": 272.0
+      },
+      "frame-built": {
+        "launchMs": 665.9083811100572,
+        "navigationMs": 274.0
+      },
+      "document": {
+        "launchMs": 851.6359091736376,
+        "navigationMs": 459.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 83.88697006739676
+      },
+      "native-builder": {
+        "launchMs": 83.88697006739676
+      },
+      "native-setup": {
+        "launchMs": 217.14051300659776
+      },
+      "native-setup-complete": {
+        "launchMs": 217.56298816762865
+      },
+      "source-ready": {
+        "launchMs": 527.334971120581,
+        "navigationMs": 135.0
+      },
+      "preview-start": {
+        "launchMs": 538.7380081228912,
+        "navigationMs": 147.0
+      },
+      "file-ready": {
+        "launchMs": 539.6254900842905,
+        "navigationMs": 148.0
+      },
+      "shell": {
+        "launchMs": 561.5862649865448,
+        "navigationMs": 170.0
+      },
+      "renderer-ready": {
+        "launchMs": 611.0479640774429,
+        "navigationMs": 219.0
+      },
+      "folder": {
+        "launchMs": 639.2721720039845,
+        "navigationMs": 242.0
+      },
+      "parser-ready": {
+        "launchMs": 648.1734670232981,
+        "navigationMs": 252.0
+      },
+      "assets-ready": {
+        "launchMs": 664.3266691826284,
+        "navigationMs": 272.0
+      },
+      "frame-built": {
+        "launchMs": 665.6471721362323,
+        "navigationMs": 274.0
+      },
+      "document": {
+        "launchMs": 856.5836581401527,
+        "navigationMs": 464.0
+      }
+    },
+    {
+      "native-entry": {
+        "launchMs": 84.31719709187746
+      },
+      "native-builder": {
+        "launchMs": 84.31719709187746
+      },
+      "native-setup": {
+        "launchMs": 219.5835169404745
+      },
+      "native-setup-complete": {
+        "launchMs": 220.0406331103295
+      },
+      "source-ready": {
+        "launchMs": 529.2291559744626,
+        "navigationMs": 133.0
+      },
+      "preview-start": {
+        "launchMs": 540.120670106262,
+        "navigationMs": 144.0
+      },
+      "file-ready": {
+        "launchMs": 541.1071178968996,
+        "navigationMs": 145.0
+      },
+      "shell": {
+        "launchMs": 563.9475539792329,
+        "navigationMs": 167.0
+      },
+      "renderer-ready": {
+        "launchMs": 613.2968768943101,
+        "navigationMs": 217.0
+      },
+      "folder": {
+        "launchMs": 641.9418130535632,
+        "navigationMs": 239.0
+      },
+      "parser-ready": {
+        "launchMs": 650.4471739754081,
+        "navigationMs": 250.0
+      },
+      "assets-ready": {
+        "launchMs": 667.5570020452142,
+        "navigationMs": 271.0
+      },
+      "frame-built": {
+        "launchMs": 668.8215609174222,
+        "navigationMs": 273.0
+      },
+      "document": {
+        "launchMs": 856.7514880560338,
+        "navigationMs": 460.0
+      }
+    }
+  ]
+}
