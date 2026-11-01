@@ -244,45 +244,80 @@ input[type='checkbox'] {
 }
 .diagram-dialog {
   position: fixed;
-  inset: auto;
-  left: calc(var(--viewport-width, 100vw) * 0.125);
-  top: calc(var(--viewport-height, 100dvh) * 0.1);
-  margin: 0;
+  inset: 0;
+  margin: auto;
   box-sizing: border-box;
-  width: calc(var(--viewport-width, 100vw) * 0.75);
-  height: calc(var(--viewport-height, 100dvh) * 0.8);
-  max-width: none;
-  max-height: none;
-  padding: min(16px, calc(var(--viewport-width, 100vw) * 0.04));
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--code);
+  width: max-content;
+  max-width: calc(var(--viewport-width, 100vw) * 0.9);
+  max-height: calc(var(--viewport-height, 100dvh) * 0.9);
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: inherit;
-  overflow: hidden;
-  overflow-wrap: anywhere;
+  overflow: visible;
 }
 .diagram-dialog[open] {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  gap: 12px;
 }
 .diagram-dialog::backdrop {
-  background: var(--code);
-}
-.diagram-dialog header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  flex-shrink: 0;
-}
-.diagram-dialog header button {
-  max-width: 100%;
-  white-space: normal;
+  background: rgb(0 0 0 / 65%);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 .diagram-dialog .diagram-viewport {
-  flex: 1;
-  min-height: 0;
-  max-height: none;
+  box-sizing: border-box;
+  width: fit-content;
+  max-width: 100%;
+  max-height: calc(var(--viewport-height, 100dvh) * 0.9 - var(--diagram-controls-height, 64px));
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--code);
+  box-shadow: 0 12px 48px rgb(0 0 0 / 30%);
+}
+.diagram-dialog .diagram-output {
+  min-width: 0;
+}
+.diagram-dialog .diagram-viewport.panning {
+  cursor: grabbing;
+  user-select: none;
+}
+.diagram-zoom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  flex: none;
+  max-width: 100%;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--code);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
+  font-size: min(1rem, 16px);
+}
+.diagram-zoom-controls button {
+  min-width: 36px;
+  padding: 5px 10px;
+}
+.diagram-zoom-controls button:first-child,
+.diagram-zoom-controls button:nth-child(3) {
+  font-size: 1.2em;
+  line-height: 1;
+}
+.diagram-export-status {
+  max-width: 100%;
+  max-height: 4em;
+  overflow: auto;
+  color: var(--muted);
+  font-size: 0.85em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.diagram-export-status:empty {
+  display: none;
 }
