@@ -78,11 +78,6 @@
             '';
             preCheck = "cargo fmt --all --check";
             postInstall = ''
-              install -Dm644 ${./packaging/papyri.desktop} $out/share/applications/papyri.desktop
-              substituteInPlace $out/share/applications/papyri.desktop \
-                --replace-fail 'Exec=papyri %f' "Exec=$out/bin/papyri %f" \
-                --replace-fail 'TryExec=papyri' "TryExec=$out/bin/papyri"
-              desktop-file-validate $out/share/applications/papyri.desktop
               install -Dm644 ${./packaging/papyri.svg} $out/share/icons/hicolor/scalable/apps/papyri.svg
               install -Dm644 ${./packaging/papyri-symbolic.svg} $out/share/icons/hicolor/scalable/apps/papyri-symbolic.svg
               for size in 32 64 128; do
@@ -90,6 +85,17 @@
               done
               install -Dm644 icons/128x128@2x.png $out/share/icons/hicolor/256x256/apps/papyri.png
               install -Dm644 icons/icon.png $out/share/icons/hicolor/512x512/apps/papyri.png
+              # QIcon-based launchers can miss Nix profile hicolor themes when
+              # there is no index.theme, so the installed entry uses the file.
+              install -Dm644 ${./packaging/papyri.desktop} $out/share/applications/papyri.desktop
+              substituteInPlace $out/share/applications/papyri.desktop \
+                --replace-fail 'Exec=papyri %f' "Exec=$out/bin/papyri %f" \
+                --replace-fail 'TryExec=papyri' "TryExec=$out/bin/papyri" \
+                --replace-fail 'Icon=papyri' "Icon=$out/share/icons/hicolor/512x512/apps/papyri.png"
+              install -Dm644 icons/icon.png $out/share/pixmaps/papyri.png
+              test -f $out/share/icons/hicolor/512x512/apps/papyri.png
+              grep -Fqx "Icon=$out/share/icons/hicolor/512x512/apps/papyri.png" $out/share/applications/papyri.desktop
+              desktop-file-validate $out/share/applications/papyri.desktop
             '';
             meta = { description = "Read-only Markdown, PDF, Typst, and LaTeX viewer"; homepage = "https://github.com/pseudofractal/papyri"; license = lib.licenses.mit; platforms = systems; mainProgram = "papyri"; };
           };
