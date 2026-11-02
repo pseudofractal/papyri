@@ -103,15 +103,20 @@
     'pdf-last': ChevronsRight,
     'pdf-go-page': Hash,
   };
-  const filters: { id: PaletteFilter; label: string; icon: IconComponent }[] = [
+  const filters: {
+    id: PaletteFilter;
+    label: string;
+    icon: IconComponent;
+    prefix?: string;
+  }[] = [
     { id: 'all', label: 'All', icon: Search },
     { id: 'files', label: 'Files', icon: FileText },
-    { id: 'commands', label: 'Commands', icon: Terminal },
-    { id: 'headings', label: 'Headings', icon: List },
-    { id: 'tabs', label: 'Tabs', icon: BookOpen },
-    { id: 'text', label: 'Text', icon: FileSearch },
-    { id: 'recent', label: 'Recent', icon: Clock },
-    { id: 'pages', label: 'Pages', icon: Hash },
+    { id: 'commands', label: 'Commands', icon: Terminal, prefix: '>' },
+    { id: 'headings', label: 'Headings', icon: List, prefix: '@' },
+    { id: 'tabs', label: 'Tabs', icon: BookOpen, prefix: '%' },
+    { id: 'text', label: 'Text', icon: FileSearch, prefix: '?' },
+    { id: 'recent', label: 'Recent', icon: Clock, prefix: '~' },
+    { id: 'pages', label: 'Pages', icon: Hash, prefix: '#' },
   ];
   const prefixFilters: Record<string, PaletteFilter> = {
     '>': 'commands',
@@ -544,15 +549,20 @@
             type="button"
             id="palette-filter-{item.id}"
             class="palette-filter"
+            aria-label={item.label}
             aria-pressed={effectiveFilter === item.id}
             tabindex={effectiveFilter === item.id ? 0 : -1}
-            title="{item.label} results"
+            title={item.prefix
+              ? `${item.label} results · type ${item.prefix}`
+              : `${item.label} results`}
             onmousedown={(event) => event.preventDefault()}
             onclick={() => selectFilter(item.id)}
             onkeydown={(event) => filterKeydown(event, index)}
           >
             <FilterIcon size={14} aria-hidden="true" />
             <span class="palette-filter-label">{item.label}</span>
+            {#if item.prefix}<kbd class="palette-filter-key" aria-hidden="true">{item.prefix}</kbd
+              >{/if}
           </button>
         {/each}
       </div>

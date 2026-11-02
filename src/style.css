@@ -848,6 +848,24 @@ textarea:focus-visible {
 .palette-filter svg {
   flex: none;
 }
+.palette-filter-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--color-base-100);
+  color: var(--muted);
+  font: inherit;
+  font-size: 8px;
+  line-height: 1;
+}
+.palette-filter[aria-pressed='true'] .palette-filter-key {
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 38%, var(--line));
+}
 .palette-scope {
   display: flex;
   align-items: center;

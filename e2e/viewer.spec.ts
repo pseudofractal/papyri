@@ -212,6 +212,8 @@ test('filters the palette by result type and keeps prefixes in sync', async ({ p
     'aria-checked',
     'true',
   );
+  await expect(dialog.getByRole('button', { name: 'Commands' }).locator('kbd')).toHaveText('>');
+  await expect(dialog.getByRole('button', { name: 'Pages' }).locator('kbd')).toHaveText('#');
   await dialog.getByRole('button', { name: 'Files' }).click();
   await expect(dialog.getByRole('button', { name: 'Files' })).toHaveAttribute(
     'aria-pressed',
