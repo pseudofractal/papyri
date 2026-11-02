@@ -6,6 +6,7 @@ mod control;
 mod executables;
 mod files;
 mod latex;
+mod logging;
 mod security;
 mod typst;
 use tauri::Manager;

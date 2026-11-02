@@ -78,10 +78,12 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
     }
     driver = subprocess.Popen(["tauri-driver"], stdout=log, stderr=log, env=test_environment, start_new_session=True)
     session = None
+    detached_log = None
+    detached_socket = None
     try:
         until(lambda: request("GET", "/status"), "WebDriver startup")
         binary = os.environ.get("PAPYRI_BINARY") or str(Path("src-tauri/target/debug/papyri").resolve())
-        options = {"capabilities": {"alwaysMatch": {"tauri:options": {"application": binary, "args": ["--decorationless", str(root) + "/sub/../hello world.md"]}}}}
+        options = {"capabilities": {"alwaysMatch": {"tauri:options": {"application": binary, "args": ["--decorationless", "--log", "terminal", str(root) + "/sub/../hello world.md"]}}}}
         session = request("POST", "/session", options)["sessionId"]
         prefix = "/session/" + session
         until(lambda: request("GET", prefix + "/title") == "Papyri", "Papyri window title")
@@ -493,6 +495,15 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             "CLI decoration-less mode on a running window",
         )
         control("decorationless", "off")
+        logging_launch = subprocess.run(
+            [binary, "--log", "terminal"],
+            capture_output=True,
+            text=True,
+            env=test_environment,
+            timeout=90,
+        )
+        assert logging_launch.returncode != 0
+        assert "already running" in logging_launch.stderr, logging_launch.stderr
         control("search", "Imported")
         state = json.loads(control("state", "--json"))
         assert state["view"]["search"] is True and state["view"]["query"] == "Imported", state["view"]
@@ -504,14 +515,70 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         control("preferences", "set", json.dumps({"theme": before["theme"], "network": before["network"], "documentZoom": before["documentZoom"], "fitWidth": before["fitWidth"]}), "--json")
         request("DELETE", prefix)
         session = None
-        for args, expected in [([], str(Path.cwd())), ([str(root)], str(root))]:
+        for args, expected in [(["--log", "terminal"], str(Path.cwd())), (["--log", "terminal", str(root)], str(root))]:
             options["capabilities"]["alwaysMatch"]["tauri:options"]["args"] = args
             session = request("POST", "/session", options)["sessionId"]
             prefix = "/session/" + session
             until(lambda: execute("return document.querySelector('input[aria-label=\"Directory path\"]')?.value === " + json.dumps(expected)), "CLI default and directory arguments")
             request("DELETE", prefix)
             session = None
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "CLI decoration-less launch"]}, indent=2))
+        detached_socket = root / "detached.sock"
+        detached_log = root / "detached.log"
+        document.write_text("# Native works" + body)
+        detached_environment = {
+            **test_environment,
+            "PAPYRI_CONTROL_SOCKET": str(detached_socket),
+            "XDG_STATE_HOME": str(root / "detached-state"),
+            "XDG_DATA_HOME": str(root / "detached-data"),
+            "XDG_CONFIG_HOME": str(root / "detached-config"),
+            "XDG_CACHE_HOME": str(root / "detached-cache"),
+            "PAPYRI_STARTUP_TRACE": "1",
+        }
+        for name in ["detached-state", "detached-data", "detached-config", "detached-cache"]:
+            (root / name).mkdir(parents=True, exist_ok=True)
+        launch = subprocess.run(
+            [binary, "--log", str(detached_log), str(document)],
+            capture_output=True,
+            text=True,
+            env=detached_environment,
+            timeout=30,
+        )
+        assert launch.returncode == 0, launch.stderr
+        assert "started in the background" in launch.stderr, launch.stderr
+        until(lambda: detached_log.exists() and "PAPYRI_NATIVE" in detached_log.read_text(), "detached app log")
+        until(lambda: detached_socket.exists(), "detached app control socket")
+
+        def detached_state():
+            result = subprocess.run(
+                [binary, "ctl", "--socket", str(detached_socket), "state", "--json"],
+                capture_output=True,
+                text=True,
+                env=detached_environment,
+                timeout=30,
+            )
+            assert result.returncode == 0, result.stderr
+            return json.loads(result.stdout)
+
+        until(lambda: detached_state()["active"] == str(document), "detached app document")
+        quit_result = subprocess.run(
+            [binary, "ctl", "--socket", str(detached_socket), "quit"],
+            capture_output=True,
+            text=True,
+            env=detached_environment,
+            timeout=30,
+        )
+        assert quit_result.returncode == 0, quit_result.stderr
+        until(
+            lambda: subprocess.run(
+                [binary, "ctl", "--socket", str(detached_socket), "ping"],
+                capture_output=True,
+                text=True,
+                env=detached_environment,
+                timeout=30,
+            ).returncode != 0,
+            "detached app shutdown",
+        )
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "CLI decoration-less launch", "CLI detached logging"]}, indent=2))
     except Exception:
         if session:
             try:
@@ -522,6 +589,13 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
                 print("Host trust state:", execute("return document.querySelector('.trust-button')?.textContent"))
             except Exception as error:
                 print("Diagnostic unavailable:", str(error))
+        if detached_log and detached_log.exists():
+            print("Detached log:", detached_log.read_text())
+        if detached_socket and detached_socket.exists():
+            try:
+                print("Detached state:", detached_state())
+            except Exception as error:
+                print("Detached state unavailable:", str(error))
         raise
     finally:
         if session:

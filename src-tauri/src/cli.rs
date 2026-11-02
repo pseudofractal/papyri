@@ -7,13 +7,14 @@
 use crate::cli_args::*;
 use crate::cli_output::{print_result, write_output};
 use crate::control::{self, ProtocolError, Request};
+use crate::logging::{self, Mode as LogMode, Target as LogTarget};
 use clap::{CommandFactory, Parser};
 use serde_json::{json, Value};
 use std::{
+  ffi::OsString,
   fmt,
-  io::{BufRead, BufReader, Write},
+  io::{BufRead, BufReader, IsTerminal, Write},
   path::{Path, PathBuf},
-  process::{Command, Stdio},
   thread,
   time::{Duration, Instant},
 };
@@ -75,6 +76,11 @@ fn fail(error: CliError, json_output: bool) -> ! {
 /// Returns true when the process should exit instead of starting the GUI.
 pub fn intercept() -> bool {
   let cli = Cli::parse();
+  // The launcher already configured stdio and the initial view for this
+  // process. Do not detach again.
+  if std::env::var_os("PAPYRI_GUI_PROCESS").is_some() {
+    return false;
+  }
   if let Err(error) = validate_launch_flags(&cli) {
     fail(error, false);
   }
@@ -92,7 +98,7 @@ pub fn intercept() -> bool {
       }
       true
     }
-    None => match open_or_launch(cli.path, cli.decorationless) {
+    None => match open_or_launch(cli.path, cli.decorationless, cli.log.as_deref()) {
       Ok(should_exit) => should_exit,
       Err(error) => fail(error, false),
     },
@@ -106,13 +112,29 @@ fn validate_launch_flags(cli: &Cli) -> Result<(), CliError> {
       "`--decorationless` only applies when opening a document or folder.",
     ));
   }
+  if cli.log.is_some() && cli.command.is_some() {
+    return Err(CliError::new(
+      "usage",
+      "`--log` only applies when starting Papyri.",
+    ));
+  }
   Ok(())
 }
 
 /// Forward a path or mode to the running window, or prepare this process to
 /// start the GUI with the requested initial view.
-fn open_or_launch(path: Option<PathBuf>, decorationless: bool) -> Result<bool, CliError> {
+fn open_or_launch(
+  path: Option<PathBuf>,
+  decorationless: bool,
+  log: Option<&str>,
+) -> Result<bool, CliError> {
   if control::is_running() {
+    if log.is_some() {
+      return Err(CliError::new(
+        "usage",
+        "`--log` only applies when starting Papyri; a window is already running. Omit it to forward this request.",
+      ));
+    }
     if let Some(path) = path.as_ref() {
       forward_path(path)?;
     }
@@ -134,8 +156,28 @@ fn open_or_launch(path: Option<PathBuf>, decorationless: bool) -> Result<bool, C
     if let Some(path) = path.as_ref() {
       record_initial_path(path)?;
     }
-    Ok(false)
+    let attached = std::io::stdout().is_terminal() || std::io::stderr().is_terminal();
+    match logging::select(log, attached, !cfg!(debug_assertions))? {
+      LogMode::Attached => Ok(false),
+      LogMode::Detached(target) => {
+        logging::spawn_detached(&program_path()?, &target)?;
+        let _ = writeln!(
+          std::io::stderr(),
+          "Papyri started in the background; logging to {}.",
+          target.describe()
+        );
+        Ok(true)
+      }
+    }
   }
+}
+
+fn program_path() -> Result<OsString, String> {
+  std::env::current_exe()
+    .ok()
+    .map(|path| path.into_os_string())
+    .or_else(|| std::env::args_os().next().filter(|value| !value.is_empty()))
+    .ok_or_else(|| "Could not find the Papyri executable.".into())
 }
 
 /// Pass the launch target to the native startup hooks without making them
@@ -424,38 +466,10 @@ fn forward_path(path: &Path) -> Result<(), CliError> {
 }
 
 fn launch(path: &Path) -> Result<(), String> {
-  let program = std::env::args_os()
-    .next()
-    .filter(|value| !value.is_empty())
-    .unwrap_or_else(|| {
-      std::env::current_exe()
-        .map(|path| path.into_os_string())
-        .unwrap_or_default()
-    });
-  match spawn(&program, path) {
-    Ok(()) => Ok(()),
-    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-      let current = std::env::current_exe()
-        .map_err(|error| format!("Could not find the Papyri executable: {error}"))?;
-      spawn(current.as_os_str(), path).map_err(|error| format!("Could not launch Papyri: {error}"))
-    }
-    Err(error) => Err(format!("Could not launch Papyri: {error}")),
-  }
-}
-
-fn spawn(program: &std::ffi::OsStr, path: &Path) -> std::io::Result<()> {
-  let mut command = Command::new(program);
-  command
-    .arg(path)
-    .stdin(Stdio::null())
-    .stdout(Stdio::null())
-    .stderr(Stdio::null());
-  #[cfg(unix)]
-  {
-    use std::os::unix::process::CommandExt;
-    command.process_group(0);
-  }
-  command.spawn().map(|_| ())
+  let path = absolute_path(path)?;
+  std::env::set_var("PAPYRI_INITIAL_PATH", &path);
+  logging::spawn_detached(&program_path()?, &LogTarget::File(logging::default_file()))?;
+  Ok(())
 }
 
 fn scroll_request(command: ScrollCommand) -> (&'static str, Value) {
@@ -627,7 +641,26 @@ mod tests {
     let cli = Cli::try_parse_from(["papyri", "notes.md"]).unwrap();
     assert_eq!(cli.path, Some(PathBuf::from("notes.md")));
     assert!(!cli.decorationless);
+    assert!(cli.log.is_none());
     assert!(cli.command.is_none());
+  }
+
+  #[test]
+  fn parses_log_targets() {
+    let cli = Cli::try_parse_from(["papyri", "--log", "terminal", "notes.md"]).unwrap();
+    assert_eq!(cli.log.as_deref(), Some("terminal"));
+    assert_eq!(cli.path, Some(PathBuf::from("notes.md")));
+
+    let cli = Cli::try_parse_from(["papyri", "-l", "cmd:wl-copy", "notes.md"]).unwrap();
+    assert_eq!(cli.log.as_deref(), Some("cmd:wl-copy"));
+    assert_eq!(cli.path, Some(PathBuf::from("notes.md")));
+
+    let cli = Cli::try_parse_from(["papyri", "notes.md", "--log", "-"]).unwrap();
+    assert_eq!(cli.log.as_deref(), Some("-"));
+    assert_eq!(cli.path, Some(PathBuf::from("notes.md")));
+
+    let cli = Cli::try_parse_from(["papyri", "--log", "terminal", "ctl", "state"]).unwrap();
+    assert!(validate_launch_flags(&cli).is_err());
   }
 
   #[test]

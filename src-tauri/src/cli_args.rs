@@ -10,7 +10,7 @@ use std::path::PathBuf;
   version,
   about = "Read Markdown, PDF, Typst, and LaTeX documents",
   long_about = "Papyri is a read-only document viewer for Markdown, PDF, Typst, and LaTeX.\n\nRun `papyri ctl --help` to control a running window over its local socket, or `papyri completions <shell>` to install shell completions.",
-  after_help = "Examples:\n  papyri notes.md\n  papyri --decorationless notes.md\n  papyri ctl state --json\n  papyri ctl scroll by 400\n  papyri completions bash\n\nSee docs/control.md for the control protocol and editor integration examples."
+  after_help = "Examples:\n  papyri notes.md\n  papyri --decorationless notes.md\n  papyri --log terminal notes.md\n  papyri ctl state --json\n  papyri ctl scroll by 400\n  papyri completions bash\n\nSee docs/control.md for the control protocol and editor integration examples."
 )]
 pub(crate) struct Cli {
   /// Document or directory to open. A running window receives this path.
@@ -19,6 +19,14 @@ pub(crate) struct Cli {
   /// Open in decoration-less reading mode
   #[arg(short = 'd', long)]
   pub(crate) decorationless: bool,
+  /// Stream output to `terminal`, a file, or `cmd:<command>`
+  #[arg(
+    short = 'l',
+    long,
+    value_name = "TARGET",
+    long_help = "Stream application output to TARGET.\n\nUse `terminal` (or `-`) to stay attached to the terminal, a file path to append to a file, or `cmd:<command>` to pipe both output streams through a shell command such as `cmd:wl-copy`.\n\nWhen launched from a terminal without `--log`, release builds detach and append to the default Papyri log file. Use `--log terminal` to stay in the foreground."
+  )]
+  pub(crate) log: Option<String>,
   #[command(subcommand)]
   pub(crate) command: Option<TopCommand>,
 }

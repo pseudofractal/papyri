@@ -71,6 +71,44 @@ aliases are `status`, `tabs`, `fit`, and `prefs`; `decoration-less` is accepted
 for `decorationless`. `-j` is shorthand for `--json` and `-s` for `--socket`.
 `papyri --version` and `papyri ctl --version` print the application version.
 
+## Launch output and logging
+
+When Papyri is started from a terminal, release builds detach from the shell and
+append stdout and stderr to a log file. Interactive launches print the chosen
+path. Use `--log TARGET` (or `-l`) to choose where the detached process sends
+output:
+
+| Target                 | Behavior                                               |
+| ---------------------- | ------------------------------------------------------ |
+| `terminal`, `tty`, `-` | Stay attached to the terminal and stream output there. |
+| `PATH` or `file:PATH`  | Append both streams to `PATH` and detach.              |
+| `cmd:COMMAND`          | Pipe both streams through `sh -c COMMAND` and detach.  |
+
+```sh
+papyri --log terminal notes.md       # Keep stdio in this terminal
+papyri --log ~/papyri.log notes.md   # Append to a specific file
+papyri --log cmd:wl-copy notes.md    # Pipe output into wl-copy
+```
+
+`cmd:` targets receive the stream on stdin; commands that wait for EOF, such as
+`wl-copy`, finish when Papyri exits. The command must keep consuming stdin, or
+the app can block once the pipe fills. Shell syntax is available inside the
+command. `--log` only applies when starting Papyri; it reports an error if a
+window is already running. Without `--log`, development builds stay attached to
+the terminal so `tauri dev` keeps its stdio.
+
+The default log path is:
+
+| Priority         | Path                                   |
+| ---------------- | -------------------------------------- |
+| `XDG_STATE_HOME` | `$XDG_STATE_HOME/papyri/papyri.log`    |
+| Fallback         | `$HOME/.local/state/papyri/papyri.log` |
+| Fallback         | `$XDG_CACHE_HOME/papyri/papyri.log`    |
+| Last resort      | `$TMPDIR/papyri-<uid>/papyri.log`      |
+
+The file is appended to, created with mode `0600`, and missing parent
+directories are created with mode `0700`.
+
 ## Socket
 
 | Platform    | Default path                                                            |
