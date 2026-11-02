@@ -381,7 +381,7 @@
     </div>
     <div class="palette-hint">
       <label
-        >Search scope
+        ><span class="palette-scope-label">Search scope</span>
         <select aria-label="Search scope" bind:value={scope}>
           <option value="current">Current folder</option>
           {#if directory !== '/' && directory !== workspaceRoot}<option value="parent"
@@ -435,7 +435,9 @@
         {/if}
         {#if inaccessible}{inaccessible} folder(s) could not be searched.{/if}
         {#if contentInaccessible}{contentInaccessible} file(s) could not be searched.{/if}
-      {:else}↑ ↓ navigate · Enter open · Esc close{/if}
+      {:else}<span class="palette-keys-full">↑ ↓ navigate · Enter open · Esc close</span><span
+          class="palette-keys-compact">↑↓ · Enter · Esc</span
+        >{/if}
     </div>
   </div>
 </dialog>
