@@ -958,6 +958,20 @@ textarea:focus-visible {
 .palette-result-icon[data-kind='page'] {
   color: var(--color-accent);
 }
+.palette-result-icon[data-kind='correction'] {
+  color: var(--color-primary);
+}
+.palette-result.correction {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+.palette-result.correction.active {
+  box-shadow:
+    inset 3px 0 var(--color-primary),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+.palette-result.correction .palette-result-text > span {
+  color: var(--color-primary);
+}
 .palette-result-text {
   display: flex;
   flex-direction: column;

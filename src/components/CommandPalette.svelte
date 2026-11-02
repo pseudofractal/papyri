@@ -38,6 +38,7 @@
     FileCode,
     Clock,
     ArrowLeftRight,
+    SpellCheck,
   } from '@lucide/svelte';
   import { openDialog } from '../lib/dialog';
   import {
@@ -49,6 +50,7 @@
     type ContentMatch,
   } from '../lib/palette';
   import { basename, dirname, isLatex, isMarkdown, isPdf, isTypst } from '../lib/paths';
+  import { buildSpellingDictionary, suggestSpelling } from '../lib/spelling';
   import type { RecentFolder } from '../lib/recent';
   import type { Heading, Source } from '../lib/types';
 
@@ -57,9 +59,10 @@
     label: string;
     detail: string;
     right?: string;
-    kind: 'file' | 'folder' | 'command' | 'heading' | 'tab' | 'content' | 'page';
+    kind: 'file' | 'folder' | 'command' | 'heading' | 'tab' | 'content' | 'page' | 'correction';
     score: number;
     lastFile?: string;
+    correction?: string;
   };
   type PaletteFilter =
     'all' | 'files' | 'commands' | 'headings' | 'tabs' | 'text' | 'recent' | 'pages';
@@ -134,6 +137,7 @@
     if (result.kind === 'tab') return BookOpen;
     if (result.kind === 'content') return FileSearch;
     if (result.kind === 'page') return Hash;
+    if (result.kind === 'correction') return SpellCheck;
     return FileText;
   }
   function fileKind(path: string) {
@@ -214,6 +218,20 @@
   const effectiveFilter = $derived(prefixFilter ?? filter);
   const search = $derived(prefixFilter ? query.trimStart().slice(1).trim() : query.trim());
   const textSearch = $derived(effectiveFilter === 'text' ? search : '');
+  const spellingDictionary = $derived.by(() =>
+    buildSpellingDictionary([
+      commands.map((command) => `${command.label} ${command.keywords ?? ''}`),
+      headings.map((heading) => heading.text),
+      tabs,
+      recentFolders.map((folder) => folder.path),
+      paths.slice(0, 2000),
+      recentFiles,
+      [directory, workspaceRoot],
+    ]),
+  );
+  const spelling = $derived(
+    effectiveFilter === 'pages' ? null : suggestSpelling(query, spellingDictionary),
+  );
   const placeholder = $derived(
     effectiveFilter === 'commands'
       ? 'Search commands…'
@@ -233,6 +251,16 @@
   );
   const results = $derived.by(() => {
     const matches: Result[] = [];
+    if (spelling)
+      matches.push({
+        id: `spelling:${spelling.corrected}`,
+        label: `Did you mean “${spelling.display}”?`,
+        detail: 'Replace the search with the corrected spelling.',
+        right: 'Spelling',
+        kind: 'correction',
+        score: 1_000_000_000,
+        correction: spelling.corrected,
+      });
     const includeCommands = effectiveFilter === 'all' || effectiveFilter === 'commands';
     const includeFiles = effectiveFilter === 'all' || effectiveFilter === 'files';
     const includeRecentFolders = effectiveFilter === 'all' || effectiveFilter === 'recent';
@@ -481,6 +509,12 @@
     };
   });
   function choose(result: Result) {
+    if (result.kind === 'correction') {
+      query = result.correction ?? query;
+      selected = 0;
+      input.focus();
+      return;
+    }
     if (result.kind === 'command' && result.id === 'pdf-go-page') {
       oncommand(result.id);
       filter = 'pages';
@@ -604,6 +638,8 @@
           aria-selected={index === active}
           class="palette-result"
           class:active={index === active}
+          class:correction={result.kind === 'correction'}
+          data-kind={result.kind}
           onclick={() => choose(result)}
         >
           <span class="palette-result-icon" data-kind={result.kind}

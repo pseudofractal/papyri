@@ -315,6 +315,11 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         assert execute("return JSON.parse(localStorage.getItem('papyri.preferences')).sidebarWidth>=180")
         until(lambda: execute("const stored=JSON.parse(localStorage.getItem('papyri.recentFolders')||'null');return !!stored&&stored.folders.some(folder=>folder.path===" + json.dumps(str(root)) + ")"), "native recent folder persistence")
         execute("window.dispatchEvent(new KeyboardEvent('keydown',{key:'k',ctrlKey:true}))")
+        execute("const input=document.querySelector('[aria-label=\"Search files and commands\"]');input.value='>settngs';input.dispatchEvent(new Event('input',{bubbles:true}))")
+        until(lambda: execute("return document.querySelector('.palette-result')?.textContent.includes('Did you mean')"), "native spelling suggestion")
+        execute("document.querySelector('.palette-result').click()")
+        until(lambda: execute("return document.querySelector('[aria-label=\"Search files and commands\"]').value==='>settings'"), "native spelling correction")
+        execute("const input=document.querySelector('[aria-label=\"Search files and commands\"]');input.value='';input.dispatchEvent(new Event('input',{bubbles:true}))")
         execute("document.querySelector('#palette-filter-recent').click()")
         until(lambda: execute("return document.querySelector('#palette-filter-recent')?.getAttribute('aria-pressed')==='true'"), "native recent filter")
         until(lambda: execute("return document.querySelector('.palette-results')?.textContent.includes(" + json.dumps(str(root)) + ")"), "native recent folders in palette")
@@ -616,7 +621,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             ).returncode != 0,
             "detached app shutdown",
         )
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "settings tabs and configurable fonts", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG", "recent folder persistence and palette"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "settings tabs and configurable fonts", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG", "spelling suggestions", "recent folder persistence and palette"]}, indent=2))
     except Exception:
         if session:
             try:

@@ -203,7 +203,7 @@ test('changes the palette search scope and filters results by type', async ({ pa
   );
 });
 
-test('filters the palette by result type and keeps prefixes in sync', async ({ page }) => {
+test('filters by result type, syncs prefixes, and corrects spelling', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Open command palette' }).click();
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
@@ -237,6 +237,12 @@ test('filters the palette by result type and keeps prefixes in sync', async ({ p
     'aria-pressed',
     'true',
   );
+  await search.fill('>settngs');
+  const correction = dialog.getByRole('option', { name: /Did you mean .*settings/ });
+  await expect(correction).toBeVisible();
+  await correction.click();
+  await expect(search).toHaveValue('>settings');
+  await expect(dialog.getByRole('option', { name: /Open settings/ })).toBeVisible();
 });
 
 test('shows recently opened folders and navigates back to them', async ({ page }) => {
