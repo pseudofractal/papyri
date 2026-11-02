@@ -276,8 +276,8 @@ test('keeps the palette within the viewport and gives commands distinct icons', 
       expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewBottom + 2);
       const viewportWidth = bounds.viewRight - bounds.viewLeft;
       const viewportHeight = bounds.viewBottom - bounds.viewTop;
-      const expectedWidth = Math.min(960, viewportWidth * 0.92);
-      const expectedHeight = Math.min(760, viewportHeight * 0.88);
+      const expectedWidth = Math.min(960, viewportWidth * 0.7);
+      const expectedHeight = Math.min(760, viewportHeight * 0.6);
       expect(Math.abs(bounds.width - expectedWidth)).toBeLessThanOrEqual(2);
       expect(Math.abs(bounds.height - expectedHeight)).toBeLessThanOrEqual(2);
       expect(

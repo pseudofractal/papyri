@@ -716,12 +716,12 @@ textarea:focus-visible {
   gap: 0;
   width: min(
     calc(var(--palette-max-width, 960px) / var(--ui-scale, 1)),
-    calc(var(--dialog-viewport-width, 100vw) * var(--palette-width, 92) / 100 / var(--ui-scale, 1))
+    calc(var(--dialog-viewport-width, 100vw) * var(--palette-width, 70) / 100 / var(--ui-scale, 1))
   );
   height: min(
     calc(var(--palette-max-height, 760px) / var(--ui-scale, 1)),
     calc(
-      var(--dialog-viewport-height, 100dvh) * var(--palette-height, 88) / 100 / var(--ui-scale, 1)
+      var(--dialog-viewport-height, 100dvh) * var(--palette-height, 60) / 100 / var(--ui-scale, 1)
     )
   );
   max-width: 100%;
@@ -797,7 +797,7 @@ textarea:focus-visible {
 }
 .palette-results {
   flex: 1;
-  min-height: 0;
+  min-height: 2rem;
   overflow-y: auto;
 }
 .palette-result {
