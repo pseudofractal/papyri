@@ -1,6 +1,6 @@
 :root {
   width: var(--viewport-width, 100%);
-  font-family: system-ui, sans-serif;
+  font-family: var(--reading-font, system-ui, sans-serif);
   color: #cdd6f4;
   background: #1e1e2e;
   color-scheme: dark;
@@ -81,7 +81,7 @@ pre {
   font-size: 0.85em;
 }
 code {
-  font-family: ui-monospace, monospace;
+  font-family: var(--code-font, ui-monospace, monospace);
 }
 p code,
 li code {
@@ -172,6 +172,25 @@ hr {
 .katex-display {
   overflow: auto;
   padding: 12px 0;
+}
+:root[data-math-font='custom'] .katex,
+:root[data-math-font='custom'] .katex .mathnormal,
+:root[data-math-font='custom'] .katex .mathit,
+:root[data-math-font='custom'] .katex .mathbf,
+:root[data-math-font='custom'] .katex .boldsymbol,
+:root[data-math-font='custom'] .katex .textbb,
+:root[data-math-font='custom'] .katex .mathcal,
+:root[data-math-font='custom'] .katex .textfrak,
+:root[data-math-font='custom'] .katex .textboldfrak,
+:root[data-math-font='custom'] .katex .mathtt,
+:root[data-math-font='custom'] .katex .textscr,
+:root[data-math-font='custom'] .katex .textsf,
+:root[data-math-font='custom'] .katex .textboldsf,
+:root[data-math-font='custom'] .katex .textitsf,
+:root[data-math-font='custom'] .katex .mainrm,
+:root[data-math-font='custom'] .katex .textrm,
+:root[data-math-font='custom'] .katex .texttt {
+  font-family: var(--math-font) !important;
 }
 .diagram {
   border: 1px solid var(--line);

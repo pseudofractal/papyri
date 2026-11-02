@@ -6,6 +6,13 @@ const markdownFile = (text: string, name = 'sample.md') => ({
   mimeType: 'text/markdown',
   buffer: Buffer.from(text),
 });
+async function openSettingsTab(page: Page, tab: string) {
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Reading preferences' })
+    .getByRole('tab', { name: tab, exact: true })
+    .click();
+}
 
 for (const mode of ['pointer', 'keyboard'] as const) {
   test(`prepares Markdown on ${mode} file selection`, async ({ page }) => {
@@ -306,6 +313,83 @@ test('keeps the palette within the viewport and gives commands distinct icons', 
   }
 });
 
+test('configures palette bounds and document fonts from tabbed settings', async ({ page }) => {
+  await page.goto('/');
+  await openSettingsTab(page, 'Appearance');
+  const dialog = page.getByRole('dialog', { name: 'Reading preferences' });
+  const appearance = dialog.getByRole('tab', { name: 'Appearance', exact: true });
+  const reading = dialog.getByRole('tab', { name: 'Reading', exact: true });
+  await expect(appearance).toHaveAttribute('aria-selected', 'true');
+  await appearance.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(reading).toHaveAttribute('aria-selected', 'true');
+  await expect(reading).toBeFocused();
+
+  const textFont = dialog.getByLabel('Markdown text font');
+  await textFont.fill("'Noto Serif', Georgia, serif");
+  await textFont.blur();
+  const codeFont = dialog.getByLabel('Markdown code font');
+  await codeFont.fill("'JetBrains Mono', ui-monospace, monospace");
+  await codeFont.blur();
+  const mathFont = dialog.getByLabel('Math font');
+  await mathFont.fill("'STIX Two Math', serif");
+  await mathFont.blur();
+  const frame = page.frameLocator('iframe');
+  await expect
+    .poll(() => frame.locator('body').evaluate((element) => getComputedStyle(element).fontFamily))
+    .toContain('Noto Serif');
+  await expect
+    .poll(() =>
+      frame
+        .locator('code')
+        .first()
+        .evaluate((element) => getComputedStyle(element).fontFamily),
+    )
+    .toContain('JetBrains Mono');
+  await expect
+    .poll(() =>
+      frame
+        .locator('.katex')
+        .first()
+        .evaluate((element) => getComputedStyle(element).fontFamily),
+    )
+    .toContain('STIX Two Math');
+
+  await appearance.click();
+  const interfaceFont = dialog.getByLabel('Interface font');
+  await interfaceFont.fill('Georgia, serif');
+  await interfaceFont.blur();
+  await expect(page.locator('html')).toHaveCSS('font-family', /Georgia/);
+  for (const [label, value] of [
+    ['Command palette width percentage', '70'],
+    ['Command palette height percentage', '70'],
+    ['Command palette maximum width in pixels', '800'],
+    ['Command palette maximum height in pixels', '600'],
+  ] as const) {
+    const input = dialog.getByLabel(label);
+    await input.fill(value);
+    await input.blur();
+  }
+  await dialog.getByRole('button', { name: 'Close settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Open command palette' }).click();
+  const palette = page.getByRole('dialog', { name: 'Command palette' }).locator('.palette-panel');
+  const viewport = page.viewportSize()!;
+  const box = await palette.boundingBox();
+  expect(box).not.toBeNull();
+  expect(Math.abs(box!.width - Math.min(800, viewport.width * 0.7))).toBeLessThanOrEqual(2);
+  expect(Math.abs(box!.height - Math.min(600, viewport.height * 0.7))).toBeLessThanOrEqual(2);
+  await page.keyboard.press('Escape');
+
+  await page.reload();
+  await openSettingsTab(page, 'Reading');
+  await expect(page.getByLabel('Markdown text font')).toHaveValue("'Noto Serif', Georgia, serif");
+  await expect(page.getByLabel('Markdown code font')).toHaveValue(
+    "'JetBrains Mono', ui-monospace, monospace",
+  );
+  await expect(page.getByLabel('Math font')).toHaveValue("'STIX Two Math', serif");
+  await expect(page.locator('html')).toHaveCSS('font-family', /Georgia/);
+});
+
 test('runs contextual commands for tabs, zoom, appearance, and folders', async ({ page }) => {
   await page.goto('/');
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
@@ -359,7 +443,7 @@ test('selects a LaTeX engine from the palette in the desktop app', async ({ page
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
   await dialog.getByRole('combobox', { name: 'Search files and commands' }).fill('>xelatex');
   await dialog.getByRole('option', { name: 'Use xelatex for LaTeX' }).click();
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await openSettingsTab(page, 'Compilers');
   await expect(page.getByRole('combobox', { name: 'Engine' })).toHaveValue('xelatex');
 });
 
@@ -439,11 +523,11 @@ test('bounds floating panels to the viewport and wraps controls at every UI zoom
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await openSettingsTab(page, 'Documents');
   for (let index = 0; index < 8; index++)
     await page.getByRole('button', { name: 'Add delimiter pair' }).click();
   await page
-    .locator('.settings-panel > p')
+    .locator('#settings-panel-documents > p')
     .first()
     .evaluate((element) => {
       element.textContent += ` ${'long-unbroken-content'.repeat(30)}`;
@@ -532,7 +616,7 @@ test('uses the shared monochrome mark and themes host dialogs', async ({ page })
   await expect(emptyMark).toBeVisible();
   expect(await emptyMark.evaluate((element) => getComputedStyle(element).maskImage)).toBe(mask);
   await page.getByRole('button', { name: 'Toggle color theme' }).click();
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await openSettingsTab(page, 'Documents');
   const panel = page.locator('.settings-panel');
   await expect(panel).toHaveCSS('background-color', 'rgb(239, 241, 245)');
   await expect(panel).toHaveCSS('color', 'rgb(76, 79, 105)');
@@ -630,7 +714,7 @@ test('imports read-only files and enforces script and host isolation', async ({ 
 });
 test('persists Typst and LaTeX compiler settings', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await openSettingsTab(page, 'Compilers');
   await page.getByLabel('Typst executable path').fill('/opt/typst/bin/typst');
   await page.getByLabel('Typst executable path').blur();
   await page.getByRole('combobox', { name: 'Engine' }).selectOption('xelatex');
@@ -638,7 +722,7 @@ test('persists Typst and LaTeX compiler settings', async ({ page }) => {
   await page.getByLabel('xelatex executable path').blur();
   await page.getByRole('button', { name: 'Apply preferences' }).click();
   await page.reload();
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await openSettingsTab(page, 'Compilers');
   await expect(page.getByLabel('Typst executable path')).toHaveValue('/opt/typst/bin/typst');
   await expect(page.getByRole('combobox', { name: 'Engine' })).toHaveValue('xelatex');
   await expect(page.getByLabel('xelatex executable path')).toHaveValue('/opt/tex/bin/xelatex');
@@ -646,7 +730,7 @@ test('persists Typst and LaTeX compiler settings', async ({ page }) => {
 
 test('validates and persists math preferences', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await openSettingsTab(page, 'Documents');
   await page.getByRole('button', { name: 'Disable math', exact: true }).click();
   await page.getByRole('button', { name: 'Add delimiter pair' }).click();
   await page.getByRole('button', { name: 'Apply preferences' }).click();
@@ -656,7 +740,7 @@ test('validates and persists math preferences', async ({ page }) => {
   await page.getByLabel('Math mode 1', { exact: true }).selectOption('display');
   await page.getByRole('button', { name: 'Apply preferences' }).click();
   await page.reload();
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await openSettingsTab(page, 'Documents');
   await expect(page.getByLabel('Opening delimiter 1', { exact: true })).toHaveValue('%%');
   await expect(page.getByLabel('Math mode 1', { exact: true })).toHaveValue('display');
 });
@@ -1663,7 +1747,7 @@ test('consumes heading navigation and restores tab scroll positions', async ({ p
   await page.locator('.tab-select').filter({ hasText: 'alpha.md' }).click();
   await expect(frame.getByRole('heading', { name: 'Alpha', exact: true })).toBeVisible();
   await expect.poll(() => frame.locator('html').evaluate(() => scrollY)).toBe(0);
-  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await openSettingsTab(page, 'Documents');
   await page.getByRole('checkbox', { name: /Allow network resources/ }).check();
   await page.getByRole('button', { name: 'Close settings', exact: true }).click();
   await expect(page.locator('iframe')).not.toHaveClass(/pending/);

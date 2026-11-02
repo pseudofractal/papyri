@@ -410,6 +410,10 @@ test('preserves independent positions when the same PDF is shown in both panes',
   await expect.poll(() => first.evaluate((element) => element.scrollTop)).toBe(2200);
   await expect.poll(() => second.evaluate((element) => element.scrollTop)).toBe(6000);
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Reading preferences' })
+    .getByRole('tab', { name: 'Documents', exact: true })
+    .click();
   await page.getByRole('checkbox', { name: /Allow network resources/ }).check();
   await page.getByRole('button', { name: 'Close settings', exact: true }).click();
   await expect(page.frameLocator('iframe').nth(0).locator('#page-count')).toHaveText('of 200');

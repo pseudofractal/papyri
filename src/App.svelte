@@ -112,6 +112,20 @@
     document.documentElement.dataset.theme = preferences.theme;
     document.documentElement.style.zoom = String(uiScale);
     document.documentElement.style.setProperty('--ui-scale', String(uiScale));
+    document.documentElement.style.setProperty('--ui-font', preferences.uiFont);
+    document.documentElement.style.setProperty('--palette-width', String(preferences.paletteWidth));
+    document.documentElement.style.setProperty(
+      '--palette-height',
+      String(preferences.paletteHeight),
+    );
+    document.documentElement.style.setProperty(
+      '--palette-max-width',
+      `${preferences.paletteMaxWidth}px`,
+    );
+    document.documentElement.style.setProperty(
+      '--palette-max-height',
+      `${preferences.paletteMaxHeight}px`,
+    );
   });
   function viewCommand(command: ViewCommand) {
     if (command.target === 'view') {

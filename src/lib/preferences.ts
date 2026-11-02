@@ -1,6 +1,13 @@
 import {
   clampZoom,
   clampSidebarWidth,
+  clampPalettePercent,
+  clampPaletteMaxWidth,
+  clampPaletteMaxHeight,
+  DEFAULT_PALETTE_WIDTH_PERCENT,
+  DEFAULT_PALETTE_HEIGHT_PERCENT,
+  DEFAULT_PALETTE_MAX_WIDTH,
+  DEFAULT_PALETTE_MAX_HEIGHT,
   DEFAULT_SIDEBAR_WIDTH,
   MAX_PDF_ZOOM,
   MAX_ZOOM,
@@ -19,6 +26,14 @@ export const defaults: Preferences = {
   fitWidth: false,
   uiZoom: 100,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
+  paletteWidth: DEFAULT_PALETTE_WIDTH_PERCENT,
+  paletteHeight: DEFAULT_PALETTE_HEIGHT_PERCENT,
+  paletteMaxWidth: DEFAULT_PALETTE_MAX_WIDTH,
+  paletteMaxHeight: DEFAULT_PALETTE_MAX_HEIGHT,
+  uiFont: 'Inter, ui-sans-serif, system-ui, sans-serif',
+  textFont: 'system-ui, sans-serif',
+  codeFont: 'ui-monospace, monospace',
+  mathFont: '',
   delimiters: [
     { left: '$$', right: '$$', display: true },
     { left: '\\[', right: '\\]', display: true },
@@ -26,6 +41,41 @@ export const defaults: Preferences = {
     { left: '[', right: ']', display: true },
   ],
 };
+const MAX_FONT_FAMILY_LENGTH = 256;
+const INVALID_FONT_FAMILY_CHARACTERS = ';{}<>!';
+function hasInvalidFontCharacters(value: string): boolean {
+  for (const character of value) {
+    const code = character.codePointAt(0)!;
+    if (code <= 0x1f || code === 0x7f || INVALID_FONT_FAMILY_CHARACTERS.includes(character))
+      return true;
+  }
+  return false;
+}
+
+/**
+ * Keep a CSS font-family list. The value is applied with `style.setProperty`,
+ * so rejecting separators and markup keeps persisted preferences predictable.
+ */
+export function validateFontFamily(value: unknown, name: string, allowEmpty = false): string {
+  if (typeof value !== 'string') throw new Error(`\`${name}\` must be a string.`);
+  const family = value.trim().replace(/\s+/g, ' ');
+  if (!family) {
+    if (allowEmpty) return '';
+    throw new Error(`\`${name}\` must not be empty.`);
+  }
+  if (family.length > MAX_FONT_FAMILY_LENGTH)
+    throw new Error(`\`${name}\` must be at most ${MAX_FONT_FAMILY_LENGTH} characters.`);
+  if (hasInvalidFontCharacters(family))
+    throw new Error(`\`${name}\` contains unsupported characters.`);
+  return family;
+}
+function loadFont(value: unknown, fallback: string, allowEmpty = false): string {
+  try {
+    return validateFontFamily(value, 'font', allowEmpty);
+  } catch {
+    return fallback;
+  }
+}
 /** Reject ambiguous openings; longest opening delimiter is always matched first. */
 export function validateDelimiters(value: unknown): Delimiter[] {
   if (!Array.isArray(value) || value.length > 20)
@@ -77,6 +127,22 @@ export function loadPreferences(): Preferences {
       sidebarWidth: Number.isFinite(stored.sidebarWidth)
         ? clampSidebarWidth(stored.sidebarWidth)
         : DEFAULT_SIDEBAR_WIDTH,
+      paletteWidth: Number.isFinite(stored.paletteWidth)
+        ? clampPalettePercent(stored.paletteWidth)
+        : DEFAULT_PALETTE_WIDTH_PERCENT,
+      paletteHeight: Number.isFinite(stored.paletteHeight)
+        ? clampPalettePercent(stored.paletteHeight)
+        : DEFAULT_PALETTE_HEIGHT_PERCENT,
+      paletteMaxWidth: Number.isFinite(stored.paletteMaxWidth)
+        ? clampPaletteMaxWidth(stored.paletteMaxWidth)
+        : DEFAULT_PALETTE_MAX_WIDTH,
+      paletteMaxHeight: Number.isFinite(stored.paletteMaxHeight)
+        ? clampPaletteMaxHeight(stored.paletteMaxHeight)
+        : DEFAULT_PALETTE_MAX_HEIGHT,
+      uiFont: loadFont(stored.uiFont, defaults.uiFont),
+      textFont: loadFont(stored.textFont, defaults.textFont),
+      codeFont: loadFont(stored.codeFont, defaults.codeFont),
+      mathFont: loadFont(stored.mathFont, defaults.mathFont, true),
       delimiters: migrateDelimiters(stored),
     };
   } catch {
@@ -137,6 +203,30 @@ export function mergePreferences(
         break;
       case 'sidebarWidth':
         next.sidebarWidth = clampSidebarWidth(finitePreference(value, 'sidebarWidth'));
+        break;
+      case 'paletteWidth':
+        next.paletteWidth = clampPalettePercent(finitePreference(value, 'paletteWidth'));
+        break;
+      case 'paletteHeight':
+        next.paletteHeight = clampPalettePercent(finitePreference(value, 'paletteHeight'));
+        break;
+      case 'paletteMaxWidth':
+        next.paletteMaxWidth = clampPaletteMaxWidth(finitePreference(value, 'paletteMaxWidth'));
+        break;
+      case 'paletteMaxHeight':
+        next.paletteMaxHeight = clampPaletteMaxHeight(finitePreference(value, 'paletteMaxHeight'));
+        break;
+      case 'uiFont':
+        next.uiFont = validateFontFamily(value, 'uiFont');
+        break;
+      case 'textFont':
+        next.textFont = validateFontFamily(value, 'textFont');
+        break;
+      case 'codeFont':
+        next.codeFont = validateFontFamily(value, 'codeFont');
+        break;
+      case 'mathFont':
+        next.mathFont = validateFontFamily(value, 'mathFont', true);
         break;
       case 'typstPath':
         if (typeof value !== 'string') throw new Error('`typstPath` must be a string.');

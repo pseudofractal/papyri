@@ -37,6 +37,14 @@ export interface Preferences {
   fitWidth: boolean;
   uiZoom: number;
   sidebarWidth: number;
+  paletteWidth: number;
+  paletteHeight: number;
+  paletteMaxWidth: number;
+  paletteMaxHeight: number;
+  uiFont: string;
+  textFont: string;
+  codeFont: string;
+  mathFont: string;
   delimiters: Delimiter[];
 }
 export type LatexEngine = 'lualatex' | 'pdflatex' | 'xelatex';

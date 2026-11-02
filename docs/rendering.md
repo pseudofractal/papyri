@@ -54,6 +54,12 @@ Direct `data:image/*` sources, including SVG, are rendered without a host filesy
 
 Document zoom changes the root font size, allowing text and math to reflow at full rendering quality. Equations that cannot wrap, including wide inline matrices, scroll inside their own area rather than widening the page. SVG diagrams remain vectors and scale with that font size. UI magnification is separate; the frame cancels inherited UI scaling so document font size and rendering coordinates stay independent. **Fit document to width** (Ctrl =) removes the reading-column limit and preserves the selected font size. In this mode, code lines wrap visually without changing their copied text; normal reading mode keeps horizontal code scrolling. Ctrl + / − / 0 changes or resets the document font size. On keyboards where + shares the = key, use Ctrl Shift = to zoom in.
 
+## Appearance and fonts
+
+Settings is divided into Appearance, Reading, Documents, and Compilers tabs. Appearance controls the interface zoom, interface font, and command-palette size. Palette width and height are percentages of the available window, with separate pixel limits for large displays. Reading controls Markdown zoom plus independent text, code, and math font stacks. Documents groups network access and math delimiters. Compilers holds the Typst and LaTeX executable settings.
+
+Fonts are stored as CSS `font-family` lists in the local profile. Any installed family can be typed, and the preset lists are suggestions rather than a fixed catalog. Papyri never downloads fonts: unavailable names fall through to the next family in the list. The text font applies to prose and headings, the code font to inline and fenced code, and the math font overrides KaTeX's bundled faces while keeping its layout. Leaving the math font empty retains the KaTeX defaults. Specialized KaTeX size fonts still draw large delimiters and operators, so unusual symbols can fall back to their bundled glyphs. The PDF toolbar follows the interface font; PDF page content keeps the fonts embedded in the document.
+
 Each preview measures its own available viewport and refreshes that measurement when the pane resizes. Reading width, responsive padding and diagram dialog dimensions use those measurements, including at non-default UI zoom. Explorer, outline and split-pane changes therefore update the document without estimating panel widths.
 
 Search highlights prose and code without inserting markup into SVG or mathematics; diagram labels and mathematical notation are excluded from text matching.

@@ -27,6 +27,7 @@ interface Payload {
   pdfZoom: number;
   fitWidth: boolean;
   network: boolean;
+  uiFont: string;
 }
 const payload: Payload = JSON.parse(document.getElementById('payload')!.textContent!);
 const send = (data: Record<string, unknown>) =>
@@ -111,6 +112,9 @@ class BundledBinaryDataFactory {
 function presentation() {
   document.documentElement.dataset.theme = payload.theme;
   document.documentElement.style.colorScheme = payload.theme === 'latte' ? 'light' : 'dark';
+  if (typeof payload.uiFont === 'string' && payload.uiFont)
+    document.documentElement.style.setProperty('--pdf-font', payload.uiFont);
+  else document.documentElement.style.removeProperty('--pdf-font');
   if (!loaded) return;
   if (payload.fitWidth) {
     viewer.currentScaleValue = 'page-width';
@@ -262,6 +266,7 @@ window.addEventListener('message', (event) => {
     payload.theme = data.theme;
     payload.pdfZoom = data.pdfZoom;
     payload.fitWidth = data.fitWidth;
+    if (typeof data.uiFont === 'string') payload.uiFont = data.uiFont;
     presentation();
   }
   if (data.type === 'pdf-data' && !opened && data.bytes instanceof Uint8Array) {

@@ -196,6 +196,16 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         expected_background = "rgb(239, 241, 245)" if original_theme == "mocha" else "rgb(30, 30, 46)"
         until(lambda: execute("return getComputedStyle(document.querySelector('.settings-panel')).backgroundColor") == expected_background, "native themed settings")
         assert execute("return getComputedStyle(document.querySelector('.settings-panel')).color") == expected_color
+        execute("document.querySelector('#settings-tab-reading').click()")
+        until(lambda: execute("return !document.querySelector('#settings-panel-reading').hidden"), "native settings reading tab")
+        execute("const values=[['Markdown text font','serif'],['Math font','STIX Two Math, serif']];for(const [label,value] of values){const input=document.querySelector(`[aria-label=\"${label}\"]`);input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}))}")
+        until(lambda: preview("return getComputedStyle(document.body).fontFamily.includes('serif')"), "native Markdown font")
+        until(lambda: preview("return getComputedStyle(document.querySelector('.katex')).fontFamily.includes('STIX Two Math')"), "native math font")
+        request("POST", prefix + "/frame", {"id": None})
+        execute("const values=[['Markdown text font','system-ui, sans-serif'],['Math font','']];for(const [label,value] of values){const input=document.querySelector(`[aria-label=\"${label}\"]`);input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}))}")
+        until(lambda: preview("return getComputedStyle(document.body).fontFamily.includes('system-ui')"), "native Markdown font reset")
+        request("POST", prefix + "/frame", {"id": None})
+        execute("document.querySelector('#settings-tab-appearance').click()")
         for width, height in [(1280, 860), (640, 480), (390, 640)]:
             request("POST", prefix + "/window/rect", {"width": width, "height": height})
             for zoom in [50, 100, 140, 200]:
@@ -604,7 +614,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             ).returncode != 0,
             "detached app shutdown",
         )
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG", "recent folder persistence and palette"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "settings tabs and configurable fonts", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG", "recent folder persistence and palette"]}, indent=2))
     except Exception:
         if session:
             try:

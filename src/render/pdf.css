@@ -5,9 +5,8 @@
   --pdf-accent: #cba6f7;
   color: var(--pdf-text);
   background: var(--pdf-background);
-  font:
-    14px system-ui,
-    sans-serif;
+  font-family: var(--pdf-font, system-ui, sans-serif);
+  font-size: 14px;
 }
 :root[data-theme='latte'] {
   --pdf-background: #eff1f5;

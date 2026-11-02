@@ -6,6 +6,16 @@ export const ZOOM_STEP = 10;
 export const DEFAULT_SIDEBAR_WIDTH = 254;
 export const MIN_SIDEBAR_WIDTH = 180;
 export const MAX_SIDEBAR_WIDTH = 600;
+export const DEFAULT_PALETTE_WIDTH_PERCENT = 92;
+export const DEFAULT_PALETTE_HEIGHT_PERCENT = 88;
+export const MIN_PALETTE_PERCENT = 40;
+export const MAX_PALETTE_PERCENT = 100;
+export const DEFAULT_PALETTE_MAX_WIDTH = 960;
+export const DEFAULT_PALETTE_MAX_HEIGHT = 760;
+export const MIN_PALETTE_MAX_WIDTH = 320;
+export const MAX_PALETTE_MAX_WIDTH = 2000;
+export const MIN_PALETTE_MAX_HEIGHT = 240;
+export const MAX_PALETTE_MAX_HEIGHT = 1600;
 export const NARROW_VIEWPORT = 760;
 export const MAX_SCROLL_POSITION = 100_000_000;
 export type ZoomTarget = 'document' | 'ui';
@@ -83,4 +93,13 @@ export function zoomShortcut(
 }
 export function clampSidebarWidth(value: number): number {
   return Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, Math.round(value)));
+}
+export function clampPalettePercent(value: number): number {
+  return Math.max(MIN_PALETTE_PERCENT, Math.min(MAX_PALETTE_PERCENT, Math.round(value)));
+}
+export function clampPaletteMaxWidth(value: number): number {
+  return Math.max(MIN_PALETTE_MAX_WIDTH, Math.min(MAX_PALETTE_MAX_WIDTH, Math.round(value)));
+}
+export function clampPaletteMaxHeight(value: number): number {
+  return Math.max(MIN_PALETTE_MAX_HEIGHT, Math.min(MAX_PALETTE_MAX_HEIGHT, Math.round(value)));
 }

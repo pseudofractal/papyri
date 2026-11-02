@@ -266,7 +266,12 @@ shown after a compilation failure.
 
 `preferences.set` accepts a partial object. Unknown keys are rejected. Supported
 keys are `theme`, `network`, `fitWidth`, `documentZoom`, `pdfZoom`, `uiZoom`,
-`sidebarWidth`, `typstPath`, `latexEngine`, `latexPaths`, and `delimiters`.
+`sidebarWidth`, `paletteWidth`, `paletteHeight`, `paletteMaxWidth`,
+`paletteMaxHeight`, `uiFont`, `textFont`, `codeFont`, `mathFont`, `typstPath`,
+`latexEngine`, `latexPaths`, and `delimiters`. Palette percentages range from
+40 to 100. Palette pixel limits range from 320 to 2000 wide and 240 to 1600 tall.
+Font values are CSS `font-family` lists; `mathFont` may be empty to keep KaTeX's
+bundled fonts.
 Numeric zoom and sidebar values are clamped to the same limits as the settings
 dialog. For example:
 

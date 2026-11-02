@@ -63,6 +63,10 @@ test('previews images and sandboxed pages only when network resources are enable
   });
   await page.goto('/');
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Reading preferences' })
+    .getByRole('tab', { name: 'Documents', exact: true })
+    .click();
   await page.getByRole('checkbox', { name: /Allow network resources/ }).check();
   await page.getByRole('button', { name: 'Close settings' }).click();
   await page.getByLabel('Import selected files').setInputFiles(document);
@@ -105,6 +109,10 @@ test('shows and previews external PDF links according to the network setting', a
   await expect(frame.locator('.link-preview-card')).toContainText('External previews are blocked');
   expect(requests).toBe(0);
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Reading preferences' })
+    .getByRole('tab', { name: 'Documents', exact: true })
+    .click();
   await page.getByRole('checkbox', { name: /Allow network resources/ }).check();
   await page.getByRole('button', { name: 'Close settings' }).click();
   await expect(frame.locator('#page-count')).toHaveText('of 2');

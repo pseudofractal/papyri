@@ -57,8 +57,19 @@ export function sanitize(html: string) {
   });
 }
 function applyPresentation(presentation: Record<string, unknown>) {
-  const { theme, documentZoom, uiZoom, fitWidth } = presentation;
+  const { theme, documentZoom, uiZoom, fitWidth, textFont, codeFont, mathFont } = presentation;
   const page = document.documentElement;
+  if (typeof textFont === 'string' && textFont) page.style.setProperty('--reading-font', textFont);
+  else page.style.removeProperty('--reading-font');
+  if (typeof codeFont === 'string' && codeFont) page.style.setProperty('--code-font', codeFont);
+  else page.style.removeProperty('--code-font');
+  if (typeof mathFont === 'string' && mathFont) {
+    page.dataset.mathFont = 'custom';
+    page.style.setProperty('--math-font', mathFont);
+  } else {
+    delete page.dataset.mathFont;
+    page.style.removeProperty('--math-font');
+  }
   if (theme === 'latte' || theme === 'mocha') {
     page.dataset.theme = theme;
     page.style.background = theme === 'latte' ? '#eff1f5' : '#1e1e2e';

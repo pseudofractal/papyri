@@ -45,6 +45,36 @@ describe('view preferences', () => {
     expect(loadPreferences().delimiters).toEqual(legacy.delimiters);
     expect(loadPreferences().documentZoom).toBe(100);
     expect(loadPreferences().pdfZoom).toBe(100);
+    expect(loadPreferences().paletteWidth).toBe(defaults.paletteWidth);
+    expect(loadPreferences().paletteHeight).toBe(defaults.paletteHeight);
+    expect(loadPreferences().uiFont).toBe(defaults.uiFont);
+    expect(loadPreferences().mathFont).toBe('');
+    vi.unstubAllGlobals();
+  });
+  it('falls back from invalid persisted fonts and clamps palette bounds', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () =>
+        JSON.stringify({
+          delimiters: defaults.delimiters,
+          paletteWidth: 900,
+          paletteHeight: 1,
+          paletteMaxWidth: 5000,
+          paletteMaxHeight: 10,
+          uiFont: 'serif; color: red',
+          textFont: '',
+          codeFont: 42,
+          mathFont: 'STIX Two Math, serif',
+        }),
+    });
+    const loaded = loadPreferences();
+    expect(loaded.paletteWidth).toBe(100);
+    expect(loaded.paletteHeight).toBe(40);
+    expect(loaded.paletteMaxWidth).toBe(2000);
+    expect(loaded.paletteMaxHeight).toBe(240);
+    expect(loaded.uiFont).toBe(defaults.uiFont);
+    expect(loaded.textFont).toBe(defaults.textFont);
+    expect(loaded.codeFont).toBe(defaults.codeFont);
+    expect(loaded.mathFont).toBe('STIX Two Math, serif');
     vi.unstubAllGlobals();
   });
 });

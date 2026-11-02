@@ -112,6 +112,10 @@
       pdfZoom: preferences.pdfZoom,
       uiZoom: preferences.uiZoom,
       fitWidth: preferences.fitWidth,
+      textFont: preferences.textFont,
+      codeFont: preferences.codeFont,
+      mathFont: preferences.mathFont,
+      uiFont: preferences.uiFont,
     }),
   );
   const delimiterKey = $derived(JSON.stringify(preferences.delimiters));

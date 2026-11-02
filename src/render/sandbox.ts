@@ -94,6 +94,9 @@ export async function buildFrame(
     documentZoom: prefs.documentZoom,
     uiZoom: prefs.uiZoom,
     fitWidth: prefs.fitWidth,
+    textFont: prefs.textFont,
+    codeFont: prefs.codeFont,
+    mathFont: prefs.mathFont,
     scroll,
     channel,
   }).replace(/</g, '\\u003c');
@@ -135,6 +138,7 @@ export async function buildPdfFrame(
     pdfZoom: prefs.pdfZoom,
     fitWidth: prefs.fitWidth,
     network: prefs.network,
+    uiFont: prefs.uiFont,
   }).replace(/</g, '\\u003c');
   const policy = framePolicy(false)
     .replace("connect-src 'none'", 'connect-src data: blob:')

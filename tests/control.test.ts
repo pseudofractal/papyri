@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createControlExecutor, type ControlActions, type ControlState } from '../src/lib/control';
+import { defaults } from '../src/lib/preferences';
 
 function sampleState(): ControlState {
   return {
@@ -27,19 +28,7 @@ function sampleState(): ControlState {
       decorationless: false,
       query: '',
     },
-    preferences: {
-      typstPath: '',
-      latexEngine: 'lualatex',
-      latexPaths: { lualatex: '', pdflatex: '', xelatex: '' },
-      theme: 'mocha',
-      network: false,
-      documentZoom: 100,
-      pdfZoom: 100,
-      fitWidth: false,
-      uiZoom: 100,
-      sidebarWidth: 254,
-      delimiters: [],
-    },
+    preferences: structuredClone(defaults),
     directory: '/',
     source: { label: 'Test', root: '/', live: true },
     busy: false,
