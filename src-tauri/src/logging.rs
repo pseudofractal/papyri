@@ -120,7 +120,10 @@ pub fn default_file() -> PathBuf {
 /// `target`. The returned child is normally dropped: the launcher exits and the
 /// GUI is reparented.
 pub fn spawn_detached(program: &OsStr, target: &Target) -> Result<Child, String> {
-  let mut command = Command::new(program);
+  spawn_detached_command(Command::new(program), target)
+}
+
+fn spawn_detached_command(mut command: Command, target: &Target) -> Result<Child, String> {
   command.stdin(Stdio::null()).env("PAPYRI_GUI_PROCESS", "1");
   match target {
     Target::Terminal => return Err("Terminal output cannot be detached.".into()),
@@ -224,7 +227,6 @@ mod tests {
       "#!/bin/sh\nprintf 'stdout-line\\n'\nprintf 'stderr-line\\n' >&2\n",
     )
     .unwrap();
-    fs::set_permissions(&script, Permissions::from_mode(0o755)).unwrap();
     script
   }
 
@@ -290,7 +292,9 @@ mod tests {
     let directory = test_directory("file");
     let script = writer_script(&directory);
     let log = directory.join("papyri.log");
-    let mut child = spawn_detached(script.as_os_str(), &Target::File(log.clone())).unwrap();
+    let mut command = Command::new("sh");
+    command.arg(&script);
+    let mut child = spawn_detached_command(command, &Target::File(log.clone())).unwrap();
     assert!(child.wait().unwrap().success());
     let text = fs::read_to_string(&log).unwrap();
     assert!(text.contains("stdout-line"));
@@ -303,8 +307,10 @@ mod tests {
     let directory = test_directory("command");
     let script = writer_script(&directory);
     let sink = directory.join("sink.log");
-    let command = format!("cat > {}", sink.display());
-    let mut child = spawn_detached(script.as_os_str(), &Target::Command(command)).unwrap();
+    let sink_command = format!("cat > {}", sink.display());
+    let mut command = Command::new("sh");
+    command.arg(&script);
+    let mut child = spawn_detached_command(command, &Target::Command(sink_command)).unwrap();
     assert!(child.wait().unwrap().success());
     await_file(&sink, &["stdout-line", "stderr-line"]);
     fs::remove_dir_all(directory).unwrap();
