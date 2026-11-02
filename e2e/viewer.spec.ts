@@ -188,6 +188,38 @@ test('changes the palette search scope and groups commands', async ({ page }) =>
   await expect(dialog.locator('.palette-group', { hasText: 'View' }).first()).toBeVisible();
 });
 
+test('shows recently opened folders and navigates back to them', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Import selected folder').setInputFiles('examples/showcase');
+  const pathInput = page.getByLabel('Directory path');
+  if (!(await pathInput.isVisible()))
+    await page.getByRole('button', { name: 'Toggle explorer' }).click();
+  await page.locator('.file-row').filter({ hasText: 'README.md' }).click();
+  const frame = page.frameLocator('iframe');
+  await expect(
+    frame.getByRole('heading', { name: 'Papyri feature showcase', exact: true }),
+  ).toBeVisible();
+  if (!(await pathInput.isVisible()))
+    await page.getByRole('button', { name: 'Toggle explorer' }).click();
+  await pathInput.fill('/showcase/parts');
+  await pathInput.press('Enter');
+  await expect(pathInput).toHaveValue('/showcase/parts');
+  await page.keyboard.press('Control+k');
+  const dialog = page.getByRole('dialog', { name: 'Command palette' });
+  const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
+  await search.fill('~');
+  await expect(dialog.getByText('Recent folders', { exact: true })).toBeVisible();
+  const showcase = dialog.getByRole('option', { name: /^showcase/ });
+  const parts = dialog.getByRole('option', { name: /^parts/ });
+  await expect(showcase).toBeVisible();
+  await expect(parts).toBeVisible();
+  await showcase.click();
+  await expect(dialog).toHaveCount(0);
+  if (!(await pathInput.isVisible()))
+    await page.getByRole('button', { name: 'Toggle explorer' }).click();
+  await expect(pathInput).toHaveValue('/showcase');
+});
+
 test('keeps the palette within the viewport and gives commands distinct icons', async ({
   page,
 }) => {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { openDialog } from './lib/dialog';
   import {
     FolderOpen,
@@ -45,6 +45,12 @@
   import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
   import { demoSource } from './lib/demo';
   import { loadPreferences } from './lib/preferences';
+  import {
+    loadRecentFolders,
+    persistRecentFolders,
+    rememberRecentFolder,
+    type RecentFolder,
+  } from './lib/recent';
   import { traceStartup } from './lib/startup-trace';
   import { basename, dirname, isDocument, isMarkdown, normalize, resolveLink } from './lib/paths';
   import type { Heading, LatexEngine, Preferences, Source } from './lib/types';
@@ -72,6 +78,7 @@
   let headings = $state<Heading[]>([]);
   let headingsPath = $state('');
   let recentCommands = $state<string[]>([]);
+  let recentFolders = $state<RecentFolder[]>(loadRecentFolders());
   let pdfPage = $state({ path: '', page: 0, total: 0 });
   let trustedPath = $state('');
   let trustedRevision = $state(-1);
@@ -162,15 +169,34 @@
       workspace.error = 'Preferences could not be persisted; browser storage is unavailable.';
     }
   }
+  function updateRecentFolders(path: string, lastFile?: string | null) {
+    recentFolders = rememberRecentFolder(recentFolders, path, lastFile);
+    persistRecentFolders(recentFolders);
+  }
+  function useFolder(path: string, project: boolean, lastFile?: string | null) {
+    workspace.directory = path;
+    if (project) workspace.searchRoot = path;
+    workspace.treeRevision++;
+    updateRecentFolders(path, lastFile);
+  }
+  async function openRecentProject(path: string, lastFile?: string) {
+    useFolder(path, true, lastFile);
+    if (lastFile) {
+      await workspace.open(lastFile);
+      if (workspace.active !== lastFile) updateRecentFolders(path, null);
+    }
+    if (lastFile && window.innerWidth < NARROW_VIEWPORT) sidebar = false;
+  }
+  $effect(() => {
+    const file = workspace.recentFiles[0];
+    if (!file) return;
+    untrack(() => updateRecentFolders(dirname(file), file));
+  });
   async function chooseFolder() {
     try {
       if (native) {
         const selected = await invokeHost<string | null>('pick_path', { directory: true });
-        if (typeof selected === 'string') {
-          workspace.directory = selected;
-          workspace.searchRoot = selected;
-          workspace.treeRevision++;
-        }
+        if (typeof selected === 'string') useFolder(selected, true);
       } else await workspace.selectSource(await browserDirectory());
     } catch (error) {
       workspace.error = String(error);
@@ -648,6 +674,7 @@
     updatePreferences,
     commands: () => paletteCommands,
     runCommand: runPaletteCommand,
+    rememberFolder: (path) => updateRecentFolders(path),
     zoom,
     split,
     refresh,
@@ -707,8 +734,10 @@
           traceStartup('source-ready');
           if (disposed) return;
           await workspace.changeSource(source);
-          if (initial.directory) workspace.directory = workspace.searchRoot = initial.path;
-          else {
+          if (initial.directory) {
+            workspace.directory = workspace.searchRoot = initial.path;
+            updateRecentFolders(initial.path);
+          } else {
             workspace.directory = dirname(initial.path);
             workspace.searchRoot = dirname(initial.path);
             await workspace.open(initial.path);
@@ -796,8 +825,7 @@
           class="path-form"
           onsubmit={(event) => {
             event.preventDefault();
-            workspace.directory = normalize(pathInput);
-            workspace.treeRevision++;
+            useFolder(normalize(pathInput), false);
           }}
         >
           <input aria-label="Directory path" bind:value={pathInput} spellcheck="false" /><button
@@ -1099,9 +1127,11 @@
     tabs={workspace.tabs.map((tab) => tab.path)}
     recentFiles={workspace.recentFiles}
     {recentCommands}
+    {recentFolders}
     pdfPages={pdfPage.path === workspace.active && pagedDocument ? pdfPage.total : 0}
     onclose={() => (paletteOpen = false)}
     onopen={(path) => void openDocument(path)}
+    onopenfolder={(path, lastFile) => void openRecentProject(path, lastFile)}
     oncommand={runPaletteCommand}
     onheading={(id) => workspace.navigateAnchor(id)}
     oncontent={(path, text) => {

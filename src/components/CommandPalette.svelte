@@ -47,15 +47,17 @@
     type ContentMatch,
   } from '../lib/palette';
   import { basename, dirname } from '../lib/paths';
+  import type { RecentFolder } from '../lib/recent';
   import type { Heading, Source } from '../lib/types';
 
   type Result = {
     id: string;
     label: string;
     detail: string;
-    kind: 'file' | 'command' | 'heading' | 'tab' | 'content' | 'page';
+    kind: 'file' | 'folder' | 'command' | 'heading' | 'tab' | 'content' | 'page';
     score: number;
     group?: string;
+    lastFile?: string;
   };
   const commandIcons: Record<string, typeof FileText> = {
     'open-file': FileText,
@@ -98,6 +100,7 @@
   function resultIcon(result: Result) {
     if (result.kind === 'command')
       return commandIcons[result.id] || (result.id.startsWith('latex-') ? FileCode : Terminal);
+    if (result.kind === 'folder') return FolderOpen;
     if (result.kind === 'heading') return List;
     if (result.kind === 'tab') return BookOpen;
     if (result.kind === 'content') return FileSearch;
@@ -113,9 +116,11 @@
     tabs,
     recentFiles,
     recentCommands,
+    recentFolders,
     pdfPages,
     onclose,
     onopen,
+    onopenfolder,
     oncommand,
     onheading,
     oncontent,
@@ -129,9 +134,11 @@
     tabs: string[];
     recentFiles: string[];
     recentCommands: string[];
+    recentFolders: RecentFolder[];
     pdfPages: number;
     onclose: () => void;
     onopen: (path: string) => void;
+    onopenfolder: (path: string, lastFile?: string) => void;
     oncommand: (id: string) => void;
     onheading: (id: string) => void;
     oncontent: (path: string, query: string) => void;
@@ -154,7 +161,7 @@
   );
   const prefix = $derived(query.trimStart().slice(0, 1));
   const results = $derived.by(() => {
-    const special = ['>', '@', '%', '?', '#'].includes(prefix);
+    const special = ['>', '@', '%', '?', '#', '~'].includes(prefix);
     const search = special ? query.trimStart().slice(1).trim() : query.trim();
     const matches: Result[] = [];
     if (!special || prefix === '>')
@@ -174,6 +181,20 @@
                 ? 1000 - recentCommands.indexOf(command.id)
                 : 0),
           });
+      }
+    if (!special || prefix === '~')
+      for (const [index, folder] of recentFolders.entries()) {
+        const score = search ? fileScore(search, folder.path) : 1040 - index;
+        if (score === null) continue;
+        matches.push({
+          id: folder.path,
+          label: basename(folder.path),
+          detail: folder.lastFile ? `${folder.path} · ${basename(folder.lastFile)}` : folder.path,
+          kind: 'folder',
+          group: 'Recent folders',
+          lastFile: folder.lastFile,
+          score,
+        });
       }
     if (!special) {
       for (const path of paths) {
@@ -253,6 +274,14 @@
       .slice(0, 100);
   });
   const active = $derived(Math.min(selected, Math.max(0, results.length - 1)));
+  function showGroup(result: Result, index: number) {
+    if (!result.group || (index > 0 && results[index - 1].group === result.group)) return false;
+    return (
+      (prefix === '>' && !query.trimStart().slice(1).trim()) ||
+      prefix === '~' ||
+      (!query.trim() && result.kind === 'folder')
+    );
+  }
   onMount(() => input.focus());
   $effect(() => {
     const currentSource = source;
@@ -305,6 +334,7 @@
     }
     onclose();
     if (result.kind === 'file' || result.kind === 'tab') onopen(result.id);
+    else if (result.kind === 'folder') onopenfolder(result.id, result.lastFile);
     else if (result.kind === 'heading') onheading(result.id);
     else if (result.kind === 'content') oncontent(result.id, query.trimStart().slice(1).trim());
     else if (result.kind === 'page') onpage(Number(result.id));
@@ -344,7 +374,7 @@
         aria-expanded="true"
         aria-controls="palette-results"
         aria-activedescendant={results.length ? `palette-option-${active}` : undefined}
-        placeholder="Search files and commands…"
+        placeholder="Search files, folders, and commands…"
         autocomplete="off"
         spellcheck="false"
       />
@@ -361,7 +391,7 @@
         </select>
       </label>
       <span
-        >{scopePath} · &gt; commands · @ headings · % tabs · ? text{pdfPages
+        >{scopePath} · &gt; commands · @ headings · % tabs · ~ recent folders · ? text{pdfPages
           ? ' · # page'
           : ''}</span
       >
@@ -369,10 +399,7 @@
     <div id="palette-results" class="palette-results" role="listbox" aria-label="Search results">
       {#each results as result, index (`${result.kind}:${result.id}`)}
         {@const Icon = resultIcon(result)}
-        {#if prefix === '>' && !query
-            .trimStart()
-            .slice(1)
-            .trim() && result.group && (index === 0 || results[index - 1].group !== result.group)}
+        {#if showGroup(result, index)}
           <div class="palette-group" role="presentation">{result.group}</div>
         {/if}
         <button

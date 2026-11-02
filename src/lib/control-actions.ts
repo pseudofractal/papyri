@@ -41,6 +41,7 @@ export interface ControlContext {
   updatePreferences(value: Preferences): void;
   commands(): PaletteCommand[];
   runCommand(id: string): void;
+  rememberFolder(path: string): void;
   zoom(command: ZoomCommand): void;
   split(): void;
   refresh(): Promise<void>;
@@ -94,6 +95,7 @@ export function createControlActions(context: ControlContext): ControlActions {
         workspace.directory = workspace.searchRoot = target;
         workspace.treeRevision++;
         workspace.error = '';
+        context.rememberFolder(target);
         return context.state();
       }
       if (!isDocument(target)) throw new Error('Open a Markdown, PDF, Typst, or LaTeX document.');

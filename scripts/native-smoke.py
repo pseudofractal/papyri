@@ -303,6 +303,11 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         until(lambda: execute("return Math.abs(document.querySelector('.sidebar').getBoundingClientRect().width-" + str(divider["width"]) + ")>40"), "native mouse explorer resizing")
         execute("document.querySelector('[aria-label=\"Resize explorer\"]').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))")
         assert execute("return JSON.parse(localStorage.getItem('papyri.preferences')).sidebarWidth>=180")
+        until(lambda: execute("const stored=JSON.parse(localStorage.getItem('papyri.recentFolders')||'null');return !!stored&&stored.folders.some(folder=>folder.path===" + json.dumps(str(root)) + ")"), "native recent folder persistence")
+        execute("window.dispatchEvent(new KeyboardEvent('keydown',{key:'k',ctrlKey:true}))")
+        until(lambda: execute("return document.querySelector('.palette-group')?.textContent.includes('Recent folders')"), "native recent folders in palette")
+        execute("document.querySelector('[aria-label=\"Close command palette\"]').click()")
+        until(lambda: execute("return !document.querySelector('[aria-label=\"Close command palette\"]')"), "native recent palette close")
         frame()
         assert execute("return !!document.querySelector('.katex-display') && !!document.querySelector('a[href=\"#equation-7-1\"]') && !!document.querySelector('a[href=\"#reference-1-1\"]')")
         assert execute("const ids=[...document.querySelectorAll('[id]')].map(node=>node.id);return ids.length===new Set(ids).size")
@@ -599,7 +604,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             ).returncode != 0,
             "detached app shutdown",
         )
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG", "recent folder persistence and palette"]}, indent=2))
     except Exception:
         if session:
             try:
