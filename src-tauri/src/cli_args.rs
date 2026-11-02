@@ -10,12 +10,15 @@ use std::path::PathBuf;
   version,
   about = "Read Markdown, PDF, Typst, and LaTeX documents",
   long_about = "Papyri is a read-only document viewer for Markdown, PDF, Typst, and LaTeX.\n\nRun `papyri ctl --help` to control a running window over its local socket, or `papyri completions <shell>` to install shell completions.",
-  after_help = "Examples:\n  papyri notes.md\n  papyri ctl state --json\n  papyri ctl scroll by 400\n  papyri completions bash\n\nSee docs/control.md for the control protocol and editor integration examples."
+  after_help = "Examples:\n  papyri notes.md\n  papyri --decorationless notes.md\n  papyri ctl state --json\n  papyri ctl scroll by 400\n  papyri completions bash\n\nSee docs/control.md for the control protocol and editor integration examples."
 )]
 pub(crate) struct Cli {
   /// Document or directory to open. A running window receives this path.
   #[arg(value_name = "PATH")]
   pub(crate) path: Option<PathBuf>,
+  /// Open in decoration-less reading mode
+  #[arg(short = 'd', long)]
+  pub(crate) decorationless: bool,
   #[command(subcommand)]
   pub(crate) command: Option<TopCommand>,
 }

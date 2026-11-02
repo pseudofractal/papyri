@@ -56,6 +56,9 @@
   import type { PreviewControls } from './lib/preview-control';
   import { createControlActions, type ControlViewState } from './lib/control-actions';
   const workspace = new Workspace();
+  const startsDecorationless =
+    (window as unknown as { __PAPYRI_DECORATIONLESS__?: boolean }).__PAPYRI_DECORATIONLESS__ ===
+    true;
   let preferences = $state(loadPreferences());
   let sidebar = $state(window.innerWidth >= NARROW_VIEWPORT);
   let outline = $state(window.innerWidth >= 1100);
@@ -63,7 +66,7 @@
   let help = $state(false);
   let searchOpen = $state(false);
   let paletteOpen = $state(false);
-  let decorationless = $state(false);
+  let decorationless = $state(startsDecorationless);
   let query = $state('');
   let pathInput = $derived(workspace.directory);
   let headings = $state<Heading[]>([]);

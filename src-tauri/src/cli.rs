@@ -75,6 +75,9 @@ fn fail(error: CliError, json_output: bool) -> ! {
 /// Returns true when the process should exit instead of starting the GUI.
 pub fn intercept() -> bool {
   let cli = Cli::parse();
+  if let Err(error) = validate_launch_flags(&cli) {
+    fail(error, false);
+  }
   match cli.command {
     Some(TopCommand::Ctl(args)) => {
       let json_output = args.json;
@@ -89,29 +92,58 @@ pub fn intercept() -> bool {
       }
       true
     }
-    None => match cli.path {
-      Some(path) => {
-        if control::is_running() {
-          if let Err(error) = forward_path(&path) {
-            fail(error, false);
-          }
-          true
-        } else {
-          false
-        }
-      }
-      None => {
-        if control::is_running() {
-          if let Err(error) = control::request("raise", json!({}), Duration::from_secs_f64(0.0)) {
-            fail(error.into(), false);
-          }
-          true
-        } else {
-          false
-        }
-      }
+    None => match open_or_launch(cli.path, cli.decorationless) {
+      Ok(should_exit) => should_exit,
+      Err(error) => fail(error, false),
     },
   }
+}
+
+fn validate_launch_flags(cli: &Cli) -> Result<(), CliError> {
+  if cli.decorationless && cli.command.is_some() {
+    return Err(CliError::new(
+      "usage",
+      "`--decorationless` only applies when opening a document or folder.",
+    ));
+  }
+  Ok(())
+}
+
+/// Forward a path or mode to the running window, or prepare this process to
+/// start the GUI with the requested initial view.
+fn open_or_launch(path: Option<PathBuf>, decorationless: bool) -> Result<bool, CliError> {
+  if control::is_running() {
+    if let Some(path) = path.as_ref() {
+      forward_path(path)?;
+    }
+    if decorationless {
+      request(
+        "decorationless",
+        json!({ "enabled": true }),
+        Duration::from_secs_f64(0.0),
+      )?;
+    }
+    if path.is_none() {
+      request("raise", json!({}), Duration::from_secs_f64(0.0))?;
+    }
+    Ok(true)
+  } else {
+    if decorationless {
+      std::env::set_var("PAPYRI_DECORATIONLESS", "1");
+    }
+    if let Some(path) = path.as_ref() {
+      record_initial_path(path)?;
+    }
+    Ok(false)
+  }
+}
+
+/// Pass the launch target to the native startup hooks without making them
+/// re-parse CLI flags such as `--decorationless`.
+fn record_initial_path(path: &Path) -> Result<(), CliError> {
+  let path = absolute_path(path)?;
+  std::env::set_var("PAPYRI_INITIAL_PATH", path);
+  Ok(())
 }
 
 fn run_completions(args: CompletionsArgs) -> Result<(), CliError> {
@@ -594,7 +626,29 @@ mod tests {
   fn keeps_bare_path_launches() {
     let cli = Cli::try_parse_from(["papyri", "notes.md"]).unwrap();
     assert_eq!(cli.path, Some(PathBuf::from("notes.md")));
+    assert!(!cli.decorationless);
     assert!(cli.command.is_none());
+  }
+
+  #[test]
+  fn parses_decorationless_launches() {
+    for args in [
+      vec!["papyri", "--decorationless", "notes.md"],
+      vec!["papyri", "-d", "notes.md"],
+      vec!["papyri", "notes.md", "--decorationless"],
+    ] {
+      let cli = Cli::try_parse_from(args).unwrap();
+      assert!(cli.decorationless);
+      assert_eq!(cli.path, Some(PathBuf::from("notes.md")));
+      assert!(cli.command.is_none());
+    }
+    let cli = Cli::try_parse_from(["papyri", "--decorationless"]).unwrap();
+    assert!(cli.decorationless);
+    assert_eq!(cli.path, None);
+    assert!(cli.command.is_none());
+
+    let cli = Cli::try_parse_from(["papyri", "--decorationless", "ctl", "state"]).unwrap();
+    assert!(validate_launch_flags(&cli).is_err());
   }
 
   #[test]

@@ -1,5 +1,10 @@
 use serde::Serialize;
-use std::{fs, io::Read, path::Path, time::UNIX_EPOCH};
+use std::{
+  fs,
+  io::Read,
+  path::{Path, PathBuf},
+  time::UNIX_EPOCH,
+};
 #[derive(Serialize)]
 pub struct InitialPath {
   pub path: String,
@@ -50,9 +55,9 @@ pub fn bounded_read(path: &str, limit: u64) -> Result<(Vec<u8>, fs::Metadata), S
 }
 pub fn initial_path() -> Result<InitialPath, String> {
   let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-  let argument = std::env::args_os()
-    .nth(1)
-    .map(std::path::PathBuf::from)
+  let argument = std::env::var_os("PAPYRI_INITIAL_PATH")
+    .map(PathBuf::from)
+    .or_else(|| std::env::args_os().nth(1).map(PathBuf::from))
     .unwrap_or(cwd.clone());
   let path = if argument.is_absolute() {
     argument

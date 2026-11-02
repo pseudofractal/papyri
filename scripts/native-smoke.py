@@ -81,7 +81,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
     try:
         until(lambda: request("GET", "/status"), "WebDriver startup")
         binary = os.environ.get("PAPYRI_BINARY") or str(Path("src-tauri/target/debug/papyri").resolve())
-        options = {"capabilities": {"alwaysMatch": {"tauri:options": {"application": binary, "args": [str(root) + "/sub/../hello world.md"]}}}}
+        options = {"capabilities": {"alwaysMatch": {"tauri:options": {"application": binary, "args": ["--decorationless", str(root) + "/sub/../hello world.md"]}}}}
         session = request("POST", "/session", options)["sessionId"]
         prefix = "/session/" + session
         until(lambda: request("GET", prefix + "/title") == "Papyri", "Papyri window title")
@@ -127,6 +127,20 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             until(bounds_fit, "dialog within 75% width and 80% height, with no horizontal overflow")
 
         until(lambda: execute("return !!document.querySelector('iframe')"), "native iframe")
+        until(
+            lambda: execute("return document.querySelector('.app-shell')?.classList.contains('decorationless')"),
+            "CLI decoration-less startup",
+        )
+        until(
+            lambda: execute("const hidden=s=>getComputedStyle(document.querySelector(s)).display==='none';const pane=document.querySelector('.preview-pane');return hidden('.app-header')&&hidden('.tab-bar')&&pane&&Math.abs(pane.getBoundingClientRect().height-innerHeight)<=2"),
+            "CLI decoration-less viewport",
+        )
+        control("ping", "--wait", "10")
+        control("decorationless", "off")
+        until(
+            lambda: execute("return getComputedStyle(document.querySelector('.app-header')).display!=='none'"),
+            "CLI decoration-less mode off",
+        )
         assert execute("return getComputedStyle(document.querySelector('.brand-mark .app-logo')).maskImage !== 'none'")
         execute("document.querySelector('.brand').style.color='rgb(35, 150, 120)'")
         assert execute("return getComputedStyle(document.querySelector('.brand-mark .app-logo')).backgroundColor") == "rgb(35, 150, 120)"
@@ -464,6 +478,21 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             lambda: execute("const shown=s=>getComputedStyle(document.querySelector(s)).display!=='none';return shown('.app-header')&&shown('.tab-bar')&&shown('.document-toolbar')&&shown('.status-bar')"),
             "native chrome restored",
         )
+        launch = subprocess.run(
+            [binary, "--decorationless"],
+            capture_output=True,
+            text=True,
+            env=test_environment,
+            timeout=90,
+        )
+        assert launch.returncode == 0, launch.stderr
+        state = json.loads(control("state", "--json"))
+        assert state["view"]["decorationless"] is True, state["view"]
+        until(
+            lambda: execute("return document.querySelector('.app-shell')?.classList.contains('decorationless')"),
+            "CLI decoration-less mode on a running window",
+        )
+        control("decorationless", "off")
         control("search", "Imported")
         state = json.loads(control("state", "--json"))
         assert state["view"]["search"] is True and state["view"]["query"] == "Imported", state["view"]
@@ -482,7 +511,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             until(lambda: execute("return document.querySelector('input[aria-label=\"Directory path\"]')?.value === " + json.dumps(expected)), "CLI default and directory arguments")
             request("DELETE", prefix)
             session = None
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "CLI decoration-less launch"]}, indent=2))
     except Exception:
         if session:
             try:

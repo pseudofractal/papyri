@@ -11,6 +11,7 @@ renderer: documents are still rendered by the running app.
 
 ```sh
 papyri notes.md                  # Open normally (forwards to a running window)
+papyri --decorationless notes.md # Open directly in decoration-less mode
 papyri ctl ping                  # Is a window running?
 papyri ctl open notes.md         # Open, launching Papyri if needed
 papyri ctl state                 # Active document, tabs, view, preferences
@@ -169,8 +170,10 @@ Decoration-less mode hides the header, explorer, tabs, document toolbar,
 outline, and status bar so the preview fills the viewport. The command palette
 and all keyboard shortcuts remain available; `Esc` leaves the mode when no
 dialog or search is open. Toggle it with `Ctrl Shift D` or
-`papyri ctl decorationless [on|off|toggle]`. The mode is view state rather than
-a preference, so it is not persisted across restarts.
+`papyri ctl decorationless [on|off|toggle]`. Launch straight into the mode with
+`papyri --decorationless notes.md` (or `-d`); if a window is already running,
+the flag applies to that window instead of starting a second instance. The mode
+is view state rather than a preference, so it is not persisted across restarts.
 
 ### State shape
 
