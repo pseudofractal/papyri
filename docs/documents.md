@@ -2,7 +2,7 @@
 
 Open `.pdf` or `.typ` files with `papyri path/to/document`, the file picker, the explorer, or a link from another document. They share tabs, split view, keyboard shortcuts, and live refresh with Markdown. The viewer remains read-only. A Typst preview compiles into memory and never writes a PDF beside the source.
 
-Papyri remembers recently opened folders locally. The command palette lists up to ten recent projects before its regular results, and typing `~` filters directly to them. Selecting one switches the explorer and workspace scope and reopens the last document used from that folder when it is still available. Recent folders are stored only in the local application profile.
+Papyri remembers recently opened folders locally. The command palette shows up to ten recent projects in its All and Recent filters, and typing `~` filters directly to them. Selecting one switches the explorer and workspace scope and reopens the last document used from that folder when it is still available. The palette's segmented scope control switches between the current folder, its parent, and the workspace folder without a dropdown. Recent folders are stored only in the local application profile.
 
 The Linux app also opens `.tex` entry points, compiles them locally and previews the resulting PDF. When compilation or PDF rendering fails, Papyri shows the source with syntax highlighting and an explanation. The static web build shows Typst and LaTeX source; use an exported PDF for the compiled output.
 

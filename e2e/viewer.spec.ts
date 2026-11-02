@@ -174,7 +174,7 @@ test('navigates headings and tabs, remembers choices, and searches document text
   );
 });
 
-test('changes the palette search scope and groups commands', async ({ page }) => {
+test('changes the palette search scope and filters results by type', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Import selected folder').setInputFiles('examples/showcase');
   if (!(await page.getByLabel('Directory path').isVisible()))
@@ -186,13 +186,55 @@ test('changes the palette search scope and groups commands', async ({ page }) =>
   const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
   await search.fill('markdown.md');
   await expect(dialog.getByText('No matches.')).toBeVisible();
-  await dialog.getByLabel('Search scope').selectOption('parent');
+  await dialog.getByRole('radio', { name: 'Parent' }).click();
   await expect(dialog.getByRole('option', { name: /markdown\.md/ })).toBeVisible();
-  await dialog.getByLabel('Search scope').selectOption('workspace');
+  await dialog.getByRole('radio', { name: 'Workspace' }).click();
   await expect(dialog.getByRole('option', { name: /markdown\.md/ })).toBeVisible();
-  await search.fill('>');
-  await expect(dialog.locator('.palette-group', { hasText: 'Files' }).first()).toBeVisible();
-  await expect(dialog.locator('.palette-group', { hasText: 'View' }).first()).toBeVisible();
+  await search.fill('');
+  await dialog.getByRole('button', { name: 'Commands' }).click();
+  await expect(dialog.getByRole('button', { name: 'Commands' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(dialog.getByRole('option', { name: /Open settings/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Files' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+});
+
+test('filters the palette by result type and keeps prefixes in sync', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Open command palette' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Command palette' });
+  const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
+  await expect(dialog.getByRole('radio', { name: 'Folder' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await dialog.getByRole('button', { name: 'Files' }).click();
+  await expect(dialog.getByRole('button', { name: 'Files' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(dialog.getByRole('option', { name: /welcome\.md/ })).toBeVisible();
+  await expect(dialog.getByRole('option', { name: /Open settings/ })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Commands' }).click();
+  await expect(dialog.getByRole('option', { name: /Open settings/ })).toBeVisible();
+  await expect(dialog.getByRole('option', { name: /welcome\.md/ })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Files' }).click();
+  await search.fill('@math');
+  await expect(dialog.getByRole('button', { name: 'Headings' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(dialog.getByRole('option', { name: /Mathematics/ })).toBeVisible();
+  await search.fill('');
+  await dialog.getByRole('button', { name: 'Recent' }).click();
+  await expect(dialog.getByRole('button', { name: 'Recent' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 });
 
 test('shows recently opened folders and navigates back to them', async ({ page }) => {
@@ -215,7 +257,10 @@ test('shows recently opened folders and navigates back to them', async ({ page }
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
   const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
   await search.fill('~');
-  await expect(dialog.getByText('Recent folders', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Recent' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   const showcase = dialog.getByRole('option', { name: /^showcase/ });
   const parts = dialog.getByRole('option', { name: /^parts/ });
   await expect(showcase).toBeVisible();
