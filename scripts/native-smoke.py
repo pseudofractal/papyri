@@ -310,6 +310,27 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         assert execute("try { return parent.__PAPYRI_HOST_TOKEN__ || 'missing' } catch { return 'isolated' }") == "isolated"
         execute("document.querySelector('img').scrollIntoView()")
         assert until(lambda: execute("return document.querySelector('img')?.naturalWidth === 1"), "local image resolution")
+        execute("document.querySelector('.image-frame img').click()")
+        until(lambda: execute("return !!document.querySelector('.image-dialog[open]')"), "native image viewer")
+        request("POST", prefix + "/frame", {"id": None})
+        until(lambda: execute("return !!document.querySelector('.preview-pane.expanded')"), "native expanded image frame")
+        frame()
+        assert execute("return getComputedStyle(document.querySelector('.image-viewport')).backgroundImage.includes('linear-gradient')")
+        assert execute("return !!document.querySelector('.image-dialog[open] img')")
+        execute("document.querySelector('.image-dialog [aria-label=\"Close image\"]').click()")
+        until(lambda: execute("return !document.querySelector('.image-dialog')"), "native image dialog close")
+        request("POST", prefix + "/frame", {"id": None})
+        until(lambda: execute("return !document.querySelector('.preview-pane.expanded')"), "native image close")
+        frame()
+        execute("document.querySelector('#search-regression').closest('.image-frame').querySelector('button').click()")
+        until(lambda: execute("return !!document.querySelector('.image-dialog[open] svg')"), "native inline SVG viewer")
+        request("POST", prefix + "/frame", {"id": None})
+        until(lambda: execute("return !!document.querySelector('.preview-pane.expanded')"), "native expanded inline SVG frame")
+        frame()
+        execute("document.querySelector('.image-dialog [aria-label=\"Close image\"]').click()")
+        request("POST", prefix + "/frame", {"id": None})
+        until(lambda: execute("return !document.querySelector('.preview-pane.expanded')"), "native inline SVG close")
+        frame()
         denial = asynchronous("const done=arguments[arguments.length-1]; const api=window.__TAURI_INTERNALS__; if(!api) done('unavailable'); else api.invoke('read_document',{path:'/etc/passwd',hostToken:'forged'}).then(()=>done('BAD'),()=>done('denied'))")
         assert denial in ("unavailable", "denied")
         execute("document.querySelectorAll('.diagram')[0].querySelector('button').click()")
@@ -578,7 +599,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             ).returncode != 0,
             "detached app shutdown",
         )
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "CLI decoration-less launch", "CLI detached logging"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG"]}, indent=2))
     except Exception:
         if session:
             try:

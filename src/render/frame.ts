@@ -6,6 +6,7 @@ import './link-preview.css';
 import { syncViewportSize } from './viewport';
 import { viewShortcut } from '../lib/view';
 import { createDiagramViewer } from './diagram-view';
+import { installImageViewers } from './image-view';
 import { resolveReferenceTargets } from './reference-targets';
 import { installLinkPreviews } from './link-preview';
 const runtimeNonce = (document.currentScript as HTMLScriptElement | null)?.nonce || '';
@@ -93,6 +94,7 @@ applyPresentation(payload);
 root.innerHTML = payload.trusted ? payload.html : sanitize(payload.html);
 resolveReferenceTargets(root);
 installLinkPreviews(root, payload.network);
+installImageViewers(root, notifyHost);
 if (payload.trusted) {
   for (const old of root.querySelectorAll('script')) {
     const script = document.createElement('script');
@@ -280,7 +282,7 @@ window.addEventListener('message', (event) => {
     if (!query) return;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) =>
-        node.parentElement?.closest('script,style,mark,svg,math,.katex')
+        node.parentElement?.closest('script,style,mark,svg,math,.katex,.image-expand')
           ? NodeFilter.FILTER_REJECT
           : NodeFilter.FILTER_ACCEPT,
     });

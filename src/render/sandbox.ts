@@ -46,6 +46,7 @@ export async function prepareAssets(html: string, source: Source, path: string):
     image.removeAttribute('srcset');
     image.setAttribute('loading', 'lazy');
     const href = image.getAttribute('src') || '';
+    if (/^data:image\//i.test(href)) continue;
     const target = resolveLink(path, href);
     if (target.kind !== 'local') {
       if (target.kind !== 'external') image.removeAttribute('src');

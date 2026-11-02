@@ -31,6 +31,10 @@ export function renderMarkdown(
   })
     .use(footnote)
     .use(tasks, { enabled: false });
+  const defaultValidateLink = markdown.validateLink.bind(markdown);
+  markdown.validateLink = (url) =>
+    /^data:image\/(?:png|jpe?g|gif|webp|avif|svg\+xml)(?:[;,]|$)/i.test(url) ||
+    defaultValidateLink(url);
   const slugger = new GithubSlugger();
   markdown.renderer.rules.heading_open = (tokens, index, options, env, renderer) => {
     const title = (tokens[index + 1].children || [])

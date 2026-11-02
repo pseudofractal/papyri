@@ -189,3 +189,15 @@ $$y$$`).html;
   expect((html.match(/class="katex"/g) || []).length).toBe(3);
   expect(html).not.toContain('katex-error');
 });
+
+it('keeps inline image data URIs, including SVG and raw HTML images', () => {
+  const png =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aF1kAAAAASUVORK5CYII=';
+  const svg = 'data:image/svg+xml,%3Csvg%3E%3C/svg%3E';
+  const html = renderMarkdown(
+    `![Pixel](${png})\n\n![Vector](${svg})\n\n<img src="${svg}" alt="Raw vector">`,
+  ).html;
+  expect(html).toContain(`src="${png}"`);
+  expect(html).toContain(`src="${svg}"`);
+  expect(html).toContain('alt="Raw vector"');
+});

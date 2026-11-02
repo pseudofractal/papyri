@@ -1156,6 +1156,98 @@ test('sizes expanded diagrams to their content and provides local zoom controls'
   await expect(dialog.getByRole('button', { name: 'Reset diagram zoom' })).toHaveText('100%');
 });
 
+test('opens Markdown images and inline SVG with zoom and transparency support', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const png =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aF1kAAAAASUVORK5CYII=';
+  await page.getByLabel('Import selected files', { exact: true }).setInputFiles(
+    markdownFile(
+      `# Images
+
+![Transparent pixel](${png})
+
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1200" viewBox="0 0 2000 1200"><rect x="10" y="10" width="1980" height="1180" fill="none" stroke="currentColor" stroke-width="8"/></svg>\n\n<img src="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='80'%20height='40'%3E%3Crect%20width='80'%20height='40'%20fill='%2389b4fa'/%3E%3C/svg%3E" alt="Data vector">`,
+    ),
+  );
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Images', exact: true })).toBeVisible();
+  const imageFrames = frame.locator('.image-frame');
+  await expect(imageFrames).toHaveCount(3);
+  await expect(imageFrames.first().getByRole('button', { name: /Expand image/ })).toBeVisible();
+  await imageFrames
+    .first()
+    .getByRole('button', { name: /Expand image/ })
+    .click();
+  const pngDialog = frame.getByRole('dialog', { name: 'image: Transparent pixel', exact: true });
+  await expect(pngDialog).toBeVisible();
+  await expect(page.locator('.preview-pane').first()).toHaveClass(/expanded/);
+  const viewport = pngDialog.locator('.image-viewport');
+  await expect
+    .poll(() => viewport.evaluate((element) => getComputedStyle(element).backgroundImage))
+    .toContain('linear-gradient');
+  await expect(pngDialog.getByRole('button', { name: /Reset image zoom/ })).toHaveText('100%');
+  await pngDialog.getByRole('button', { name: 'Zoom in image', exact: true }).click();
+  await expect(pngDialog.getByRole('button', { name: /Reset image zoom/ })).toHaveText('110%');
+  await pngDialog.getByRole('button', { name: 'Close image', exact: true }).click();
+  await expect(pngDialog).toHaveCount(0);
+  await expect(page.locator('.preview-pane').first()).not.toHaveClass(/expanded/);
+  await expect(imageFrames.first().locator('img')).toBeVisible();
+
+  await imageFrames.nth(1).locator('svg').click();
+  const svgDialog = frame.getByRole('dialog', { name: 'image', exact: true });
+  await expect(svgDialog).toBeVisible();
+  await expect(svgDialog.locator('.image-output svg')).toBeVisible();
+  await expect
+    .poll(() => svgDialog.locator('.image-viewport').evaluate((element) => element.scrollWidth))
+    .toBeGreaterThan(0);
+  await svgDialog.getByRole('button', { name: /Reset image zoom/ }).click();
+  await expect
+    .poll(() =>
+      svgDialog
+        .locator('.image-viewport')
+        .evaluate((element) => element.scrollWidth > element.clientWidth),
+    )
+    .toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(svgDialog).toHaveCount(0);
+  await expect(page.locator('.preview-pane').first()).not.toHaveClass(/expanded/);
+
+  await imageFrames
+    .nth(2)
+    .getByRole('button', { name: /Expand image/ })
+    .click();
+  const dataDialog = frame.getByRole('dialog', { name: 'image: Data vector', exact: true });
+  await expect(dataDialog).toBeVisible();
+  await expect(dataDialog.locator('.image-output img')).toHaveAttribute(
+    'src',
+    /^data:image\/svg\+xml/,
+  );
+  await dataDialog.getByRole('button', { name: 'Close image', exact: true }).click();
+  await expect(dataDialog).toHaveCount(0);
+});
+
+test('keeps linked image navigation while offering the image viewer', async ({ page }) => {
+  await page.goto('/');
+  const png =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aF1kAAAAASUVORK5CYII=';
+  await page.getByLabel('Import selected files', { exact: true }).setInputFiles(
+    markdownFile(`# Linked image
+
+[![Linked pixel](${png})](https://example.invalid/)`),
+  );
+  const frame = page.frameLocator('iframe');
+  const wrapper = frame.locator('.image-frame.linked');
+  await expect(wrapper.locator('a img')).toBeVisible();
+  await wrapper.getByRole('button', { name: /Expand image/ }).click();
+  const dialog = frame.getByRole('dialog', { name: 'image: Linked pixel', exact: true });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: 'Close image', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(wrapper.locator('a img')).toBeVisible();
+});
+
 test('exports diagrams as SVG and PNG and copies a PNG', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');

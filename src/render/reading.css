@@ -10,6 +10,8 @@
   --line: #45475a;
   --accent: #cba6f7;
   --code: #181825;
+  --checker-a: #181825;
+  --checker-b: #1e1e2e;
 }
 :root[data-theme='latte'] {
   color: #4c4f69;
@@ -19,6 +21,8 @@
   --line: #bcc0cc;
   --accent: #8839ef;
   --code: #e6e9ef;
+  --checker-a: #e6e9ef;
+  --checker-b: #dce0e8;
 }
 body {
   margin: 0;
@@ -110,6 +114,55 @@ canvas,
 video {
   max-width: 100%;
   height: auto;
+}
+.image-frame {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  line-height: 0;
+  vertical-align: middle;
+}
+.image-frame.linked {
+  line-height: normal;
+}
+.image-frame > img,
+.image-frame > svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  cursor: zoom-in;
+}
+.image-expand {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--code) 82%, transparent);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.image-frame:hover > .image-expand,
+.image-frame:focus-within > .image-expand,
+.image-expand:focus-visible {
+  opacity: 1;
+}
+.image-expand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (hover: none) {
+  .image-frame > .image-expand {
+    opacity: 1;
+  }
 }
 hr {
   border: 0;
@@ -242,7 +295,7 @@ input[type='checkbox'] {
   display: block;
   max-width: none;
 }
-.diagram-dialog {
+.media-dialog {
   position: fixed;
   inset: 0;
   margin: auto;
@@ -256,36 +309,59 @@ input[type='checkbox'] {
   color: inherit;
   overflow: visible;
 }
-.diagram-dialog[open] {
+.media-dialog[open] {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
 }
-.diagram-dialog::backdrop {
+.media-dialog::backdrop {
   background: rgb(0 0 0 / 65%);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
-.diagram-dialog .diagram-viewport {
+.media-dialog .media-viewport {
   box-sizing: border-box;
   width: fit-content;
   max-width: 100%;
-  max-height: calc(var(--viewport-height, 100dvh) * 0.9 - var(--diagram-controls-height, 64px));
+  max-height: calc(var(--viewport-height, 100dvh) * 0.9 - var(--viewer-controls-height, 64px));
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--code);
   box-shadow: 0 12px 48px rgb(0 0 0 / 30%);
+  overflow: auto;
+  overscroll-behavior: contain;
 }
-.diagram-dialog .diagram-output {
+.media-dialog .media-output {
+  width: max-content;
   min-width: 0;
 }
-.diagram-dialog .diagram-viewport.panning {
+.media-dialog .media-output img,
+.media-dialog .media-output > svg {
+  display: block;
+  max-width: none;
+  height: auto;
+}
+.media-dialog .media-viewport.panning {
   cursor: grabbing;
   user-select: none;
 }
-.diagram-zoom-controls {
+.image-dialog .media-viewport {
+  background-color: var(--checker-a);
+  background-image:
+    linear-gradient(45deg, var(--checker-b) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--checker-b) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--checker-b) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--checker-b) 75%);
+  background-size: 20px 20px;
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0;
+}
+.media-zoom-controls {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -300,16 +376,16 @@ input[type='checkbox'] {
   box-shadow: 0 8px 24px rgb(0 0 0 / 25%);
   font-size: min(1rem, 16px);
 }
-.diagram-zoom-controls button {
+.media-zoom-controls button {
   min-width: 36px;
   padding: 5px 10px;
 }
-.diagram-zoom-controls button:first-child,
-.diagram-zoom-controls button:nth-child(3) {
+.media-zoom-controls button:first-child,
+.media-zoom-controls button:nth-child(3) {
   font-size: 1.2em;
   line-height: 1;
 }
-.diagram-export-status {
+.media-export-status {
   max-width: 100%;
   max-height: 4em;
   overflow: auto;
@@ -318,6 +394,6 @@ input[type='checkbox'] {
   text-align: center;
   overflow-wrap: anywhere;
 }
-.diagram-export-status:empty {
+.media-export-status:empty {
   display: none;
 }

@@ -63,6 +63,7 @@
   let elapsed = $state(0);
   let frameReady = $state(false);
   let expanded = $state(false);
+  let expandedKind = $state<'diagram' | 'image' | null>(null);
   let retryRequest = $state(0);
   let scrollRequest = 0;
   const pendingScrolls = new Map<
@@ -134,6 +135,7 @@
     const channel = crypto.getRandomValues(new Uint32Array(channelEntropyWords)).join('-');
     frameReady = false;
     expanded = false;
+    expandedKind = null;
     allowsMessages = false;
     activeChannel = '';
     loading = true;
@@ -319,8 +321,16 @@
       oncommand({ target: data.target, action: data.action } as ViewCommand);
       return;
     }
-    if (data.type === 'diagram-expanded' && typeof data.expanded === 'boolean') {
+    if (
+      (data.type === 'diagram-expanded' || data.type === 'image-expanded') &&
+      typeof data.expanded === 'boolean'
+    ) {
       expanded = data.expanded;
+      expandedKind = data.expanded
+        ? data.type === 'diagram-expanded'
+          ? 'diagram'
+          : 'image'
+        : null;
       return;
     }
     if (
@@ -342,7 +352,7 @@
     if (!allowsMessages) return;
     if (
       data.type === 'diagram-export' &&
-      expanded &&
+      expandedKind === 'diagram' &&
       !tab.bytes &&
       (data.action === 'download' || data.action === 'copy') &&
       (data.mime === 'image/png' || data.mime === 'image/svg+xml') &&
@@ -355,7 +365,11 @@
       const channel = activeChannel;
       const sender = event.source;
       const respond = (result: { message?: string; error?: string }) => {
-        if (channel === activeChannel && sender === frame?.contentWindow && expanded)
+        if (
+          channel === activeChannel &&
+          sender === frame?.contentWindow &&
+          expandedKind === 'diagram'
+        )
           frame.contentWindow?.postMessage(
             { type: 'diagram-export-result', request: data.request, ...result },
             '*',
