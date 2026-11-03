@@ -75,6 +75,9 @@
         class:active={active === entry.path}
         class:muted={!entry.directory && !isDocument(entry.path)}
         class="file-row"
+        data-path={entry.path}
+        data-directory={entry.directory ? 'true' : 'false'}
+        data-document={entry.directory ? 'folder' : isDocument(entry.path) ? 'document' : 'other'}
         style:padding-left="{12 + depth * 16}px"
         disabled={!entry.directory && !isDocument(entry.path)}
         aria-expanded={entry.directory ? expanded.includes(entry.path) : undefined}
