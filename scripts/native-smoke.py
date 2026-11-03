@@ -134,7 +134,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             "CLI decoration-less startup",
         )
         until(
-            lambda: execute("const hidden=s=>getComputedStyle(document.querySelector(s)).display==='none';const pane=document.querySelector('.preview-pane');return hidden('.app-header')&&hidden('.tab-bar')&&pane&&Math.abs(pane.getBoundingClientRect().height-innerHeight)<=2"),
+            lambda: execute("const hidden=s=>{const el=document.querySelector(s);return !el||getComputedStyle(el).display==='none';};const pane=document.querySelector('.preview-pane');return hidden('.app-header')&&hidden('.status-bar')&&hidden('.sidebar')&&hidden('.side-panel')&&pane&&Math.abs(pane.getBoundingClientRect().height-innerHeight)<=2"),
             "CLI decoration-less viewport",
         )
         control("ping", "--wait", "10")
@@ -152,7 +152,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         execute("document.documentElement.dataset.session='preserved'")
         original_theme = execute("return document.documentElement.dataset.theme")
         request("POST", prefix + "/frame", {"id": None})
-        execute("document.querySelector('[aria-label=\"Toggle color theme\"]').click()")
+        control("theme", "toggle")
         until(lambda: preview("return document.documentElement.dataset.theme !== " + json.dumps(original_theme)), "native document theme update")
         assert execute("return document.documentElement.dataset.session") == "preserved"
         expected_color = "rgb(76, 79, 105)" if original_theme == "mocha" else "rgb(205, 214, 244)"
@@ -161,7 +161,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         assert execute("return getComputedStyle(document.querySelector('.hljs-attr')).color") == expected_token
         execute("window.__svgBeforeSearch=document.querySelector('#search-regression').innerHTML")
         request("POST", prefix + "/frame", {"id": None})
-        assert execute("return document.querySelector('.document-path strong').title") == str(document)
+        assert execute("return [...document.querySelectorAll('.tab-select')].find(b => b.getAttribute('aria-pressed') === 'true')?.title") == str(document)
         execute("""
           window.__selfNavigation = false;
           window.addEventListener('message', function observe(event) {
@@ -287,9 +287,12 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             until(lambda: execute("return Math.abs(Number(document.documentElement.style.zoom)-" + str(expected_scale) + ")<0.001"), "UI scale applied")
             assert_fitted_layout()
         request("POST", prefix + "/frame", {"id": None})
-        for name in ["Toggle table of contents", "Toggle explorer", "Toggle split view"]:
+        for name in ["Toggle right panel", "Toggle explorer", "Toggle split view"]:
             request("POST", prefix + "/frame", {"id": None})
-            execute("document.querySelector('[aria-label=" + json.dumps(name) + "]').click()")
+            if name == "Toggle right panel" and execute("return !!document.querySelector('.side-panel')"):
+                execute("document.querySelector('.side-panel-close').click()")
+            else:
+                execute("document.querySelector('[aria-label=" + json.dumps(name) + "]').click()")
             assert_fitted_layout()
         assert_fitted_layout(1)
         request("POST", prefix + "/frame", {"id": None})
@@ -411,7 +414,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         until(lambda: preview("return document.querySelector('h1')?.textContent === 'Trust test'"), "safe script fixture")
         assert execute("return document.body.dataset.executed || null") is None
         request("POST", prefix + "/frame", {"id": None})
-        execute("document.querySelector('.trust-button').click()")
+        execute("document.querySelector('.tab-trust').click()")
         execute("document.querySelector('dialog .btn-primary').click()")
         until(lambda: preview("return document.body.dataset.executed === 'yes' && document.body.dataset.isolated === 'yes'"), "explicit native script trust and isolation")
         request("POST", prefix + "/frame", {"id": None})
@@ -434,7 +437,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         (root / "sub" / "next.md").unlink()
         until(lambda: execute("return document.body.textContent.includes('File unavailable')"), "deleted-file error")
         execute("[...document.querySelectorAll('.file-row')].find(button=>button.textContent.trim()==='paper.pdf').click()")
-        until(lambda: execute("return document.querySelector('.document-path strong').title===" + json.dumps(str(root / "paper.pdf"))), "native PDF tab selected")
+        until(lambda: execute("return [...document.querySelectorAll('.tab-select')].find(b => b.getAttribute('aria-pressed') === 'true')?.title===" + json.dumps(str(root / "paper.pdf"))), "native PDF tab selected")
         frame()
         until(lambda: preview("return document.querySelector('#page-count')?.textContent==='of 2' && !!document.querySelector('.textLayer span')"), "native PDF rendering and text layer")
         assert execute("try { return parent.document ? false : false } catch { return true }")
@@ -461,7 +464,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         until(lambda: execute("return document.querySelector('#page-number').value==='2'"), "native PDF page navigation")
         request("POST", prefix + "/frame", {"id": None})
         execute("[...document.querySelectorAll('.file-row')].find(button=>button.textContent.trim()==='paper.typ').click()")
-        until(lambda: execute("return document.querySelector('.document-path strong').title===" + json.dumps(str(root / "paper.typ"))), "native Typst tab selected")
+        until(lambda: execute("return [...document.querySelectorAll('.tab-select')].find(b => b.getAttribute('aria-pressed') === 'true')?.title===" + json.dumps(str(root / "paper.typ"))), "native Typst tab selected")
         frame()
         until(lambda: preview("return document.querySelector('.textLayer')?.textContent.includes('Imported dependency')"), "native sandboxed Typst preview")
         execute("document.documentElement.dataset.retained='yes'")
@@ -517,14 +520,14 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         state = json.loads(control("state", "--json"))
         assert state["view"]["decorationless"] is True, state["view"]
         until(
-            lambda: execute("const hidden=s=>getComputedStyle(document.querySelector(s)).display==='none';return hidden('.app-header')&&hidden('.tab-bar')&&hidden('.document-toolbar')&&hidden('.status-bar')&&Math.abs(document.querySelector('.preview-pane').getBoundingClientRect().height-innerHeight)<=2"),
+            lambda: execute("const hidden=s=>{const el=document.querySelector(s);return !el||getComputedStyle(el).display==='none';};return hidden('.app-header')&&hidden('.status-bar')&&hidden('.sidebar')&&hidden('.side-panel')&&Math.abs(document.querySelector('.preview-pane').getBoundingClientRect().height-innerHeight)<=2"),
             "native decoration-less viewport",
         )
         control("decorationless", "off")
         state = json.loads(control("state", "--json"))
         assert state["view"]["decorationless"] is False, state["view"]
         until(
-            lambda: execute("const shown=s=>getComputedStyle(document.querySelector(s)).display!=='none';return shown('.app-header')&&shown('.tab-bar')&&shown('.document-toolbar')&&shown('.status-bar')"),
+            lambda: execute("const shown=s=>{const el=document.querySelector(s);return !!el&&getComputedStyle(el).display!=='none';};return shown('.app-header')&&shown('.status-bar')&&shown('.sidebar')"),
             "native chrome restored",
         )
         launch = subprocess.run(
@@ -633,7 +636,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
                 print("Native diagnostic:", execute("return {heading:document.querySelector('h1')?.textContent,trusted:document.getElementById('payload')?JSON.parse(document.getElementById('payload').textContent).trusted:null,dataset:{...document.body.dataset},image:document.querySelector('img')?{src:document.querySelector('img').src.slice(0,50),complete:document.querySelector('img').complete,top:document.querySelector('img').getBoundingClientRect().top,height:innerHeight,scroll:scrollY}:null,documentScripts:[...document.querySelectorAll('#document script')].map(s=>s.textContent)}"))
                 request("POST", prefix + "/frame", {"id": None})
                 print("Host layout:", execute("return {width:innerWidth,height:innerHeight,zoom:document.documentElement.style.zoom,sidebar:!!document.querySelector('.sidebar'),focus:document.activeElement?.tagName}"))
-                print("Host trust state:", execute("return document.querySelector('.trust-button')?.textContent"))
+                print("Host trust state:", execute("return document.querySelector('.tab-trust')?.getAttribute('aria-label')"))
             except Exception as error:
                 print("Diagnostic unavailable:", str(error))
         if detached_log and detached_log.exists():

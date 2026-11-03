@@ -170,7 +170,9 @@ test('views PDFs offline with text, search, outline, links, zoom, and isolation'
   const frame = page.frameLocator('iframe');
   await expect(frame.locator('#page-count')).toHaveText('of 2');
   await expect(frame.locator('.textLayer').first()).toContainText('Searchable needle.');
-  await expect(page.locator('.trust-button')).toContainText('PDF preview · scripts disabled');
+  await expect(
+    page.locator('.tab-item').filter({ hasText: 'paged.pdf' }).locator('.tab-trust'),
+  ).toHaveCount(0);
   await expect(page.locator('.preview-pane')).toHaveAttribute('aria-busy', 'false');
   const pdfFrame = page.frames().find((frame) => frame.parentFrame());
   expect(
@@ -223,7 +225,17 @@ test('views PDFs offline with text, search, outline, links, zoom, and isolation'
     'aria-pressed',
     'false',
   );
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
+  await page.evaluate(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+  });
+  await page.keyboard.press('Control+k');
+  const palette = page.getByRole('dialog', { name: 'Command palette' });
+  await palette
+    .getByRole('combobox', { name: 'Search files and commands' })
+    .fill('>Use light theme');
+  await palette.getByRole('option', { name: /Use light theme/ }).click();
+  await expect(palette).toHaveCount(0);
   await expect(frame.locator('html')).toHaveAttribute('data-theme', 'latte');
   await expect(frame.locator('canvas').first()).toBeVisible();
 
@@ -382,11 +394,15 @@ test('navigates PDF pages through the command palette', async ({ page }) => {
   await expect(frame.locator('#page-count')).toHaveText('of 2');
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
   const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
-  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await page.locator('.app-header').click({ position: { x: 3, y: 3 } });
+  await page.keyboard.press('Control+k');
+  await expect(dialog).toBeVisible();
   await search.fill('>last pdf');
   await dialog.getByRole('option', { name: /Last PDF page/ }).click();
   await expect(frame.getByRole('spinbutton', { name: 'Page number' })).toHaveValue('2');
-  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await page.locator('.app-header').click({ position: { x: 3, y: 3 } });
+  await page.keyboard.press('Control+k');
+  await expect(dialog).toBeVisible();
   await search.fill('>go to pdf page');
   await dialog.getByRole('option', { name: /Go to PDF page/ }).click();
   await expect(search).toHaveValue('#');

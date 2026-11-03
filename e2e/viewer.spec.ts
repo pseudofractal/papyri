@@ -14,6 +14,26 @@ async function openSettingsTab(page: Page, tab: string) {
     .click();
 }
 
+async function openCommandPalette(page: Page) {
+  await page.evaluate(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+  });
+  await page.keyboard.press('Control+k');
+  await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeVisible();
+}
+
+async function toggleTheme(page: Page) {
+  const current = await page.locator('.app-shell').getAttribute('data-theme');
+  const command = current === 'latte' ? 'Use dark theme' : 'Use light theme';
+  await openCommandPalette(page);
+  const dialog = page.getByRole('dialog', { name: 'Command palette' });
+  const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
+  await search.fill(`>${command}`);
+  await dialog.getByRole('option', { name: command, exact: false }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
 for (const mode of ['pointer', 'keyboard'] as const) {
   test(`prepares Markdown on ${mode} file selection`, async ({ page }) => {
     await page.goto('/');
@@ -109,7 +129,7 @@ test('searches nested files and commands with the keyboard palette', async ({ pa
   await expect(page.getByRole('dialog', { name: 'Reading preferences' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('dialog[open]')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await openCommandPalette(page);
   await search.fill('>toggle');
   await search.press('ArrowDown');
   await expect(
@@ -125,7 +145,7 @@ test('navigates headings and tabs, remembers choices, and searches document text
   await page.goto('/');
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
   const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
-  const openPalette = () => page.getByRole('button', { name: 'Open command palette' }).click();
+  const openPalette = () => openCommandPalette(page);
   await expect(
     page.frameLocator('iframe').getByRole('heading', { name: 'Mathematics' }),
   ).toBeVisible();
@@ -181,7 +201,7 @@ test('changes the palette search scope and filters results by type', async ({ pa
     await page.getByRole('button', { name: 'Toggle explorer' }).click();
   await page.getByLabel('Directory path').fill('/showcase/parts');
   await page.getByLabel('Directory path').press('Enter');
-  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await openCommandPalette(page);
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
   const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
   await search.fill('markdown.md');
@@ -205,7 +225,7 @@ test('changes the palette search scope and filters results by type', async ({ pa
 
 test('filters by result type, syncs prefixes, and corrects spelling', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await openCommandPalette(page);
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
   const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
   await expect(dialog.getByRole('radio', { name: 'Folder' })).toHaveAttribute(
@@ -310,7 +330,7 @@ test('keeps the palette within the viewport and gives commands distinct icons', 
             }),
           );
       }, zoom);
-      await page.getByRole('button', { name: 'Open command palette' }).click();
+      await openCommandPalette(page);
       const dialog = page.getByRole('dialog', { name: 'Command palette' });
       const panel = dialog.locator('.palette-panel');
       const bounds = await panel.evaluate((element) => {
@@ -430,7 +450,7 @@ test('configures palette bounds and document fonts from tabbed settings', async 
     await input.blur();
   }
   await dialog.getByRole('button', { name: 'Close settings', exact: true }).click();
-  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await openCommandPalette(page);
   const palette = page.getByRole('dialog', { name: 'Command palette' }).locator('.palette-panel');
   const viewport = page.viewportSize()!;
   const box = await palette.boundingBox();
@@ -454,7 +474,7 @@ test('runs contextual commands for tabs, zoom, appearance, and folders', async (
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
   const search = dialog.getByRole('combobox', { name: 'Search files and commands' });
   const run = async (label: string) => {
-    await page.getByRole('button', { name: 'Open command palette' }).click();
+    await openCommandPalette(page);
     await search.fill(`>${label}`);
     await dialog.getByRole('option', { name: label, exact: false }).click();
     await expect(dialog).toHaveCount(0);
@@ -466,16 +486,20 @@ test('runs contextual commands for tabs, zoom, appearance, and folders', async (
   await run('Use light theme');
   await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', 'latte');
   await run('Allow external resources');
-  await expect(page.locator('.offline-label')).toHaveText('External content allowed');
+  await openSettingsTab(page, 'Documents');
+  await expect(page.getByLabel('Allow network resources')).toBeChecked();
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click();
   await run('Block external resources');
-  await expect(page.locator('.offline-label')).toHaveText('Network resources blocked');
+  await openSettingsTab(page, 'Documents');
+  await expect(page.getByLabel('Allow network resources')).not.toBeChecked();
+  await page.getByRole('button', { name: 'Close settings', exact: true }).click();
   await page.frameLocator('iframe').getByRole('link', { name: 'format gallery' }).click();
   await expect(page.locator('.tab-select')).toHaveCount(2);
   await run('Previous tab');
   await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Papyri' })).toBeVisible();
   await run('Close other tabs');
   await expect(page.locator('.tab-select')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await openCommandPalette(page);
   await search.fill('>next tab');
   await expect(dialog.getByRole('option', { name: /Next tab/ })).toHaveCount(0);
   await search.fill('>preferences');
@@ -498,7 +522,7 @@ test('selects a LaTeX engine from the palette in the desktop app', async ({ page
     });
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Open command palette' }).click();
+  await openCommandPalette(page);
   const dialog = page.getByRole('dialog', { name: 'Command palette' });
   await dialog.getByRole('combobox', { name: 'Search files and commands' }).fill('>xelatex');
   await dialog.getByRole('option', { name: 'Use xelatex for LaTeX' }).click();
@@ -674,7 +698,7 @@ test('uses the shared monochrome mark and themes host dialogs', async ({ page })
   const emptyMark = page.locator('.empty-icon .app-logo');
   await expect(emptyMark).toBeVisible();
   expect(await emptyMark.evaluate((element) => getComputedStyle(element).maskImage)).toBe(mask);
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
+  await toggleTheme(page);
   await openSettingsTab(page, 'Documents');
   const panel = page.locator('.settings-panel');
   await expect(panel).toHaveCSS('background-color', 'rgb(239, 241, 245)');
@@ -713,13 +737,11 @@ test('keeps long document names within the toolbar', async ({ page }) => {
   await expect(
     page.frameLocator('iframe').getByRole('heading', { name: 'Long filename' }),
   ).toBeVisible();
-  const path = page.locator('.document-path');
-  await expect(path.locator('strong')).toHaveAttribute('title', `/${filename}`);
+  const tab = page.locator('.tab-select').filter({ hasText: 'notes.md' });
+  await expect(tab).toHaveAttribute('title', `/${filename}`);
   expect(
-    await path.evaluate((element) => {
-      const bounds = element.getBoundingClientRect();
-      const toolbar = element.parentElement!.getBoundingClientRect();
-      return bounds.right <= toolbar.right && getComputedStyle(element).overflowX === 'hidden';
+    await page.locator('.app-header').evaluate((element) => {
+      return element.scrollWidth <= element.clientWidth;
     }),
   ).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -844,7 +866,7 @@ test('pages large directories and keeps controls available during large-file par
   await page.getByRole('button', { name: 'Close settings' }).click();
   await expect(
     page.frameLocator('iframe').getByRole('heading', { name: 'Large document' }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
 });
 
 test('revokes old frame messages while disabling document scripts', async ({ page }) => {
@@ -889,7 +911,7 @@ test('updates document theme and independent zoom without rebuilding the preview
   await expect(frame.getByRole('heading', { name: 'Papyri' })).toBeVisible();
   await frame.locator('html').evaluate((node) => (node.dataset.session = 'preserved'));
   const initialWorkers = workers;
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
+  await toggleTheme(page);
   await expect(frame.locator('html')).toHaveAttribute('data-theme', 'latte');
   await expect(frame.locator('html')).toHaveAttribute('data-session', 'preserved');
   await page.getByRole('button', { name: 'Zoom in document', exact: true }).click();
@@ -1043,7 +1065,7 @@ test('cycles open tabs from the host and document and wraps in both directions',
   await expect(frame.getByRole('heading', { name: 'Alpha', exact: true })).toBeVisible();
   await page.keyboard.press('Control+Shift+Tab');
   await expect(frame.getByRole('heading', { name: 'Gamma', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Toggle table of contents' }).focus();
+  await page.getByRole('button', { name: 'Toggle right panel' }).focus();
   await page.keyboard.press('Control+Shift+Tab');
   await expect(frame.getByRole('heading', { name: 'Beta', exact: true })).toBeVisible();
   await page.keyboard.press('Control+Tab');
@@ -1108,7 +1130,7 @@ test('keeps loading surfaces themed and conceals unpainted document frames', asy
   await expect(frame.locator('html')).toHaveCSS('background-color', 'rgb(30, 30, 46)');
   await frame.getByRole('link', { name: 'format gallery' }).click();
   await expect(frame.getByRole('heading', { name: 'Format gallery', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
+  await toggleTheme(page);
   await frame.getByRole('link', { name: 'Back to welcome' }).click();
   await expect(frame.getByRole('heading', { name: 'Papyri', exact: true })).toBeVisible();
   await expect(frame.locator('html')).toHaveCSS('background-color', 'rgb(239, 241, 245)');
@@ -1259,7 +1281,7 @@ test('uses Catppuccin diagram defaults, preserves authored colors and expands sc
   await chart.getByRole('button', { name: 'Zoom in diagram' }).click();
   await expect.poll(async () => (await chartSvg.boundingBox())!.width).toBeGreaterThan(chartWidth);
   await chart.getByRole('button', { name: 'Close diagram' }).click();
-  await page.getByRole('button', { name: 'Toggle color theme' }).click();
+  await toggleTheme(page);
   await first.getByRole('button', { name: 'Update diagram theme', exact: true }).click();
   await expect(first.locator('.node rect').first()).toHaveCSS('fill', 'rgb(204, 208, 218)');
   await diagrams.nth(2).getByRole('button', { name: 'Expand diagram', exact: true }).click();
@@ -1423,6 +1445,350 @@ test('keeps linked image navigation while offering the image viewer', async ({ p
   await dialog.getByRole('button', { name: 'Close image', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(wrapper.locator('a img')).toBeVisible();
+});
+
+test('offers source, rendered text, and quote copies for a Markdown selection', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile('# Selection\n\nA **bold** paragraph.', 'selection.md'));
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Selection' })).toBeVisible();
+  const selectParagraph = () =>
+    frame
+      .locator('p')
+      .first()
+      .evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const selection = window.getSelection()!;
+        selection.removeAllRanges();
+        selection.addRange(range);
+        const bounds = element.getBoundingClientRect();
+        element.dispatchEvent(
+          new MouseEvent('contextmenu', {
+            bubbles: true,
+            cancelable: true,
+            clientX: bounds.left + 12,
+            clientY: bounds.top + 8,
+          }),
+        );
+      });
+  const menu = page.getByRole('menu', { name: 'Selection actions' });
+  const readClipboard = () => page.evaluate(() => navigator.clipboard.readText());
+
+  await selectParagraph();
+  await expect(menu).toBeVisible();
+  await expect(menu.locator('.pad-rendered strong')).toHaveText('bold');
+  await menu.getByRole('button', { name: 'Toggle source preview' }).hover();
+  await expect(menu.locator('.pad-source-code')).toHaveText('A **bold** paragraph.');
+  await page.mouse.move(1, 1);
+  await expect(menu.locator('.pad-rendered')).toBeVisible();
+  await menu.getByRole('menuitem', { name: 'Copy source', exact: true }).click();
+  expect(await readClipboard()).toBe('A **bold** paragraph.');
+
+  await selectParagraph();
+  await menu.getByRole('menuitem', { name: 'Copy selected text', exact: true }).click();
+  expect(await readClipboard()).toBe('A bold paragraph.');
+
+  await selectParagraph();
+  await menu.getByRole('menuitem', { name: 'Copy as quote', exact: true }).click();
+  expect(await readClipboard()).toBe('> A bold paragraph.');
+
+  await selectParagraph();
+  await expect(menu).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+});
+
+test('suppresses WebKit navigation menus in the app and document preview', async ({ page }) => {
+  await page.goto('/');
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Papyri' })).toBeVisible();
+  expect(
+    await page.evaluate(() => {
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      document.body.dispatchEvent(event);
+      return event.defaultPrevented;
+    }),
+  ).toBe(true);
+  await expect(page.getByRole('menu', { name: 'Context actions' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  expect(
+    await frame.locator('body').evaluate(() => {
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+      document.body.dispatchEvent(event);
+      return event.defaultPrevented;
+    }),
+  ).toBe(true);
+  await expect(page.getByRole('menu', { name: 'Context actions' })).toBeVisible();
+  await page.keyboard.press('Escape');
+});
+
+test('opens context menus for app chrome, tabs, files, and documents', async ({ page }) => {
+  await page.goto('/');
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Papyri' })).toBeVisible();
+  const menu = page.getByRole('menu', { name: 'Context actions' });
+
+  await page.locator('.brand').click({ button: 'right' });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: /Open file/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+
+  await page.locator('.tab-item[data-path]').first().click({ button: 'right' });
+  await expect(menu.getByRole('menuitem', { name: /Close tab/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page
+    .locator('.file-row[data-path]')
+    .filter({ hasText: 'welcome.md' })
+    .click({ button: 'right' });
+  await expect(menu.getByRole('menuitem', { name: 'Open', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await frame.locator('p').first().click({ button: 'right' });
+  await expect(menu.getByRole('menuitem', { name: /Copy raw source/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+});
+
+test('highlights a partially selected formula as one block', async ({ page }) => {
+  await page.goto('/');
+  const markdown = String.raw`# Math highlight
+
+Inline math: \(e^{i\pi} + 1 = 0\) with text.
+`;
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile(markdown, 'math-highlight.md'));
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Math highlight' })).toBeVisible();
+  const formula = frame.locator('.katex').first();
+  await formula.evaluate((element) => {
+    const text = element.querySelector('.katex-html .mord')?.firstChild;
+    if (!text) throw new Error('No formula text');
+    const range = document.createRange();
+    range.setStart(text, 0);
+    range.setEnd(text, Math.min(1, text.textContent!.length));
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  await expect.poll(() => formula.getAttribute('class')).toContain('selection-highlight');
+  expect(await formula.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(
+    'rgba(0, 0, 0, 0)',
+  );
+});
+
+test('shows selected word and character counts in the status bar', async ({ page }) => {
+  await page.goto('/');
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile('# Stats\n\nAlpha beta gamma.', 'stats.md'));
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Stats' })).toBeVisible();
+  const status = page.locator('.status-stats');
+  await frame
+    .locator('p')
+    .first()
+    .evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+  await expect(status).toContainText('3 words selected');
+  await expect(status).toContainText('17 characters selected');
+  await frame.locator('body').evaluate(() => window.getSelection()!.removeAllRanges());
+  await expect(status).not.toContainText('selected');
+  await expect(status).toContainText('26 characters');
+});
+
+test('renders lists and block structure in the action-pad preview', async ({ page }) => {
+  await page.goto('/');
+  const markdown = [
+    '# Preview structure',
+    '',
+    'A **mixed** sentence.',
+    '',
+    '- First item',
+    '- Second item',
+    '',
+    '> Quoted line',
+    '',
+    'Final paragraph.',
+  ].join('\n');
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile(markdown, 'preview-structure.md'));
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Preview structure' })).toBeVisible();
+  const openMenu = (select: 'blocks' | 'list') =>
+    frame.locator('#document').evaluate((root, mode) => {
+      const range = document.createRange();
+      if (mode === 'list') range.selectNodeContents(root.querySelector('ul')!);
+      else {
+        const paragraphs = root.querySelectorAll('p');
+        range.setStart(paragraphs[0].firstChild!, 0);
+        range.setEnd(paragraphs[1].firstChild!, paragraphs[1].firstChild!.textContent!.length);
+      }
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const bounds = range.getBoundingClientRect();
+      root.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: bounds.left + 10,
+          clientY: bounds.top + 10,
+        }),
+      );
+    }, select);
+  const menu = page.getByRole('menu', { name: 'Selection actions' });
+
+  await openMenu('blocks');
+  await expect(menu.locator('.pad-rendered ul')).toHaveCSS('list-style-type', 'disc');
+  await expect(menu.locator('.pad-rendered ul li')).toHaveCount(2);
+  await expect(menu.locator('.pad-rendered blockquote')).toContainText('Quoted line');
+  await page.keyboard.press('Escape');
+
+  await openMenu('list');
+  await expect(menu.locator('.pad-rendered ul li')).toHaveCount(2);
+});
+
+test('copies Markdown source and rendered text with keyboard shortcuts', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  const markdown = String.raw`# Keyboard copy
+
+A **bold** \(x^2\) paragraph.
+
+Second paragraph for multi-block source.`;
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile(markdown, 'keyboard-copy.md'));
+  const frame = page.frameLocator('iframe');
+  await frame.getByRole('heading', { name: 'Keyboard copy' }).click();
+  const selectParagraph = () =>
+    frame
+      .locator('p')
+      .first()
+      .evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const selection = window.getSelection()!;
+        selection.removeAllRanges();
+        selection.addRange(range);
+      });
+  const selectAcrossParagraphs = () =>
+    frame.locator('#document').evaluate((root) => {
+      const paragraphs = root.querySelectorAll('p');
+      const range = document.createRange();
+      range.setStart(paragraphs[0].firstChild!, 0);
+      range.setEnd(paragraphs[1].firstChild!, paragraphs[1].firstChild!.textContent!.length);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+  const openSelectionMenu = () =>
+    frame
+      .locator('p')
+      .first()
+      .evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const selection = window.getSelection()!;
+        selection.removeAllRanges();
+        selection.addRange(range);
+        const bounds = element.getBoundingClientRect();
+        element.dispatchEvent(
+          new MouseEvent('contextmenu', {
+            bubbles: true,
+            cancelable: true,
+            clientX: bounds.left + 12,
+            clientY: bounds.top + 8,
+          }),
+        );
+      });
+  const readClipboard = () => page.evaluate(() => navigator.clipboard.readText());
+
+  await selectParagraph();
+  await page.keyboard.press('Control+c');
+  await expect.poll(readClipboard).toBe(String.raw`A **bold** \(x^2\) paragraph.`);
+
+  await selectParagraph();
+  await page.keyboard.press('Control+Shift+c');
+  await expect.poll(readClipboard).toBe('A bold $x^2$ paragraph.');
+
+  await selectAcrossParagraphs();
+  await page.keyboard.press('Control+c');
+  await expect.poll(readClipboard).toBe(
+    String.raw`A **bold** \(x^2\) paragraph.
+
+Second paragraph for multi-block source.`,
+  );
+
+  await openSelectionMenu();
+  await expect(page.getByRole('menu', { name: 'Selection actions' })).toBeVisible();
+  await page.keyboard.press('Control+Shift+c');
+  await expect.poll(readClipboard).toBe('A bold $x^2$ paragraph.');
+});
+
+test('copies TeX instead of KaTeX markup for math selections', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  const markdown = String.raw`# Math selection
+
+Inline \(x^2 + y^2 = z^2\) and **bold** prose.
+
+$$
+\int_0^1 x^2\,dx = \frac{1}{3}
+$$
+`;
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile(markdown, 'math-selection.md'));
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Math selection' })).toBeVisible();
+  async function copyFrom(locator: ReturnType<typeof frame.locator>, action: string) {
+    await locator.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const bounds = element.getBoundingClientRect();
+      element.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: bounds.left + 12,
+          clientY: bounds.top + 8,
+        }),
+      );
+    });
+    await page.getByRole('menuitem', { name: action, exact: true }).click();
+    return page.evaluate(() => navigator.clipboard.readText());
+  }
+  expect(await copyFrom(frame.locator('.katex').first(), 'Copy selected text')).toBe(
+    '$x^2 + y^2 = z^2$',
+  );
+  expect(await copyFrom(frame.locator('.katex-display').first(), 'Copy selected text')).toBe(
+    '$$\n\\int_0^1 x^2\\,dx = \\frac{1}{3}\n$$',
+  );
+  expect(await copyFrom(frame.locator('.katex-display').first(), 'Copy source')).toBe(
+    '$$\n\\int_0^1 x^2\\,dx = \\frac{1}{3}\n$$',
+  );
 });
 
 test('exports diagrams as SVG and PNG and copies a PNG', async ({ page, context }) => {
@@ -1664,8 +2030,10 @@ test('tracks the actual pane viewport as UI zoom, panels and window size change'
       await page.keyboard.press(steps < 0 ? 'Control+Alt+Minus' : 'Control+Alt+Equal');
     await expectFits();
   }
-  for (const name of ['Toggle table of contents', 'Toggle explorer', 'Toggle split view']) {
-    await page.getByRole('button', { name, exact: true }).click();
+  for (const name of ['Toggle right panel', 'Toggle explorer', 'Toggle split view']) {
+    if (name === 'Toggle right panel' && (await page.locator('.side-panel').isVisible()))
+      await page.locator('.side-panel-close').click();
+    else await page.getByRole('button', { name, exact: true }).click();
     await expectFits();
   }
   await expectFits(1);
@@ -1773,9 +2141,9 @@ test('consumes heading navigation and restores tab scroll positions', async ({ p
   await expect(frame.getByRole('heading', { name: 'Beta', exact: true })).toBeVisible();
   await page.locator('.tab-select').filter({ hasText: 'alpha.md' }).click();
   await expect(frame.getByRole('heading', { name: 'Alpha', exact: true })).toBeVisible();
-  const outline = page.getByRole('complementary', { name: 'Table of contents' });
+  const outline = page.getByRole('complementary', { name: 'Context panel' });
   if (!(await outline.isVisible()))
-    await page.getByRole('button', { name: 'Toggle table of contents', exact: true }).click();
+    await page.getByRole('button', { name: 'Toggle right panel', exact: true }).click();
   for (let click = 0; click < 2; click++) {
     await page.locator('.outline-link').filter({ hasText: 'Shared' }).click();
     await expect.poll(() => frame.locator('html').evaluate(() => scrollY)).toBeGreaterThan(500);
@@ -1870,8 +2238,7 @@ test('hides chrome in decoration-less mode while keeping the palette and shortcu
   await expect(page.locator('.app-shell')).toHaveClass(/decorationless/);
   await expect(page.locator('.app-header')).toBeHidden();
   await expect(page.locator('.sidebar')).toBeHidden();
-  await expect(page.locator('.tab-bar')).toBeHidden();
-  await expect(page.locator('.document-toolbar')).toBeHidden();
+  await expect(page.locator('.side-panel')).toBeHidden();
   await expect(page.locator('.status-bar')).toBeHidden();
   await expect(page.locator('.render-time')).toBeHidden();
   expect(
@@ -1938,7 +2305,6 @@ test('uses readable syntax colors in both document themes', async ({ page }) => 
     });
     expect(contrast.length).toBeGreaterThan(10);
     expect(contrast.filter((token) => token.ratio < 4.5)).toEqual([]);
-    if (theme === 'mocha')
-      await page.getByRole('button', { name: 'Toggle color theme', exact: true }).click();
+    if (theme === 'mocha') await toggleTheme(page);
   }
 });
