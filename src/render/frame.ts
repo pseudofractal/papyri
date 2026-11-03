@@ -104,6 +104,283 @@ function applyPresentation(presentation: Record<string, unknown>) {
 applyPresentation(payload);
 root.innerHTML = payload.trusted ? payload.html : sanitize(payload.html);
 resolveReferenceTargets(root);
+
+type MathSelection = { tex: string; display: boolean };
+
+function nearestMath(node: Node): Element | null {
+  const element = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+  return element?.closest('.katex') ?? null;
+}
+
+function mathFor(element: Element): MathSelection | null {
+  const annotation = element.querySelector('annotation[encoding="application/x-tex"]');
+  const tex = annotation?.textContent?.trim();
+  if (!tex) return null;
+  const display =
+    element.classList.contains('katex-display') ||
+    !!element.closest('.katex-display') ||
+    annotation?.closest('math')?.getAttribute('display') === 'block';
+  return { tex, display };
+}
+
+function mathMarkdown({ tex, display }: MathSelection): string {
+  return display ? `\n\n$$\n${tex}\n$$\n\n` : `$${tex}$`;
+}
+
+function expandedSelectionRange(selection: Selection): Range {
+  const range = selection.getRangeAt(0);
+  const expanded = range.cloneRange();
+  const startMath = nearestMath(range.startContainer);
+  if (startMath) expanded.setStartBefore(startMath);
+  const endMath = nearestMath(range.endContainer);
+  if (endMath) expanded.setEndAfter(endMath);
+  return expanded;
+}
+
+/** Replace KaTeX's rendered DOM with its TeX annotation for copied text. */
+function selectionText(selection: Selection): string {
+  const holder = document.createElement('div');
+  holder.append(expandedSelectionRange(selection).cloneContents());
+  for (const math of holder.querySelectorAll('.katex')) {
+    const source = mathFor(math);
+    if (source) math.replaceWith(document.createTextNode(mathMarkdown(source)));
+  }
+  const measure = document.createElement('div');
+  measure.style.cssText =
+    'position:fixed;left:-10000px;top:0;width:10000px;opacity:0;pointer-events:none;white-space:pre-wrap;';
+  measure.append(holder);
+  document.body.append(measure);
+  const text = measure.innerText.replace(/\n{3,}/g, '\n\n').trim();
+  measure.remove();
+  return text || selection.toString().trim();
+}
+
+function hasTopLevel(holder: Element, tag: string): boolean {
+  return [...holder.children].some((child) => child.tagName === tag);
+}
+
+function wrapPreview(holder: Element, shell: Element) {
+  while (holder.firstChild) shell.append(holder.firstChild);
+  holder.append(shell);
+}
+
+/** Restore block structure that cloneContents omits for partial selections. */
+function wrapPreviewStructure(holder: Element, selection: Selection) {
+  const startBlock = nearestSourceBlock(selection.getRangeAt(0).startContainer);
+  if (!startBlock) return;
+  if (!['TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH'].includes(startBlock.tagName)) {
+    if (!hasTopLevel(holder, startBlock.tagName))
+      wrapPreview(holder, startBlock.cloneNode(false) as Element);
+  }
+  const item = startBlock.closest('li');
+  const list = startBlock.closest('ul, ol');
+  if (list) {
+    if (item && startBlock.tagName !== 'LI' && !hasTopLevel(holder, 'LI'))
+      wrapPreview(holder, item.cloneNode(false) as Element);
+    if (!hasTopLevel(holder, list.tagName)) wrapPreview(holder, list.cloneNode(false) as Element);
+  }
+  const quote = startBlock.closest('blockquote');
+  if (quote && !hasTopLevel(holder, 'BLOCKQUOTE'))
+    wrapPreview(holder, quote.cloneNode(false) as Element);
+}
+
+/** Render a safe, bounded HTML preview of the selected content. */
+function selectionPreview(selection: Selection): string {
+  const holder = document.createElement('div');
+  holder.append(expandedSelectionRange(selection).cloneContents());
+  wrapPreviewStructure(holder, selection);
+  for (const element of holder.querySelectorAll('[id]')) element.removeAttribute('id');
+  for (const anchor of holder.querySelectorAll('a')) anchor.removeAttribute('href');
+  const html = DOMPurify.sanitize(holder.innerHTML, {
+    FORBID_TAGS: [
+      'img',
+      'picture',
+      'source',
+      'video',
+      'audio',
+      'iframe',
+      'object',
+      'embed',
+      'form',
+      'input',
+      'button',
+      'textarea',
+      'select',
+      'option',
+      'style',
+      'link',
+      'meta',
+      'base',
+    ],
+    FORBID_ATTR: ['id', 'srcset'],
+  });
+  return html.length <= 20_000 ? html : '';
+}
+
+let selectionHighlightFrame = 0;
+
+function updateMathSelectionHighlight() {
+  const selection = window.getSelection();
+  const highlighted = root.querySelectorAll('.katex.selection-highlight');
+  if (!selection || selection.isCollapsed) {
+    for (const element of highlighted) element.classList.remove('selection-highlight');
+    return;
+  }
+  const range = selection.getRangeAt(0);
+  const next = new Set<Element>();
+  for (const element of root.querySelectorAll('.katex')) {
+    if (range.intersectsNode(element)) next.add(element);
+  }
+  for (const element of highlighted)
+    if (!next.has(element)) element.classList.remove('selection-highlight');
+  for (const element of next) element.classList.add('selection-highlight');
+}
+
+function scheduleMathSelectionHighlight() {
+  if (selectionHighlightFrame) return;
+  selectionHighlightFrame = requestAnimationFrame(() => {
+    selectionHighlightFrame = 0;
+    updateMathSelectionHighlight();
+  });
+}
+
+document.addEventListener('selectionchange', scheduleMathSelectionHighlight);
+
+let lastSelectionStats = '';
+let selectionStatsTimer: ReturnType<typeof setTimeout> | undefined;
+
+function publishSelectionStats() {
+  if (payload.trusted) return;
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) {
+    if (lastSelectionStats !== '0:0') {
+      lastSelectionStats = '0:0';
+      notifyHost({ type: 'selection-stats', words: 0, characters: 0 });
+    }
+    return;
+  }
+  const text = selectionText(selection);
+  const words = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+  const characters = text.length;
+  const key = `${words}:${characters}`;
+  if (key === lastSelectionStats) return;
+  lastSelectionStats = key;
+  notifyHost({ type: 'selection-stats', words, characters });
+}
+
+function scheduleSelectionStats() {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) {
+    if (selectionStatsTimer) clearTimeout(selectionStatsTimer);
+    selectionStatsTimer = undefined;
+    publishSelectionStats();
+    return;
+  }
+  if (selectionStatsTimer) clearTimeout(selectionStatsTimer);
+  selectionStatsTimer = setTimeout(() => {
+    selectionStatsTimer = undefined;
+    publishSelectionStats();
+  }, 90);
+}
+
+document.addEventListener('selectionchange', scheduleSelectionStats);
+
+function nearestSourceBlock(node: Node): Element | null {
+  let element = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+  for (; element; element = element.parentElement) {
+    const start = Number((element as HTMLElement).dataset.sourceStart);
+    const end = Number((element as HTMLElement).dataset.sourceEnd);
+    if (Number.isInteger(start) && Number.isInteger(end) && start >= 0 && end > start)
+      return element;
+  }
+  return null;
+}
+
+function sourceSlice(markdown: string, start: number, end: number): string {
+  const lines = markdown.split(/\r?\n/);
+  if (end > lines.length) return '';
+  return lines.slice(start, end).join('\n').trim().slice(0, 100_000);
+}
+
+function sourceForSelection(selection: Selection, fallback: string): string {
+  const markdown = typeof payload.markdown === 'string' ? payload.markdown : '';
+  if (!markdown) return fallback;
+  const range = selection.getRangeAt(0);
+  const startBlock = nearestSourceBlock(range.startContainer);
+  const endBlock = nearestSourceBlock(range.endContainer);
+  if (startBlock && endBlock) {
+    const source = sourceSlice(
+      markdown,
+      Number((startBlock as HTMLElement).dataset.sourceStart),
+      Number((endBlock as HTMLElement).dataset.sourceEnd),
+    );
+    if (source) return source;
+  }
+  // Selections that begin or end between blocks (select-all, for example)
+  // still cover whole line-mapped blocks.
+  const blocks = [...root.querySelectorAll<HTMLElement>('[data-source-start]')]
+    .filter((element) => range.intersectsNode(element))
+    .map((element) => ({
+      start: Number(element.dataset.sourceStart),
+      end: Number(element.dataset.sourceEnd),
+    }))
+    .filter(({ start, end }) => Number.isInteger(start) && Number.isInteger(end) && end > start);
+  if (blocks.length) {
+    const source = sourceSlice(
+      markdown,
+      Math.min(...blocks.map(({ start }) => start)),
+      Math.max(...blocks.map(({ end }) => end)),
+    );
+    if (source) return source;
+  }
+  return fallback;
+}
+
+// The preview never exposes WebKit's navigation menu. Editable controls keep
+// their native editing menu; safe previews route selections to the host.
+document.addEventListener('contextmenu', (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (target?.closest('input, textarea, [contenteditable]:not([contenteditable="false"])')) return;
+  event.preventDefault();
+  if (payload.trusted) return;
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) {
+    notifyHost({ type: 'context-menu', x: event.clientX, y: event.clientY });
+    return;
+  }
+  const text = selectionText(selection);
+  if (!text) return;
+  notifyHost({
+    type: 'selection-menu',
+    text: text.slice(0, 50_000),
+    source: sourceForSelection(selection, text).slice(0, 100_000),
+    preview: selectionPreview(selection),
+    x: event.clientX,
+    y: event.clientY,
+  });
+});
+if (!payload.trusted) {
+  document.addEventListener('keydown', (event) => {
+    const modifier = event.ctrlKey || event.metaKey;
+    const copyKey = event.key.toLowerCase() === 'c' || event.code === 'KeyC';
+    if (!modifier || event.altKey || !copyKey) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest('input, textarea, [contenteditable]:not([contenteditable="false"])'))
+      return;
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    const text = selectionText(selection);
+    if (!text) return;
+    event.preventDefault();
+    event.stopPropagation();
+    notifyHost({
+      type: 'selection-copy',
+      kind: event.shiftKey ? 'text' : 'source',
+      text: text.slice(0, 50_000),
+      source: sourceForSelection(selection, text).slice(0, 100_000),
+    });
+  });
+}
 installLinkPreviews(root, payload.network);
 installImageViewers(root, notifyHost);
 if (payload.trusted) {

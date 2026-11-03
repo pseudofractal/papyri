@@ -21,7 +21,7 @@ describe('Markdown and mathematics', () => {
     const result = renderMarkdown(
       '# Hello\n\n# Hello\n\n~~gone~~\n\n- [x] done\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\nNote[^x]\n\n[^x]: Footnote\n\n<details><summary>More</summary>HTML</details>\n\n```ts\nconst value = 1;\n```',
     );
-    expect(result.html).toContain('<table>');
+    expect(result.html).toMatch(/<table[ >]/);
     expect(result.html).toContain('<s>gone</s>');
     expect(result.html).toContain('type="checkbox"');
     expect(result.html).toContain('footnote');
@@ -166,9 +166,10 @@ Inline \(e^2\) and [label](https://example.org).`,
     const html = renderMarkdown(
       'See [1], [2], and [3].\n\n## References\n\n1. First\n   1. Detail\n   2. More detail\n2. Second\n   - Note\n3. Third',
     ).html;
-    expect(html).toContain('<li id="reference-1" data-papyri-target="reference-1">First');
-    expect(html).toContain('<li id="reference-2" data-papyri-target="reference-2">Second');
-    expect(html).toContain('<li id="reference-3" data-papyri-target="reference-3">Third');
+    expect(html).toMatch(/<li id="reference-1"[^>]*>First/);
+    expect(html).toMatch(/<li id="reference-2"[^>]*>Second/);
+    expect(html).toMatch(/<li id="reference-3"[^>]*>Third/);
+    expect(html.match(/<li id="reference-1"[^>]*data-papyri-target="reference-1"/)).toBeTruthy();
     expect((html.match(/data-papyri-target="reference-/g) || []).length).toBe(3);
   });
 });
@@ -200,4 +201,23 @@ it('keeps inline image data URIs, including SVG and raw HTML images', () => {
   expect(html).toContain(`src="${png}"`);
   expect(html).toContain(`src="${svg}"`);
   expect(html).toContain('alt="Raw vector"');
+});
+
+it('maps display math blocks back to their delimited source', () => {
+  const html = renderMarkdown(['$$', '\\frac{1}{3}', '$$'].join('\n')).html;
+  expect(html).toMatch(
+    /<div[^>]*data-source-start="0"[^>]*data-source-end="3"[^>]*class="math-block"/,
+  );
+});
+
+it('annotates block elements with Markdown source line ranges', () => {
+  const html = renderMarkdown(
+    ['# Heading', '', 'Paragraph **bold**.', '', '- one', '- two'].join('\n'),
+  ).html;
+  expect(html).toContain('data-source-start="0"');
+  expect(html).toContain('data-source-end="1"');
+  expect(html).toContain('data-source-start="2"');
+  expect(html).toContain('data-source-end="3"');
+  expect(html).toContain('data-source-start="4"');
+  expect(html).toContain('data-source-end="6"');
 });

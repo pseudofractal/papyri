@@ -71,8 +71,13 @@ export function configureMath(markdown: InstanceType<typeof MarkdownIt>, pairs: 
   )) {
     const render = markdown.renderer.rules[name]!;
     markdown.renderer.rules[name] = (tokens, index, options, env, renderer) => {
-      const html = render(tokens, index, options, env, renderer);
-      const id = tokens[index].meta?.equationId;
+      const token = tokens[index];
+      let html = render(tokens, index, options, env, renderer);
+      if (token.map) {
+        const attrs = ` data-source-start="${token.map[0]}" data-source-end="${token.map[1]}"`;
+        html = html.replace(/^<(\w+)/, `<$1${attrs}`);
+      }
+      const id = token.meta?.equationId;
       return typeof id === 'string'
         ? `<span id="${markdown.utils.escapeHtml(id)}" data-papyri-target="${markdown.utils.escapeHtml(id)}" class="equation-target">${html}</span>`
         : html;

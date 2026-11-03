@@ -29,6 +29,10 @@
     query,
     anchor,
     onanchorconsumed,
+    onselection,
+    onselectioncopy,
+    onpagecontext,
+    onselectionstats,
     onlink,
     onheadings,
     onscroll,
@@ -46,6 +50,16 @@
     query: string;
     anchor: AnchorTarget | null;
     onanchorconsumed?: (request: number) => void;
+    onselection?: (info: {
+      text: string;
+      source: string;
+      preview: string;
+      x: number;
+      y: number;
+    }) => void;
+    onselectioncopy?: (info: { kind: 'source' | 'text'; text: string; source: string }) => void;
+    onpagecontext?: (info: { x: number; y: number }) => void;
+    onselectionstats?: (info: { words: number; characters: number }) => void;
     onlink: (href: string) => void;
     onheadings: (headings: Heading[]) => void;
     onscroll: (path: string, y: number) => void;
@@ -175,7 +189,7 @@
           ]);
           const html = await prepareAssets(result.html, currentSource, path);
           if (!controller.signal.aborted) traceStartup('assets-ready');
-          document = await buildFrame(html, prefs, trust, initialScroll, channel);
+          document = await buildFrame(html, prefs, trust, initialScroll, channel, text);
           headings = result.headings;
           elapsed = Math.round(result.elapsed);
         }
@@ -303,6 +317,69 @@
               heading.level <= 6,
           ),
       );
+      return;
+    }
+    if (
+      data.type === 'selection-stats' &&
+      allowsMessages &&
+      !tab.bytes &&
+      Number.isInteger(data.words) &&
+      Number.isInteger(data.characters) &&
+      data.words >= 0 &&
+      data.characters >= 0
+    ) {
+      onselectionstats?.({
+        words: Math.min(data.words, 10_000_000),
+        characters: Math.min(data.characters, 100_000_000),
+      });
+      return;
+    }
+    if (
+      data.type === 'context-menu' &&
+      allowsMessages &&
+      !tab.bytes &&
+      Number.isFinite(data.x) &&
+      Number.isFinite(data.y)
+    ) {
+      const bounds = frame?.getBoundingClientRect();
+      if (bounds) onpagecontext?.({ x: bounds.left + data.x, y: bounds.top + data.y });
+      return;
+    }
+    if (
+      data.type === 'selection-copy' &&
+      allowsMessages &&
+      !tab.bytes &&
+      (data.kind === 'source' || data.kind === 'text') &&
+      typeof data.text === 'string' &&
+      typeof data.source === 'string'
+    ) {
+      onselectioncopy?.({
+        kind: data.kind,
+        text: data.text.slice(0, 50_000),
+        source: data.source.slice(0, 100_000),
+      });
+      return;
+    }
+    if (
+      data.type === 'selection-menu' &&
+      allowsMessages &&
+      !tab.bytes &&
+      typeof data.text === 'string' &&
+      typeof data.source === 'string' &&
+      typeof data.preview === 'string' &&
+      Number.isFinite(data.x) &&
+      Number.isFinite(data.y)
+    ) {
+      const bounds = frame?.getBoundingClientRect();
+      if (bounds) {
+        onselection?.({
+          text: data.text.slice(0, 50_000),
+          source: data.source.slice(0, 100_000),
+          preview: data.preview.slice(0, 20_000),
+          x: bounds.left + data.x,
+          y: bounds.top + data.y,
+        });
+      }
       return;
     }
     if (data.type === 'ready') {

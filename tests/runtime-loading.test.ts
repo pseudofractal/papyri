@@ -46,7 +46,7 @@ describe('renderer loading', () => {
           ? buildPdfFrame(defaults, 0, 'channel', '/test.pdf')
           : failedFile === 'diagrams.js'
             ? loadDiagramRuntime()
-            : buildFrame('diagram-source', defaults, false, 0, 'channel');
+            : buildFrame('diagram-source', defaults, false, 0, 'channel', '# Source');
 
       await expect(build()).rejects.toThrow('503');
       await expect(build()).resolves.toEqual(expect.any(String));

@@ -48,6 +48,13 @@ export function renderMarkdown(
   };
   configureMath(markdown, delimiters);
   configureReferences(markdown);
+  markdown.core.ruler.push('papyri_source_map', (state) => {
+    for (const token of state.tokens) {
+      if (!token.map || token.nesting === -1) continue;
+      token.attrSet('data-source-start', String(token.map[0]));
+      token.attrSet('data-source-end', String(token.map[1]));
+    }
+  });
   const defaultFence = markdown.renderer.rules.fence!;
   markdown.renderer.rules.fence = (tokens, index, options, env, renderer) => {
     const token = tokens[index];

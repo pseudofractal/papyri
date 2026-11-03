@@ -83,11 +83,13 @@ export async function buildFrame(
   trusted: boolean,
   scroll: number,
   channel: string,
+  markdown: string,
 ): Promise<string> {
   const [script, css] = await loadRuntime();
   const nonce = frameNonce();
   const data = JSON.stringify({
     html,
+    markdown: trusted ? '' : markdown,
     trusted,
     network: prefs.network,
     theme: prefs.theme,
