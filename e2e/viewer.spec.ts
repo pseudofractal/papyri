@@ -1530,6 +1530,7 @@ test('suppresses WebKit navigation menus in the app and document preview', async
 });
 
 test('opens context menus for app chrome, tabs, files, and documents', async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) < 700, 'Context menus are desktop interactions.');
   await page.goto('/');
   const frame = page.frameLocator('iframe');
   await expect(frame.getByRole('heading', { name: 'Papyri' })).toBeVisible();
