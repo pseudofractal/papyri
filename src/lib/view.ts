@@ -5,7 +5,11 @@ export const MAX_PDF_ZOOM = 1000;
 export const ZOOM_STEP = 10;
 export const DEFAULT_SIDEBAR_WIDTH = 254;
 export const MIN_SIDEBAR_WIDTH = 180;
-export const MAX_SIDEBAR_WIDTH = 600;
+export const MAX_SIDEBAR_WIDTH = 10000;
+export const DEFAULT_BROWSER_WIDTH = 440;
+export const MIN_BROWSER_WIDTH = 280;
+export const MAX_BROWSER_WIDTH = 10000;
+export const DEFAULT_BROWSER_URL = 'https://chatgpt.com/';
 export const DEFAULT_PALETTE_WIDTH_PERCENT = 70;
 export const DEFAULT_PALETTE_HEIGHT_PERCENT = 60;
 export const MIN_PALETTE_PERCENT = 40;
@@ -93,6 +97,9 @@ export function zoomShortcut(
 }
 export function clampSidebarWidth(value: number): number {
   return Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, Math.round(value)));
+}
+export function clampBrowserWidth(value: number): number {
+  return Math.max(MIN_BROWSER_WIDTH, Math.min(MAX_BROWSER_WIDTH, Math.round(value)));
 }
 export function clampPalettePercent(value: number): number {
   return Math.max(MIN_PALETTE_PERCENT, Math.min(MAX_PALETTE_PERCENT, Math.round(value)));

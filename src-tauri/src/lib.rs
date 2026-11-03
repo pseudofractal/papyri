@@ -1,3 +1,4 @@
+mod browser;
 mod cli;
 mod cli_args;
 mod cli_output;
@@ -39,6 +40,19 @@ pub fn run() {
       commands::pick_path,
       commands::save_diagram,
       commands::open_external,
+      browser::browser_show,
+      browser::browser_select,
+      browser::browser_quote,
+      browser::browser_search_wikipedia,
+      browser::browser_open_window,
+      browser::browser_set_zoom,
+      browser::browser_navigate,
+      browser::browser_back,
+      browser::browser_forward,
+      browser::browser_reload,
+      browser::browser_stop,
+      browser::browser_set_visible,
+      browser::browser_set_bounds,
       control::control_ready,
       control::control_respond,
       control::control_emit
@@ -58,6 +72,19 @@ pub fn run() {
         .default_window_icon()
         .ok_or("Application icon is unavailable")?;
       window.set_icon(icon.clone())?;
+      let data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Application data directory is unavailable: {error}"))?
+        .join("browser");
+      let cache_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|error| format!("Application cache directory is unavailable: {error}"))?
+        .join("browser");
+      if let Err(error) = browser::install(&window, app.handle().clone(), data_dir, cache_dir) {
+        eprintln!("Papyri browser panel unavailable: {error}");
+      }
       if let Err(error) = control::start(app.handle().clone()) {
         eprintln!("Papyri control socket unavailable: {error}");
       }

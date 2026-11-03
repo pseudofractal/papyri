@@ -37,6 +37,8 @@ export interface Preferences {
   fitWidth: boolean;
   uiZoom: number;
   sidebarWidth: number;
+  browserWidth: number;
+  browserUrl: string;
   paletteWidth: number;
   paletteHeight: number;
   paletteMaxWidth: number;

@@ -58,7 +58,7 @@
               runHook postInstall
             '';
           };
-          nativeLibraries = with pkgs; [ glib gtk3 gdk-pixbuf cairo pango atk dbus webkitgtk_4_1 libsoup_3 openssl librsvg stdenv.cc.cc.lib ];
+          nativeLibraries = with pkgs; [ glib glib-networking gtk3 gdk-pixbuf cairo pango atk dbus webkitgtk_4_1 libsoup_3 openssl librsvg cacert stdenv.cc.cc.lib ];
           desktop = pkgs.rustPlatform.buildRustPackage {
             pname = "papyri";
             version = manifest.version;
@@ -75,6 +75,10 @@
             PAPYRI_PRLIMIT_BINARY = "${pkgs.util-linux}/bin/prlimit";
             postPatch = ''
               substituteInPlace tauri.conf.json --replace-fail '"../dist"' '"${web}/dist"'
+            '';
+            preFixup = ''
+              gappsWrapperArgs+=(--set GIO_EXTRA_MODULES "${pkgs.glib-networking}/lib/gio/modules")
+              gappsWrapperArgs+=(--set SSL_CERT_FILE "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt")
             '';
             preCheck = "cargo fmt --all --check";
             postInstall = ''
@@ -146,6 +150,8 @@
         PAPYRI_PRLIMIT_BINARY = "${p.pkgs.util-linux}/bin/prlimit";
         buildInputs = p.nativeLibraries;
         LD_LIBRARY_PATH = p.pkgs.lib.makeLibraryPath p.nativeLibraries;
+        GIO_EXTRA_MODULES = "${p.pkgs.glib-networking}/lib/gio/modules";
+        SSL_CERT_FILE = "${p.pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
         PLAYWRIGHT_CHROMIUM_EXECUTABLE = "${p.pkgs.chromium}/bin/chromium";
         shellHook = ''
           export PATH="$PWD/node_modules/.bin:$PATH"

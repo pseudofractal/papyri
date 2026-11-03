@@ -204,10 +204,10 @@ returns a focused `{"tabs":[...]}` object. Documents with scripts enabled do not
 update the saved scroll bookmark, but a control-initiated scroll still resolves
 with the frame's resulting position so `papyri ctl scroll` can report success.
 
-Decoration-less mode hides the header, explorer, tabs, document toolbar,
-outline, and status bar so the preview fills the viewport. The command palette
-and all keyboard shortcuts remain available; `Esc` leaves the mode when no
-dialog or search is open. Toggle it with `Ctrl Shift D` or
+Decoration-less mode hides the one-line shell, explorer, right panel, and status
+bar so the preview fills the viewport. The command palette and all keyboard
+shortcuts remain available; `Esc` leaves the mode when no dialog or search is
+open. Toggle it with `Ctrl Shift D` or
 `papyri ctl decorationless [on|off|toggle]`. Launch straight into the mode with
 `papyri --decorationless notes.md` (or `-d`); if a window is already running,
 the flag applies to that window instead of starting a second instance. The mode
@@ -266,10 +266,12 @@ shown after a compilation failure.
 
 `preferences.set` accepts a partial object. Unknown keys are rejected. Supported
 keys are `theme`, `network`, `fitWidth`, `documentZoom`, `pdfZoom`, `uiZoom`,
-`sidebarWidth`, `paletteWidth`, `paletteHeight`, `paletteMaxWidth`,
-`paletteMaxHeight`, `uiFont`, `textFont`, `codeFont`, `mathFont`, `typstPath`,
-`latexEngine`, `latexPaths`, and `delimiters`. Palette percentages range from
-40 to 100. Palette pixel limits range from 320 to 2000 wide and 240 to 1600 tall.
+`sidebarWidth`, `browserWidth`, `browserUrl`, `paletteWidth`, `paletteHeight`,
+`paletteMaxWidth`, `paletteMaxHeight`, `uiFont`, `textFont`, `codeFont`,
+`mathFont`, `typstPath`, `latexEngine`, `latexPaths`, and `delimiters`. Palette
+percentages range from 40 to 100. Palette pixel limits range from 320 to 2000
+wide and 240 to 1600 tall. `browserWidth` ranges from 280 to 1000, and
+`browserUrl` must be an HTTP(S) address or `about:blank`.
 Font values are CSS `font-family` lists; `mathFont` may be empty to keep KaTeX's
 bundled fonts.
 Numeric zoom and sidebar values are clamped to the same limits as the settings

@@ -2509,6 +2509,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "getrandom 0.3.4",
+ "gtk",
  "libc",
  "serde",
  "serde_json",
@@ -2516,6 +2517,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
+ "webkit2gtk",
 ]
 
 [[package]]

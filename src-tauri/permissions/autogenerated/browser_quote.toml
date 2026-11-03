@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-browser-quote"
+description = "Enables the browser_quote command without any pre-configured scope."
+commands.allow = ["browser_quote"]
+
+[[permission]]
+identifier = "deny-browser-quote"
+description = "Denies the browser_quote command without any pre-configured scope."
+commands.deny = ["browser_quote"]

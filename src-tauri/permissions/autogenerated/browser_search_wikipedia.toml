@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-browser-search-wikipedia"
+description = "Enables the browser_search_wikipedia command without any pre-configured scope."
+commands.allow = ["browser_search_wikipedia"]
+
+[[permission]]
+identifier = "deny-browser-search-wikipedia"
+description = "Denies the browser_search_wikipedia command without any pre-configured scope."
+commands.deny = ["browser_search_wikipedia"]

@@ -53,6 +53,7 @@ describe('preference updates', () => {
       pdfZoom: 5000,
       uiZoom: 999,
       sidebarWidth: 10,
+      browserWidth: 50000,
       paletteWidth: 1,
       paletteHeight: 999,
       paletteMaxWidth: 10,
@@ -62,10 +63,26 @@ describe('preference updates', () => {
     expect(next.pdfZoom).toBe(1000);
     expect(next.uiZoom).toBe(200);
     expect(next.sidebarWidth).toBe(180);
+    expect(next.browserWidth).toBe(10000);
     expect(next.paletteWidth).toBe(40);
     expect(next.paletteHeight).toBe(100);
     expect(next.paletteMaxWidth).toBe(320);
     expect(next.paletteMaxHeight).toBe(1600);
+  });
+
+  it('validates the remembered browser address and width', () => {
+    const next = mergePreferences(structuredClone(defaults), {
+      browserWidth: 10,
+      browserUrl: 'https://chatgpt.com/c/example',
+    });
+    expect(next.browserWidth).toBe(280);
+    expect(next.browserUrl).toBe('https://chatgpt.com/c/example');
+    expect(() =>
+      mergePreferences(structuredClone(defaults), { browserUrl: 'file:///etc/passwd' }),
+    ).toThrow('HTTP(S)');
+    expect(() =>
+      mergePreferences(structuredClone(defaults), { browserUrl: 'javascript:alert(1)' }),
+    ).toThrow('HTTP(S)');
   });
 
   it('accepts custom font lists, normalizes whitespace, and allows an empty math font', () => {

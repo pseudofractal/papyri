@@ -1,9 +1,12 @@
 import {
   clampZoom,
   clampSidebarWidth,
+  clampBrowserWidth,
   clampPalettePercent,
   clampPaletteMaxWidth,
   clampPaletteMaxHeight,
+  DEFAULT_BROWSER_WIDTH,
+  DEFAULT_BROWSER_URL,
   DEFAULT_PALETTE_WIDTH_PERCENT,
   DEFAULT_PALETTE_HEIGHT_PERCENT,
   DEFAULT_PALETTE_MAX_WIDTH,
@@ -26,6 +29,8 @@ export const defaults: Preferences = {
   fitWidth: false,
   uiZoom: 100,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
+  browserWidth: DEFAULT_BROWSER_WIDTH,
+  browserUrl: DEFAULT_BROWSER_URL,
   paletteWidth: DEFAULT_PALETTE_WIDTH_PERCENT,
   paletteHeight: DEFAULT_PALETTE_HEIGHT_PERCENT,
   paletteMaxWidth: DEFAULT_PALETTE_MAX_WIDTH,
@@ -43,6 +48,15 @@ export const defaults: Preferences = {
 };
 const MAX_FONT_FAMILY_LENGTH = 256;
 const INVALID_FONT_FAMILY_CHARACTERS = ';{}<>!';
+const MAX_BROWSER_URL_LENGTH = 2048;
+
+export function validBrowserUrl(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= MAX_BROWSER_URL_LENGTH &&
+    (/^https?:\/\//i.test(value) || value === 'about:blank')
+  );
+}
 function hasInvalidFontCharacters(value: string): boolean {
   for (const character of value) {
     const code = character.codePointAt(0)!;
@@ -127,6 +141,10 @@ export function loadPreferences(): Preferences {
       sidebarWidth: Number.isFinite(stored.sidebarWidth)
         ? clampSidebarWidth(stored.sidebarWidth)
         : DEFAULT_SIDEBAR_WIDTH,
+      browserWidth: Number.isFinite(stored.browserWidth)
+        ? clampBrowserWidth(stored.browserWidth)
+        : DEFAULT_BROWSER_WIDTH,
+      browserUrl: validBrowserUrl(stored.browserUrl) ? stored.browserUrl : DEFAULT_BROWSER_URL,
       paletteWidth: Number.isFinite(stored.paletteWidth)
         ? clampPalettePercent(stored.paletteWidth)
         : DEFAULT_PALETTE_WIDTH_PERCENT,
@@ -203,6 +221,13 @@ export function mergePreferences(
         break;
       case 'sidebarWidth':
         next.sidebarWidth = clampSidebarWidth(finitePreference(value, 'sidebarWidth'));
+        break;
+      case 'browserWidth':
+        next.browserWidth = clampBrowserWidth(finitePreference(value, 'browserWidth'));
+        break;
+      case 'browserUrl':
+        if (!validBrowserUrl(value)) throw new Error('`browserUrl` must be an HTTP(S) URL.');
+        next.browserUrl = value;
         break;
       case 'paletteWidth':
         next.paletteWidth = clampPalettePercent(finitePreference(value, 'paletteWidth'));

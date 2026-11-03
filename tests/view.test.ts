@@ -4,6 +4,7 @@ import {
   zoomShortcut,
   viewShortcut,
   clampSidebarWidth,
+  clampBrowserWidth,
   MIN_PDF_ZOOM,
   MAX_PDF_ZOOM,
 } from '../src/lib/view';
@@ -31,7 +32,10 @@ describe('view preferences', () => {
     expect(changeZoom(250, 'in', MIN_PDF_ZOOM, MAX_PDF_ZOOM)).toBe(260);
     expect(changeZoom(10, 'out', MIN_PDF_ZOOM, MAX_PDF_ZOOM)).toBe(10);
     expect(clampSidebarWidth(1)).toBe(180);
-    expect(clampSidebarWidth(900)).toBe(600);
+    expect(clampSidebarWidth(900)).toBe(900);
+    expect(clampSidebarWidth(50000)).toBe(10000);
+    expect(clampBrowserWidth(1)).toBe(280);
+    expect(clampBrowserWidth(50000)).toBe(10000);
   });
   it('migrates unchanged legacy math defaults and preserves custom pairs', () => {
     const legacy = {
@@ -64,6 +68,8 @@ describe('view preferences', () => {
           textFont: '',
           codeFont: 42,
           mathFont: 'STIX Two Math, serif',
+          browserWidth: 10,
+          browserUrl: 'file:///etc/passwd',
         }),
     });
     const loaded = loadPreferences();
@@ -75,6 +81,8 @@ describe('view preferences', () => {
     expect(loaded.textFont).toBe(defaults.textFont);
     expect(loaded.codeFont).toBe(defaults.codeFont);
     expect(loaded.mathFont).toBe('STIX Two Math, serif');
+    expect(loaded.browserWidth).toBe(280);
+    expect(loaded.browserUrl).toBe(defaults.browserUrl);
     vi.unstubAllGlobals();
   });
 });
