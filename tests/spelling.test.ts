@@ -1,5 +1,10 @@
 import { expect, it } from 'vitest';
-import { buildSpellingDictionary, suggestSpelling } from '../src/lib/spelling';
+import {
+  buildSpellingDictionary,
+  suggestSpelling,
+  suggestWithSpellchecker,
+  type SpellCheckerLike,
+} from '../src/lib/spelling';
 
 const dictionary = buildSpellingDictionary([
   ['markdown settings welcome open gaussian integral paper typst latex'],
@@ -47,4 +52,21 @@ it('builds vocabulary from local names and common application terms', () => {
     corrected: 'showcase',
     display: 'showcase',
   });
+});
+
+it('falls back to a full dictionary and skips correctly spelled words', () => {
+  const checker: SpellCheckerLike = {
+    correct: (word) => word === 'receive' || word === 'settings',
+    suggest: (word) => (word === 'recieve' ? ['receive'] : []),
+  };
+  expect(suggestWithSpellchecker('recieve', checker)).toEqual({
+    corrected: 'receive',
+    display: 'receive',
+  });
+  expect(suggestWithSpellchecker('>recieve', checker)).toEqual({
+    corrected: '>receive',
+    display: 'receive',
+  });
+  expect(suggestWithSpellchecker('receive', checker)).toBeNull();
+  expect(suggestWithSpellchecker('zzzzzz', checker)).toBeNull();
 });

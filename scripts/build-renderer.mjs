@@ -3,10 +3,19 @@ import { copyFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 
 const licenseDirectory = 'public/pdf-licenses';
 const resourceDirectory = 'public/pdf-resources';
+const dictionaryDirectory = 'public/dictionaries';
 const resourceNames = [];
 await mkdir(licenseDirectory, { recursive: true });
 await mkdir(resourceDirectory, { recursive: true });
+await mkdir(dictionaryDirectory, { recursive: true });
 await copyFile('node_modules/pdfjs-dist/LICENSE', `${licenseDirectory}/PDFJS.txt`);
+for (const [source, destination] of [
+  ['node_modules/dictionary-en/index.aff', 'en.aff'],
+  ['node_modules/dictionary-en/index.dic', 'en.dic'],
+  ['node_modules/dictionary-en/license', 'LICENSE-dictionary.txt'],
+  ['node_modules/nspell/license', 'LICENSE-nspell.txt'],
+])
+  await copyFile(source, `${dictionaryDirectory}/${destination}`);
 for (const directory of ['cmaps', 'standard_fonts', 'wasm']) {
   for (const name of await readdir(`node_modules/pdfjs-dist/${directory}`)) {
     if (/\.(bcmap|pfb|ttf|wasm)$/.test(name) && !name.startsWith('quickjs')) {

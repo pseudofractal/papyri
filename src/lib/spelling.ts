@@ -10,6 +10,10 @@ const COMMON_WORDS =
   );
 
 export type SpellingDictionary = ReadonlyMap<string, number>;
+export interface SpellCheckerLike {
+  correct(word: string): boolean;
+  suggest(word: string): string[];
+}
 export interface SpellingSuggestion {
   /** The full corrected query, including any leading search prefix. */
   corrected: string;
@@ -104,24 +108,18 @@ function applyCase(original: string, replacement: string): string {
   return replacement;
 }
 
-/**
- * Suggest one corrected query for nearby misspelled words. The caller presents
- * the result as an option; this function never changes the active query.
- */
-export function suggestSpelling(
-  query: string,
-  dictionary: SpellingDictionary,
-): SpellingSuggestion | null {
-  if (!query.trim() || !dictionary.size) return null;
+type WordLookup = (word: string) => string | undefined;
+
+function suggestUsing(query: string, lookup: WordLookup): SpellingSuggestion | null {
+  if (!query.trim()) return null;
   const replacements: { start: number; length: number; text: string }[] = [];
   for (const match of [...query.matchAll(WORD_PATTERN)].reverse()) {
     const token = match[0];
     if (token.length < MIN_QUERY_WORD_LENGTH || token.length > MAX_WORD_LENGTH || /\d/.test(token))
       continue;
     const lower = token.toLocaleLowerCase();
-    if (dictionary.has(lower)) continue;
-    const candidate = closestWord(lower, dictionary, maxDistance(token.length));
-    if (!candidate) continue;
+    const candidate = lookup(lower);
+    if (!candidate || candidate.toLocaleLowerCase() === lower) continue;
     replacements.push({
       start: match.index,
       length: token.length,
@@ -139,4 +137,30 @@ export function suggestSpelling(
   const prefix = /^[>@%?~#]\s*/.exec(corrected);
   const display = (prefix ? corrected.slice(prefix[0].length) : corrected).trim();
   return display ? { corrected, display } : null;
+}
+
+/**
+ * Suggest one corrected query for nearby misspelled local names. The caller
+ * presents the result as an option; this function never changes the active query.
+ */
+export function suggestSpelling(
+  query: string,
+  dictionary: SpellingDictionary,
+): SpellingSuggestion | null {
+  if (!dictionary.size) return null;
+  return suggestUsing(query, (word) =>
+    dictionary.has(word) ? undefined : closestWord(word, dictionary, maxDistance(word.length)),
+  );
+}
+
+/** Suggest from a real spell checker when the local vocabulary has no match. */
+export function suggestWithSpellchecker(
+  query: string,
+  checker: SpellCheckerLike,
+): SpellingSuggestion | null {
+  return suggestUsing(query, (word) => {
+    if (checker.correct(word)) return undefined;
+    const suggestion = checker.suggest(word)[0];
+    return suggestion && suggestion.toLocaleLowerCase() !== word ? suggestion : undefined;
+  });
 }

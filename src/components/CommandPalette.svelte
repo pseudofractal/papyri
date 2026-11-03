@@ -50,7 +50,13 @@
     type ContentMatch,
   } from '../lib/palette';
   import { basename, dirname, isLatex, isMarkdown, isPdf, isTypst } from '../lib/paths';
-  import { buildSpellingDictionary, suggestSpelling } from '../lib/spelling';
+  import {
+    buildSpellingDictionary,
+    suggestSpelling,
+    suggestWithSpellchecker,
+    type SpellCheckerLike,
+  } from '../lib/spelling';
+  import { loadEnglishSpellchecker } from '../lib/dictionary';
   import type { RecentFolder } from '../lib/recent';
   import type { Heading, Source } from '../lib/types';
 
@@ -198,6 +204,8 @@
   let contentLoading = $state(false);
   let contentInaccessible = $state(0);
   let contentTruncated = $state(false);
+  let englishSpell = $state<SpellCheckerLike | null>(null);
+  let englishSpellLoading = false;
   const scopeOptions = $derived.by(() => {
     const options: { value: SearchScope; label: string }[] = [
       { value: 'current', label: 'Folder' },
@@ -229,9 +237,15 @@
       [directory, workspaceRoot],
     ]),
   );
-  const spelling = $derived(
+  const localSpelling = $derived(
     effectiveFilter === 'pages' ? null : suggestSpelling(query, spellingDictionary),
   );
+  const dictionarySpelling = $derived(
+    effectiveFilter === 'pages' || localSpelling || !englishSpell
+      ? null
+      : suggestWithSpellchecker(query, englishSpell),
+  );
+  const spelling = $derived(localSpelling ?? dictionarySpelling);
   const placeholder = $derived(
     effectiveFilter === 'commands'
       ? 'Search commands…'
@@ -466,6 +480,20 @@
         .getElementById(`palette-filter-${activeId}`)
         ?.scrollIntoView({ block: 'nearest', inline: 'nearest' }),
     );
+  });
+  $effect(() => {
+    if (!query.trim() || englishSpell || englishSpellLoading) return;
+    englishSpellLoading = true;
+    void loadEnglishSpellchecker()
+      .then((checker) => {
+        englishSpell = checker;
+      })
+      .catch(() => {
+        // Local spelling suggestions still work when the bundled dictionary is unavailable.
+      })
+      .finally(() => {
+        englishSpellLoading = false;
+      });
   });
   $effect(() => {
     const currentSource = source;

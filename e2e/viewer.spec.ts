@@ -243,6 +243,12 @@ test('filters by result type, syncs prefixes, and corrects spelling', async ({ p
   await correction.click();
   await expect(search).toHaveValue('>settings');
   await expect(dialog.getByRole('option', { name: /Open settings/ })).toBeVisible();
+  await dialog.getByRole('button', { name: 'All' }).click();
+  await search.fill('recieve');
+  const dictionaryCorrection = dialog.getByRole('option', { name: /Did you mean .*receive/ });
+  await expect(dictionaryCorrection).toBeVisible({ timeout: 15_000 });
+  await dictionaryCorrection.click();
+  await expect(search).toHaveValue('receive');
 });
 
 test('shows recently opened folders and navigates back to them', async ({ page }) => {
