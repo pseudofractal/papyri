@@ -1,0 +1,976 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Papyri — selection menu directions</title>
+    <style>
+      :root {
+        --base: #1e1e2e;
+        --mantle: #181825;
+        --crust: #11111b;
+        --surface0: #313244;
+        --surface1: #45475a;
+        --surface2: #585b70;
+        --text: #cdd6f4;
+        --subtext1: #bac2de;
+        --subtext0: #a6adc8;
+        --overlay: #6c7086;
+        --mauve: #cba6f7;
+        --lavender: #b4befe;
+        --blue: #89b4fa;
+        --green: #a6e3a1;
+        --peach: #fab387;
+        --yellow: #f9e2af;
+        --red: #f38ba8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: var(--crust);
+        color: var(--text);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+      }
+      body {
+        padding: 38px;
+        display: flex;
+        flex-direction: column;
+        gap: 34px;
+      }
+      .sample {
+        width: 1000px;
+      }
+      .sample-head {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        padding: 0 4px 10px;
+      }
+      .sample-title {
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--text);
+        font-weight: 700;
+      }
+      .sample-title b {
+        color: var(--mauve);
+        margin-right: 7px;
+      }
+      .sample-note {
+        font-size: 12px;
+        color: var(--subtext0);
+      }
+      .stage {
+        position: relative;
+        width: 1000px;
+        height: 560px;
+        overflow: hidden;
+        border: 1px solid var(--surface0);
+        border-radius: 16px;
+        background: var(--base);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+      }
+      .windowbar {
+        height: 46px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 14px;
+        background: var(--mantle);
+        border-bottom: 1px solid var(--surface0);
+        color: var(--subtext0);
+      }
+      .logo {
+        width: 27px;
+        height: 27px;
+        display: grid;
+        place-items: center;
+        border-radius: 7px;
+        background: var(--surface0);
+        color: var(--mauve);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+      }
+      .brand {
+        font-size: 13px;
+        color: var(--text);
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      .tab {
+        margin-left: 18px;
+        height: 46px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 13px;
+        border-bottom: 2px solid var(--mauve);
+        color: var(--text);
+        font-size: 11px;
+      }
+      .tab span {
+        color: var(--subtext0);
+        font-size: 9px;
+      }
+      .bar-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        color: var(--subtext0);
+      }
+      .bar-actions .dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--green);
+      }
+      .doc {
+        padding: 36px 58px;
+        max-width: 780px;
+      }
+      h1 {
+        margin: 0 0 18px;
+        font-size: 27px;
+        line-height: 1.15;
+        letter-spacing: -0.035em;
+        color: var(--text);
+      }
+      p {
+        margin: 0 0 17px;
+        max-width: 690px;
+        font-size: 14px;
+        line-height: 1.85;
+        color: var(--subtext1);
+      }
+      .muted {
+        color: var(--subtext0);
+      }
+      .selected {
+        border-radius: 3px;
+        background: rgba(203, 166, 247, 0.16);
+        box-shadow: 0 0 0 1px rgba(203, 166, 247, 0.18);
+        padding: 0 2px;
+      }
+      .math {
+        color: var(--lavender);
+        font-family: 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+        font-size: 14.5px;
+        white-space: nowrap;
+      }
+      .math i {
+        font-style: italic;
+      }
+      .menu {
+        position: absolute;
+        z-index: 4;
+        color: var(--text);
+        background: rgba(30, 30, 46, 0.97);
+        border: 1px solid var(--surface0);
+        border-radius: 14px;
+        box-shadow:
+          0 24px 60px rgba(0, 0, 0, 0.54),
+          0 3px 12px rgba(0, 0, 0, 0.28);
+        padding: 6px;
+        backdrop-filter: blur(16px);
+      }
+      .icon {
+        width: 15px;
+        height: 15px;
+        flex: none;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .brand-icon {
+        width: 15px;
+        height: 15px;
+        flex: none;
+        display: block;
+        fill: currentColor;
+        stroke: none;
+      }
+      .sec {
+        padding: 7px 10px 4px;
+        font-size: 8.5px;
+        font-weight: 700;
+        letter-spacing: 0.17em;
+        text-transform: uppercase;
+        color: var(--overlay);
+      }
+      .sep {
+        height: 1px;
+        margin: 5px 7px;
+        background: var(--surface0);
+      }
+      .item {
+        min-height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 9px;
+        border-radius: 8px;
+        font-size: 12px;
+        line-height: 1.25;
+        color: var(--subtext1);
+      }
+      .item .icon,
+      .item .brand-icon {
+        color: var(--subtext0);
+      }
+      .item .label {
+        min-width: 0;
+        flex: 1;
+      }
+      .item strong {
+        display: block;
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .item small {
+        display: block;
+        margin-top: 2px;
+        color: var(--overlay);
+        font-size: 9.5px;
+        font-weight: 400;
+      }
+      .item.primary {
+        background: #2b283f;
+        box-shadow: inset 2px 0 0 var(--mauve);
+      }
+      .item.primary .icon {
+        color: var(--mauve);
+      }
+      .item.active {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .item.active .icon {
+        color: var(--mauve);
+      }
+      kbd {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 18px;
+        padding: 0 5px;
+        border: 1px solid var(--surface1);
+        border-bottom-color: var(--surface2);
+        border-radius: 5px;
+        background: var(--crust);
+        color: var(--subtext0);
+        font-family: inherit;
+        font-size: 8.5px;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+      .chevron {
+        margin-left: auto;
+        color: var(--mauve);
+      }
+      .brand-chatgpt {
+        color: var(--green) !important;
+      }
+      .brand-gemini {
+        color: var(--blue) !important;
+      }
+      .brand-wiki {
+        color: var(--subtext1) !important;
+      }
+
+      /* A — compact list */
+      .menu-a {
+        left: 470px;
+        top: 196px;
+        width: 296px;
+      }
+
+      /* B — action pad */
+      .menu-b {
+        left: 365px;
+        top: 244px;
+        width: 430px;
+        padding: 8px;
+      }
+      .b-head {
+        padding: 8px 10px 11px;
+        border-bottom: 1px solid var(--surface0);
+        margin-bottom: 8px;
+      }
+      .b-head .eyebrow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 8.5px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--overlay);
+        font-weight: 700;
+      }
+      .b-head .eyebrow span {
+        letter-spacing: 0;
+        text-transform: none;
+        color: var(--mauve);
+        font-size: 9px;
+        font-weight: 600;
+      }
+      .b-quote {
+        margin-top: 8px;
+        color: var(--subtext1);
+        font-size: 11.5px;
+        line-height: 1.55;
+      }
+      .b-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 7px;
+      }
+      .b-tile {
+        min-height: 72px;
+        position: relative;
+        display: flex;
+        gap: 9px;
+        align-items: flex-start;
+        padding: 11px 10px;
+        border: 1px solid var(--surface0);
+        border-radius: 10px;
+        background: rgba(24, 24, 37, 0.4);
+      }
+      .b-tile.primary {
+        border-color: rgba(203, 166, 247, 0.45);
+        background: rgba(203, 166, 247, 0.09);
+      }
+      .b-tile .icon {
+        margin-top: 1px;
+        color: var(--subtext0);
+      }
+      .b-tile.primary .icon {
+        color: var(--mauve);
+      }
+      .b-tile strong {
+        display: block;
+        font-size: 11.5px;
+        color: var(--text);
+      }
+      .b-tile small {
+        display: block;
+        margin-top: 3px;
+        color: var(--overlay);
+        font-size: 9px;
+      }
+      .b-tile kbd {
+        position: absolute;
+        right: 9px;
+        top: 9px;
+      }
+      .b-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        margin-top: 7px;
+      }
+      .b-chip {
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border-radius: 9px;
+        background: var(--mantle);
+        border: 1px solid var(--surface0);
+        color: var(--subtext1);
+        font-size: 10px;
+        font-weight: 500;
+      }
+      .b-chip .icon,
+      .b-chip .brand-icon {
+        width: 14px;
+        height: 14px;
+      }
+
+      /* C — horizontal toolbar */
+      .menu-c {
+        left: 140px;
+        top: 200px;
+        width: auto;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        padding: 5px;
+        border-radius: 13px;
+      }
+      .menu-c::after {
+        content: '';
+        position: absolute;
+        left: 74px;
+        top: -6px;
+        width: 10px;
+        height: 10px;
+        background: var(--base);
+        border-left: 1px solid var(--surface0);
+        border-top: 1px solid var(--surface0);
+        transform: rotate(45deg);
+      }
+      .tb {
+        height: 42px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 11px;
+        border-radius: 9px;
+        color: var(--subtext1);
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .tb .icon,
+      .tb .brand-icon {
+        width: 15px;
+        height: 15px;
+      }
+      .tb kbd {
+        min-height: 16px;
+        padding: 0 4px;
+        font-size: 7.5px;
+        border-color: rgba(69, 71, 90, 0.8);
+      }
+      .tb.primary {
+        background: var(--mauve);
+        color: var(--crust);
+        font-weight: 700;
+        box-shadow: 0 2px 10px rgba(203, 166, 247, 0.28);
+      }
+      .tb.primary .icon {
+        color: var(--crust);
+      }
+      .tb.primary kbd {
+        color: rgba(17, 17, 27, 0.72);
+        border-color: rgba(17, 17, 27, 0.2);
+        background: rgba(17, 17, 27, 0.11);
+      }
+      .tb-div {
+        width: 1px;
+        height: 22px;
+        margin: 0 4px;
+        background: var(--surface0);
+      }
+
+      /* D — context card + flyout */
+      .menu-d {
+        left: 398px;
+        top: 158px;
+        width: 322px;
+        padding: 8px;
+      }
+      .d-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px 7px;
+      }
+      .d-badge {
+        font-size: 8.5px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--mauve);
+      }
+      .d-lines {
+        margin-left: auto;
+        font-size: 8.5px;
+        color: var(--overlay);
+      }
+      .d-quote {
+        margin: 0 8px 8px;
+        padding: 9px 10px;
+        border-left: 2px solid var(--surface1);
+        background: rgba(17, 17, 27, 0.32);
+        border-radius: 0 7px 7px 0;
+        color: var(--subtext0);
+        font-size: 10.5px;
+        line-height: 1.55;
+      }
+      .menu-d .item {
+        min-height: 43px;
+      }
+      .menu-d .item strong {
+        font-size: 11.5px;
+      }
+      .menu-d .item small {
+        font-size: 9px;
+      }
+      .menu-d-flyout {
+        left: 728px;
+        top: 327px;
+        width: 188px;
+        padding: 6px;
+      }
+      .menu-d-flyout .item {
+        min-height: 36px;
+      }
+
+      /* E — command menu */
+      .menu-e {
+        left: 300px;
+        top: 226px;
+        width: 442px;
+        padding: 0;
+        overflow: hidden;
+      }
+      .e-search {
+        height: 45px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--surface0);
+        background: rgba(24, 24, 37, 0.5);
+        color: var(--overlay);
+        font-size: 12px;
+      }
+      .e-search .icon {
+        color: var(--mauve);
+      }
+      .e-search .query {
+        flex: 1;
+        color: var(--subtext1);
+      }
+      .e-search .caret {
+        width: 1px;
+        height: 14px;
+        background: var(--mauve);
+        animation: blink 1.1s steps(2, start) infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+      .e-list {
+        padding: 6px;
+      }
+      .e-list .item {
+        min-height: 33px;
+      }
+      .e-list .item.selected {
+        background: var(--surface0);
+        box-shadow: inset 2px 0 0 var(--mauve);
+      }
+      .e-list .item.selected .icon {
+        color: var(--mauve);
+      }
+      .e-foot {
+        height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 0 11px;
+        border-top: 1px solid var(--surface0);
+        background: rgba(24, 24, 37, 0.55);
+        color: var(--overlay);
+        font-size: 8.5px;
+      }
+      .e-foot b {
+        color: var(--subtext0);
+        font-weight: 600;
+      }
+      .e-count {
+        margin-left: auto;
+        color: var(--mauve);
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-source" viewBox="0 0 24 24">
+        <polyline points="16 18 22 12 16 6" />
+        <polyline points="8 6 2 12 8 18" />
+      </symbol>
+      <symbol id="i-text" viewBox="0 0 24 24">
+        <polyline points="4 7 4 4 20 4 20 7" />
+        <line x1="9" y1="20" x2="15" y2="20" />
+        <line x1="12" y1="4" x2="12" y2="20" />
+      </symbol>
+      <symbol id="i-quote" viewBox="0 0 24 24">
+        <path
+          d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"
+        />
+        <path
+          d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"
+        />
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+      </symbol>
+      <symbol id="i-sparkles" viewBox="0 0 24 24">
+        <path
+          d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+        />
+      </symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24">
+        <path d="m9 18 6-6-6-6" />
+      </symbol>
+      <symbol id="b-chatgpt" viewBox="1.68 1.75 16.65 16.5">
+        <path
+          d="M11.248 18.25q-.825 0-1.568-.314a4.3 4.3 0 0 1-1.32-.874 4 4 0 0 1-1.304.214 4 4 0 0 1-2.046-.544 4.27 4.27 0 0 1-1.518-1.485 4 4 0 0 1-.56-2.095q0-.48.131-1.04A4.4 4.4 0 0 1 2.04 10.71a4.07 4.07 0 0 1 .017-3.4 4.2 4.2 0 0 1 1.056-1.418 3.8 3.8 0 0 1 1.6-.842 3.9 3.9 0 0 1 .76-1.683q.593-.759 1.451-1.188a4.04 4.04 0 0 1 1.832-.429q.825 0 1.567.313.742.314 1.32.875a4 4 0 0 1 1.304-.215q1.106 0 2.046.545a4.14 4.14 0 0 1 1.501 1.485q.578.941.578 2.095 0 .48-.132 1.04.66.61 1.023 1.419.363.792.363 1.666 0 .892-.38 1.717a4.3 4.3 0 0 1-1.072 1.435 3.8 3.8 0 0 1-1.584.825 3.8 3.8 0 0 1-.775 1.683 4.06 4.06 0 0 1-1.436 1.188 4.04 4.04 0 0 1-1.832.429m-4.076-2.062q.825 0 1.435-.347l3.103-1.782a.36.36 0 0 0 .164-.313v-1.42L7.881 14.62a.67.67 0 0 1-.726 0l-3.118-1.798a.5.5 0 0 1-.017.115v.198q0 .841.396 1.551.413.693 1.139 1.089a3.2 3.2 0 0 0 1.617.412m.165-2.69a.4.4 0 0 0 .181.05q.083 0 .165-.05l1.238-.71-3.977-2.31a.7.7 0 0 1-.363-.643v-3.58q-.825.362-1.32 1.122a2.9 2.9 0 0 0-.495 1.65q0 .809.413 1.55.412.743 1.072 1.123zm3.91 3.663q.875 0 1.585-.396a2.96 2.96 0 0 0 1.534-2.64v-3.564a.32.32 0 0 0-.165-.297l-1.254-.726v4.604a.7.7 0 0 1-.363.643l-3.119 1.799a3 3 0 0 0 1.783.577m.627-6.039V8.878L10.01 7.822 8.129 8.878v2.244l1.881 1.056zM7.057 5.859a.7.7 0 0 1 .363-.644l3.119-1.798a3 3 0 0 0-1.782-.578q-.874 0-1.584.396A2.96 2.96 0 0 0 6.05 4.324a3.07 3.07 0 0 0-.396 1.551v3.547q0 .199.165.314l1.237.726zm8.383 7.887q.825-.364 1.303-1.123.495-.758.495-1.65a3.15 3.15 0 0 0-.412-1.55q-.413-.743-1.073-1.123l-3.086-1.782q-.099-.065-.181-.049a.3.3 0 0 0-.165.05l-1.238.692 3.993 2.327a.6.6 0 0 1 .264.264.64.64 0 0 1 .1.363zm-3.317-8.382a.63.63 0 0 1 .726 0l3.135 1.831v-.297q0-.792-.396-1.501a2.86 2.86 0 0 0-1.105-1.155q-.71-.43-1.65-.43-.825 0-1.436.347L8.294 5.941a.36.36 0 0 0-.165.314v1.418z"
+        />
+      </symbol>
+      <symbol id="b-wikipedia" viewBox="0 0 24 24">
+        <path
+          d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139-.181-.15-.554-.24-1.122-.271C.103 5.033 0 4.982 0 4.898v-.455l.052-.045c.924-.005 5.401 0 5.401 0l.051.045v.434c0 .119-.075.176-.225.176l-.564.031c-.485.029-.727.164-.727.436 0 .135.053.33.166.601 1.082 2.646 4.818 10.521 4.818 10.521l.136.046 2.411-4.81-.482-1.067-1.658-3.264s-.318-.654-.428-.872c-.728-1.443-.712-1.518-1.447-1.617-.207-.023-.313-.05-.313-.149v-.468l.06-.045h4.292l.113.037v.451c0 .105-.076.15-.227.15l-.308.047c-.792.061-.661.381-.136 1.422l1.582 3.252 1.758-3.504c.293-.64.233-.801.111-.947-.07-.084-.305-.22-.812-.24l-.201-.021c-.052 0-.098-.015-.145-.051-.045-.031-.067-.076-.067-.129v-.427l.061-.045c1.247-.008 4.043 0 4.043 0l.059.045v.436c0 .121-.059.178-.193.178-.646.03-.782.095-1.023.439-.12.186-.375.589-.646 1.039l-2.301 4.273-.065.135 2.792 5.712.17.048 4.396-10.438c.154-.422.129-.722-.064-.895-.197-.172-.346-.273-.857-.295l-.42-.016c-.061 0-.105-.014-.152-.045-.043-.029-.072-.075-.072-.119v-.436l.059-.045h4.961l.041.045v.437c0 .119-.074.18-.209.18-.648.03-1.127.18-1.443.421-.314.255-.557.616-.736 1.067 0 0-4.043 9.258-5.426 12.339-.525 1.007-1.053.917-1.503-.031-.571-1.171-1.773-3.786-2.646-5.71l.053-.036z"
+        />
+      </symbol>
+      <symbol id="b-gemini" viewBox="0 0 24 24">
+        <path
+          d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"
+        />
+      </symbol>
+    </svg>
+
+    <section class="sample" id="sample-a">
+      <div class="sample-head">
+        <div class="sample-title"><b>A</b> Compact list</div>
+        <div class="sample-note">
+          Familiar, fast, lowest risk — a polished version of the current menu
+        </div>
+      </div>
+      <div class="stage">
+        <div class="windowbar">
+          <div class="logo">M</div>
+          <div class="brand">Papyri</div>
+          <div class="tab">research-notes.md <span>●</span></div>
+          <div class="bar-actions">
+            <span class="dot"></span> 284 words <span>⌕</span><span>▥</span>
+          </div>
+        </div>
+        <div class="doc">
+          <h1>Selection actions</h1>
+          <p>
+            <span class="selected"
+              >Papyri is a <strong>read-only</strong> Markdown viewer with a persistent browser
+              panel.</span
+            >
+            Inline math like <span class="math"><i>x</i>² + <i>y</i>² = <i>z</i>²</span> stays
+            selectable, and the source keeps its markers.
+          </p>
+          <p class="muted">Select any block, then choose how to reuse it.</p>
+        </div>
+        <div class="menu menu-a">
+          <div class="sec">Copy</div>
+          <div class="item primary">
+            <svg class="icon"><use href="#i-source" /></svg><span class="label">Copy source</span
+            ><kbd>Ctrl C</kbd>
+          </div>
+          <div class="item">
+            <svg class="icon"><use href="#i-text" /></svg
+            ><span class="label">Copy rendered text</span><kbd>Ctrl ⇧ C</kbd>
+          </div>
+          <div class="item">
+            <svg class="icon"><use href="#i-quote" /></svg><span class="label">Copy as quote</span>
+          </div>
+          <div class="sep"></div>
+          <div class="sec">Send to</div>
+          <div class="item">
+            <svg class="brand-icon brand-chatgpt"><use href="#b-chatgpt" /></svg
+            ><span class="label">ChatGPT</span>
+          </div>
+          <div class="item">
+            <svg class="brand-icon brand-gemini"><use href="#b-gemini" /></svg
+            ><span class="label">Gemini</span>
+          </div>
+          <div class="item">
+            <svg class="brand-icon brand-wiki"><use href="#b-wikipedia" /></svg
+            ><span class="label">Search Wikipedia</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sample" id="sample-b">
+      <div class="sample-head">
+        <div class="sample-title"><b>B</b> Action pad</div>
+        <div class="sample-note">
+          Selected-text preview, large copy tiles, and brand chips — most discoverable
+        </div>
+      </div>
+      <div class="stage">
+        <div class="windowbar">
+          <div class="logo">M</div>
+          <div class="brand">Papyri</div>
+          <div class="tab">research-notes.md <span>●</span></div>
+          <div class="bar-actions">
+            <span class="dot"></span> 284 words <span>⌕</span><span>▥</span>
+          </div>
+        </div>
+        <div class="doc">
+          <h1>Selection actions</h1>
+          <p>
+            <span class="selected"
+              >Papyri is a <strong>read-only</strong> Markdown viewer with a persistent browser
+              panel.</span
+            >
+            Inline math like <span class="math"><i>x</i>² + <i>y</i>² = <i>z</i>²</span> stays
+            selectable, and the source keeps its markers.
+          </p>
+          <p class="muted">Select any block, then choose how to reuse it.</p>
+        </div>
+        <div class="menu menu-b">
+          <div class="b-head">
+            <div class="eyebrow">Selected text <span>Markdown · 2 lines</span></div>
+            <div class="b-quote">
+              “Papyri is a read-only Markdown viewer with a persistent browser panel…”
+            </div>
+          </div>
+          <div class="b-grid">
+            <div class="b-tile primary">
+              <svg class="icon"><use href="#i-source" /></svg>
+              <div><strong>Copy source</strong><small>Markdown block</small></div>
+              <kbd>Ctrl C</kbd>
+            </div>
+            <div class="b-tile">
+              <svg class="icon"><use href="#i-text" /></svg>
+              <div><strong>Copy text</strong><small>Rendered selection</small></div>
+              <kbd>Ctrl ⇧ C</kbd>
+            </div>
+          </div>
+          <div class="b-row">
+            <div class="b-chip">
+              <svg class="icon"><use href="#i-quote" /></svg>Quote
+            </div>
+            <div class="b-chip">
+              <svg class="brand-icon brand-chatgpt"><use href="#b-chatgpt" /></svg>ChatGPT
+            </div>
+            <div class="b-chip">
+              <svg class="brand-icon brand-gemini"><use href="#b-gemini" /></svg>Gemini
+            </div>
+            <div class="b-chip">
+              <svg class="brand-icon brand-wiki"><use href="#b-wikipedia" /></svg>Wikipedia
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sample" id="sample-c">
+      <div class="sample-head">
+        <div class="sample-title"><b>C</b> Selection toolbar</div>
+        <div class="sample-note">
+          Horizontal, appears beside the selection — fastest for copy and quote
+        </div>
+      </div>
+      <div class="stage">
+        <div class="windowbar">
+          <div class="logo">M</div>
+          <div class="brand">Papyri</div>
+          <div class="tab">research-notes.md <span>●</span></div>
+          <div class="bar-actions">
+            <span class="dot"></span> 284 words <span>⌕</span><span>▥</span>
+          </div>
+        </div>
+        <div class="doc">
+          <h1>Selection actions</h1>
+          <p>
+            <span class="selected"
+              >Papyri is a <strong>read-only</strong> Markdown viewer with a persistent browser
+              panel.</span
+            >
+            Inline math like <span class="math"><i>x</i>² + <i>y</i>² = <i>z</i>²</span> stays
+            selectable, and the source keeps its markers.
+          </p>
+          <p class="muted">Select any block, then choose how to reuse it.</p>
+        </div>
+        <div class="menu menu-c">
+          <div class="tb primary">
+            <svg class="icon"><use href="#i-source" /></svg>Source <kbd>Ctrl C</kbd>
+          </div>
+          <div class="tb">
+            <svg class="icon"><use href="#i-text" /></svg>Text <kbd>Ctrl ⇧ C</kbd>
+          </div>
+          <div class="tb">
+            <svg class="icon"><use href="#i-quote" /></svg>Quote
+          </div>
+          <div class="tb-div"></div>
+          <div class="tb">
+            <svg class="brand-icon brand-chatgpt"><use href="#b-chatgpt" /></svg>ChatGPT
+          </div>
+          <div class="tb">
+            <svg class="brand-icon brand-gemini"><use href="#b-gemini" /></svg>Gemini
+          </div>
+          <div class="tb">
+            <svg class="brand-icon brand-wiki"><use href="#b-wikipedia" /></svg>Wikipedia
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sample" id="sample-d">
+      <div class="sample-head">
+        <div class="sample-title"><b>D</b> Context card + flyout</div>
+        <div class="sample-note">
+          Explains each action and nests the send targets — most informative, slowest
+        </div>
+      </div>
+      <div class="stage">
+        <div class="windowbar">
+          <div class="logo">M</div>
+          <div class="brand">Papyri</div>
+          <div class="tab">research-notes.md <span>●</span></div>
+          <div class="bar-actions">
+            <span class="dot"></span> 284 words <span>⌕</span><span>▥</span>
+          </div>
+        </div>
+        <div class="doc">
+          <h1>Selection actions</h1>
+          <p>
+            <span class="selected"
+              >Papyri is a <strong>read-only</strong> Markdown viewer with a persistent browser
+              panel.</span
+            >
+            Inline math like <span class="math"><i>x</i>² + <i>y</i>² = <i>z</i>²</span> stays
+            selectable, and the source keeps its markers.
+          </p>
+          <p class="muted">Select any block, then choose how to reuse it.</p>
+        </div>
+        <div class="menu menu-d">
+          <div class="d-head">
+            <span class="d-badge">Selection</span><span class="d-lines">2 lines</span>
+          </div>
+          <div class="d-quote">
+            “Papyri is a read-only Markdown viewer with a persistent browser panel…”
+          </div>
+          <div class="item primary">
+            <svg class="icon"><use href="#i-source" /></svg>
+            <div class="label">
+              <strong>Copy source</strong><small>Enclosing Markdown block</small>
+            </div>
+            <kbd>Ctrl C</kbd>
+          </div>
+          <div class="item">
+            <svg class="icon"><use href="#i-text" /></svg>
+            <div class="label">
+              <strong>Copy rendered text</strong><small>Plain selection</small>
+            </div>
+            <kbd>Ctrl ⇧ C</kbd>
+          </div>
+          <div class="item">
+            <svg class="icon"><use href="#i-quote" /></svg>
+            <div class="label">
+              <strong>Copy as quote</strong><small>Markdown blockquote</small>
+            </div>
+          </div>
+          <div class="sep"></div>
+          <div class="item active">
+            <svg class="icon"><use href="#i-sparkles" /></svg>
+            <div class="label"><strong>Send to…</strong><small>ChatGPT or Gemini</small></div>
+            <svg class="icon chevron"><use href="#i-chevron" /></svg>
+          </div>
+          <div class="item">
+            <svg class="brand-icon brand-wiki"><use href="#b-wikipedia" /></svg>
+            <div class="label">
+              <strong>Search Wikipedia</strong><small>Open in the browser panel</small>
+            </div>
+          </div>
+        </div>
+        <div class="menu menu-d-flyout">
+          <div class="sec">Send selection</div>
+          <div class="item">
+            <svg class="brand-icon brand-chatgpt"><use href="#b-chatgpt" /></svg
+            ><span class="label">ChatGPT</span>
+          </div>
+          <div class="item">
+            <svg class="brand-icon brand-gemini"><use href="#b-gemini" /></svg
+            ><span class="label">Gemini</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sample" id="sample-e">
+      <div class="sample-head">
+        <div class="sample-title"><b>E</b> Command menu</div>
+        <div class="sample-note">
+          Searchable and keyboard-first — compact like a palette, but heavier than six actions need
+        </div>
+      </div>
+      <div class="stage">
+        <div class="windowbar">
+          <div class="logo">M</div>
+          <div class="brand">Papyri</div>
+          <div class="tab">research-notes.md <span>●</span></div>
+          <div class="bar-actions">
+            <span class="dot"></span> 284 words <span>⌕</span><span>▥</span>
+          </div>
+        </div>
+        <div class="doc">
+          <h1>Selection actions</h1>
+          <p>
+            <span class="selected"
+              >Papyri is a <strong>read-only</strong> Markdown viewer with a persistent browser
+              panel.</span
+            >
+            Inline math like <span class="math"><i>x</i>² + <i>y</i>² = <i>z</i>²</span> stays
+            selectable, and the source keeps its markers.
+          </p>
+          <p class="muted">Select any block, then choose how to reuse it.</p>
+        </div>
+        <div class="menu menu-e">
+          <div class="e-search">
+            <svg class="icon"><use href="#i-search" /></svg
+            ><span class="query">Search actions…</span><span class="caret"></span><kbd>esc</kbd>
+          </div>
+          <div class="e-list">
+            <div class="sec">Copy</div>
+            <div class="item selected">
+              <svg class="icon"><use href="#i-source" /></svg><span class="label">Copy source</span
+              ><kbd>Ctrl C</kbd>
+            </div>
+            <div class="item">
+              <svg class="icon"><use href="#i-text" /></svg
+              ><span class="label">Copy rendered text</span><kbd>Ctrl ⇧ C</kbd>
+            </div>
+            <div class="item">
+              <svg class="icon"><use href="#i-quote" /></svg
+              ><span class="label">Copy as quote</span>
+            </div>
+            <div class="sec">Send to</div>
+            <div class="item">
+              <svg class="brand-icon brand-chatgpt"><use href="#b-chatgpt" /></svg
+              ><span class="label">Send to ChatGPT</span>
+            </div>
+            <div class="item">
+              <svg class="brand-icon brand-gemini"><use href="#b-gemini" /></svg
+              ><span class="label">Send to Gemini</span>
+            </div>
+            <div class="item">
+              <svg class="brand-icon brand-wiki"><use href="#b-wikipedia" /></svg
+              ><span class="label">Search Wikipedia</span>
+            </div>
+          </div>
+          <div class="e-foot">
+            <span><b>↑↓</b> Navigate</span><span><b>↵</b> Run</span><span><b>esc</b> Close</span
+            ><span class="e-count">2 lines selected</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

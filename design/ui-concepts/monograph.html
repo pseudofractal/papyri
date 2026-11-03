@@ -1,0 +1,2282 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Papyri — Monograph</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        border: 0;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .ic {
+        width: 16px;
+        height: 16px;
+        flex: none;
+        display: block;
+      }
+      .grow {
+        flex: 1;
+      }
+      .eyebrow {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .pane {
+        display: none;
+        min-height: 0;
+      }
+      .pane.active {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+      .palette-scrim {
+        display: none;
+      }
+      .palette-scrim.open {
+        display: flex;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, currentColor 18%, transparent);
+        border-radius: 99px;
+      }
+
+      .status-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #55705a;
+        box-shadow: 0 0 0 3px #55705a18;
+        flex: none;
+      }
+      .tree {
+        padding: 8px;
+        overflow: auto;
+        flex: 1;
+        min-height: 0;
+      }
+      .tree-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px 6px calc(8px + var(--depth) * 14px);
+        border-radius: 5px;
+        font-size: 10.5px;
+        color: #7d7668;
+        text-align: left;
+      }
+      .tree-row:hover {
+        background: #00000008;
+      }
+      .tree-row.folder {
+        font-weight: 550;
+      }
+      .tree-row.active {
+        font-weight: 550;
+      }
+      .twist {
+        width: 11px;
+        height: 11px;
+        flex: none;
+        opacity: 0.6;
+      }
+      .file-ic {
+        width: 13px;
+        height: 13px;
+        flex: none;
+        opacity: 0.8;
+      }
+      .tree-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .active-dot {
+        width: 5px;
+        height: 5px;
+        margin-left: auto;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .side-content {
+        min-height: 0;
+        flex: 1;
+        display: flex;
+      }
+      .side-tabs {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        height: 48px;
+        padding: 0 10px;
+        flex: none;
+      }
+      .side-tab {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 100%;
+        padding: 0 10px;
+        font-size: 9.5px;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+      }
+      .side-tab .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .side-tab-add {
+        margin-left: auto;
+        width: 24px;
+        height: 24px;
+        display: grid;
+        place-items: center;
+        border-radius: 5px;
+      }
+      .outline-head,
+      .notes-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 18px 12px;
+      }
+      .outline-head > div,
+      .notes-head > div {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .outline-head strong,
+      .notes-head strong {
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .ghost-ic {
+        width: 15px;
+        height: 15px;
+        opacity: 0.65;
+      }
+      .outline-progress {
+        height: 2px;
+        margin: 0 18px 12px;
+      }
+      .outline-progress span {
+        display: block;
+        width: 18%;
+        height: 100%;
+      }
+      .outline-list {
+        padding: 0 10px;
+        overflow: auto;
+        min-height: 0;
+      }
+      .outline-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        text-align: left;
+        padding: 8px 9px;
+        font-size: 10.5px;
+        border-left: 1px solid transparent;
+      }
+      .outline-num {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+      }
+      .reading-dot {
+        margin-left: auto;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+      }
+      .outline-foot {
+        margin-top: auto;
+        padding: 13px 18px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 9px;
+      }
+      .pulse {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+      }
+      .key {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+        border: 1px solid currentColor;
+        opacity: 0.8;
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+      .chat-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 16px 10px;
+        gap: 8px;
+      }
+      .chat-brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+      }
+      .chat-mark {
+        width: 29px;
+        height: 29px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .chat-mark .ic {
+        width: 15px;
+        height: 15px;
+      }
+      .chat-brand > div {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+      }
+      .chat-brand strong {
+        font-size: 11px;
+      }
+      .chat-brand span {
+        font-size: 8.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .signed-in {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 8px;
+        white-space: nowrap;
+      }
+      .context-chip {
+        margin: 0 16px 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: fit-content;
+        max-width: calc(100% - 32px);
+        border-radius: 5px;
+        padding: 4px 6px;
+        font-size: 8.5px;
+      }
+      .context-chip .ic {
+        width: 11px;
+        height: 11px;
+      }
+      .context-chip .ic:last-child {
+        margin-left: 4px;
+        opacity: 0.5;
+      }
+      .thread {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 6px 16px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+      }
+      .msg {
+        display: flex;
+        gap: 7px;
+      }
+      .msg.user {
+        justify-content: flex-end;
+      }
+      .msg.user .bubble {
+        border-radius: 10px 10px 3px 10px;
+        max-width: 86%;
+        padding: 8px 10px;
+        font-size: 10.5px;
+        line-height: 1.45;
+      }
+      .msg.assistant {
+        align-items: flex-start;
+      }
+      .ai-avatar {
+        width: 21px;
+        height: 21px;
+        flex: none;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+      }
+      .ai-avatar .ic {
+        width: 11px;
+        height: 11px;
+      }
+      .msg.assistant .bubble {
+        font-size: 11.5px;
+        line-height: 1.5;
+        padding: 2px 0;
+      }
+      .typing-line {
+        display: block;
+        width: 150px;
+        height: 6px;
+        margin: 5px 0;
+        border-radius: 99px;
+      }
+      .typing-line.short {
+        width: 100px;
+      }
+      .composer {
+        margin: 0 12px 10px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        min-height: 39px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 7px;
+        flex: none;
+      }
+      .composer .ic {
+        width: 14px;
+        height: 14px;
+      }
+      .composer-add,
+      .composer-mic {
+        width: 23px;
+        height: 23px;
+        display: grid;
+        place-items: center;
+      }
+      .composer-placeholder {
+        font-size: 10px;
+        flex: 1;
+      }
+      .send {
+        width: 25px;
+        height: 25px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .send .ic {
+        width: 12px;
+        height: 12px;
+      }
+      .chat-foot {
+        text-align: center;
+        font-size: 7.5px;
+        padding-bottom: 9px;
+      }
+      .files-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 14px 8px;
+      }
+      .mini-search {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        height: 29px;
+        padding: 0 8px;
+        flex: 1;
+        font-size: 9.5px;
+        min-width: 0;
+      }
+      .mini-search kbd {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+      }
+      .ghost-btn,
+      .text-btn {
+        font-size: 9px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .files-pane .tree {
+        padding: 5px 8px;
+      }
+      .files-foot {
+        margin-top: auto;
+        padding: 11px 15px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 8.5px;
+      }
+      .notes-head {
+        padding-bottom: 14px;
+      }
+      .note-card {
+        margin: 0 14px 9px;
+        padding: 12px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+      }
+      .note-date {
+        display: block;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 7.5px;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+      }
+      .note-card strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 5px;
+      }
+      .note-card p {
+        margin: 0;
+        font-size: 10.5px;
+        line-height: 1.45;
+      }
+      .note-editor {
+        margin: auto 14px 14px;
+        border-top: 1px solid transparent;
+        padding-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+      }
+      .note-editor button {
+        width: 24px;
+        height: 24px;
+        border: 1px solid currentColor;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+      }
+      .palette-scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 135px;
+      }
+      .palette {
+        width: min(560px, calc(100vw - 60px));
+        border: 1px solid transparent;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .palette-input {
+        height: 49px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 15px;
+        border-bottom: 1px solid transparent;
+        font-size: 11px;
+      }
+      .palette-input kbd {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+      .palette-body {
+        padding: 8px;
+        max-height: 390px;
+        overflow: auto;
+      }
+      .palette-label {
+        font-size: 7.5px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        padding: 10px 8px 5px;
+      }
+      .palette-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 8px;
+        border-radius: 6px;
+        text-align: left;
+      }
+      .row-icon {
+        width: 24px;
+        height: 24px;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .row-icon .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .row-main {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+      }
+      .row-main strong {
+        font-size: 10px;
+        font-weight: 550;
+      }
+      .row-main small {
+        font-size: 8px;
+      }
+      .row-hint,
+      .palette-row kbd {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+      }
+      .palette-row kbd {
+        padding: 2px 4px;
+        border-radius: 3px;
+        border: 1px solid currentColor;
+      }
+      .palette-foot {
+        height: 32px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 14px;
+        font-size: 8px;
+      }
+      .palette-foot span {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+      }
+      .palette-foot kbd {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 7px;
+        padding: 1px 3px;
+        border-radius: 2px;
+        border: 1px solid currentColor;
+      }
+      .doc-scroll {
+        height: 100%;
+        overflow: hidden;
+      }
+      .doc {
+        width: min(760px, calc(100% - 96px));
+        margin: 0 auto;
+        padding: 44px 0 80px;
+      }
+      .doc-crumb {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 9px;
+      }
+      .doc-crumb .slash {
+        opacity: 0.5;
+      }
+      .doc-crumb .kind {
+        margin-left: 7px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        padding: 2px 5px;
+        border-radius: 3px;
+        border: 1px solid currentColor;
+      }
+      .doc-title {
+        font-size: 47px;
+        line-height: 0.99;
+        font-weight: 500;
+        margin: 25px 0 15px;
+      }
+      .doc-dek {
+        font-size: 15px;
+        line-height: 1.45;
+        margin: 0 0 14px;
+        font-style: italic;
+      }
+      .doc-meta {
+        display: flex;
+        gap: 18px;
+        font-size: 9px;
+        padding: 10px 0 12px;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+      }
+      .doc-links {
+        font-size: 10.5px;
+        display: flex;
+        gap: 9px;
+        flex-wrap: wrap;
+        padding: 15px 0 4px;
+      }
+      .doc-links a {
+        border-bottom: 1px solid currentColor;
+      }
+      .doc-links span {
+        opacity: 0.5;
+      }
+      .doc-h2 {
+        font-size: 22px;
+        font-weight: 500;
+        margin: 28px 0 10px;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .hnum {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+        letter-spacing: 0.06em;
+      }
+      .doc p {
+        font-size: 14.5px;
+        line-height: 1.58;
+        margin: 10px 0;
+      }
+      .doc p a {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .doc code {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 10.5px;
+        padding: 2px 5px;
+        border-radius: 3px;
+      }
+      .doc mark {
+        padding: 1px 3px;
+      }
+      .doc blockquote {
+        margin: 17px 0;
+        padding: 3px 0 3px 17px;
+        border-left: 2px solid currentColor;
+      }
+      .doc blockquote p {
+        margin: 6px 0;
+        font-style: italic;
+      }
+      .tasks {
+        list-style: none;
+        padding: 0;
+        margin: 13px 0;
+        font-size: 13.5px;
+      }
+      .tasks li {
+        position: relative;
+        padding-left: 19px;
+        margin: 5px 0;
+      }
+      .tasks li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 9px;
+        height: 9px;
+        border: 1px solid currentColor;
+        border-radius: 2px;
+      }
+      .tasks li.done::before {
+        box-shadow: inset 0 0 0 2px currentColor;
+      }
+      .tasks li.nested {
+        margin-left: 18px;
+      }
+      .code {
+        margin: 14px 0 18px;
+        padding: 15px 18px;
+        border-radius: 7px;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 10.5px;
+        line-height: 1.6;
+        overflow: hidden;
+      }
+      .code code {
+        background: none;
+        color: inherit;
+        padding: 0;
+        font-size: inherit;
+      }
+      .doc .code code {
+        background: none !important;
+        color: inherit !important;
+        padding: 0 !important;
+        font-size: inherit !important;
+      }
+      .inline-math {
+        font-family: 'Latin Modern Math', 'DejaVu Math TeX Gyre', serif;
+        font-size: 15px;
+        white-space: nowrap;
+      }
+      .math-block {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        margin: 16px 0 18px;
+        padding: 16px 0;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+      }
+      .math {
+        font-family: 'Latin Modern Math', 'DejaVu Math TeX Gyre', serif;
+        font-size: 24px;
+        letter-spacing: 0.01em;
+      }
+      .math sub,
+      .math sup {
+        font-size: 10px;
+      }
+      .eq-no {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 9px;
+      }
+      .doc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11.5px;
+        margin: 14px 0;
+      }
+      .doc-table th {
+        text-align: left;
+        font-size: 8px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 6px 8px;
+        border-bottom: 1px solid currentColor;
+      }
+      .doc-table td {
+        padding: 7px 8px;
+        border-bottom: 1px solid currentColor;
+      }
+      .fn-ref {
+        font-size: 8px;
+      }
+
+      :root {
+        --paper: #f4f0e4;
+        --paper-2: #ece7d8;
+        --ink: #111111;
+        --muted: #5f5a4e;
+        --line: #c8c1ae;
+        --acid: #d9ff3f;
+        --orange: #ff4b2b;
+        --ui: 'Adwaita Sans', 'Inter', system-ui, sans-serif;
+        --serif: 'Latin Modern Roman', 'Iowan Old Style', Georgia, serif;
+        --mono: 'DejaVu Sans Mono', ui-monospace, monospace;
+      }
+      body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--ui);
+      }
+      .app {
+        height: 100%;
+        display: grid;
+        grid-template-rows: 48px minmax(0, 1fr) 26px;
+        background: var(--paper);
+      }
+      .m-top {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        padding: 0 16px;
+        border-bottom: 2px solid var(--ink);
+        background: var(--paper);
+      }
+      .m-word {
+        font-family: var(--serif);
+        font-size: 23px;
+        font-weight: 700;
+        letter-spacing: -0.05em;
+      }
+      .m-word span {
+        color: var(--orange);
+      }
+      .m-nav {
+        display: flex;
+        align-items: center;
+        gap: 17px;
+      }
+      .m-nav button {
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+      .m-nav button.active {
+        background: var(--ink);
+        color: var(--acid);
+        padding: 3px 6px;
+      }
+      .m-top-meta {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-family: var(--mono);
+        font-size: 8px;
+        color: var(--muted);
+      }
+      .m-top-meta strong {
+        color: var(--ink);
+        font-weight: 550;
+      }
+      .m-menu {
+        width: 24px;
+        height: 24px;
+        border: 1px solid var(--ink);
+        display: grid;
+        place-items: center;
+      }
+      .m-body {
+        display: grid;
+        grid-template-columns: 60px minmax(0, 1fr) 372px;
+        min-height: 0;
+      }
+      .m-rail {
+        border-right: 2px solid var(--ink);
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        background: var(--paper-2);
+      }
+      .m-rail button {
+        height: 52px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        border-bottom: 1px solid #11111118;
+        font-family: var(--mono);
+        font-size: 6.5px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      .m-rail button .ic {
+        width: 16px;
+        height: 16px;
+      }
+      .m-rail button.active {
+        background: var(--ink);
+        color: var(--acid);
+      }
+      .m-rail button:hover {
+        background: var(--acid);
+        color: var(--ink);
+      }
+      .m-rail .rail-grow {
+        flex: 1;
+        border-bottom: 0;
+      }
+      .m-main {
+        min-width: 0;
+        min-height: 0;
+        background: var(--paper);
+        position: relative;
+      }
+      .m-main::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 24px;
+        width: 1px;
+        background: #1111110d;
+        pointer-events: none;
+      }
+      .m-main .doc-scroll {
+        height: 100%;
+        overflow: hidden;
+      }
+      .m-main .doc {
+        width: min(790px, calc(100% - 110px));
+        padding: 38px 0 70px;
+      }
+      .m-main .doc-crumb {
+        font-family: var(--mono);
+        font-size: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+      .m-main .doc-crumb .file {
+        color: var(--ink);
+      }
+      .m-main .doc-crumb .kind {
+        background: var(--orange);
+        color: var(--paper);
+        border: 0;
+        font-family: var(--mono);
+        letter-spacing: 0.08em;
+      }
+      .m-main .doc-title {
+        font-family: var(--serif);
+        font-size: 60px;
+        line-height: 0.92;
+        font-weight: 500;
+        letter-spacing: -0.055em;
+        margin: 22px 0 16px;
+      }
+      .m-main .doc-dek {
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 15px;
+        color: var(--muted);
+        margin-bottom: 14px;
+      }
+      .m-main .doc-meta {
+        border-top: 2px solid var(--ink);
+        border-bottom: 1px solid var(--ink);
+        padding: 8px 0;
+        font-family: var(--mono);
+        font-size: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+      .m-main .doc-links {
+        font-family: var(--mono);
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ink);
+        padding: 14px 0 2px;
+      }
+      .m-main .doc-links a {
+        border-bottom: 1px solid var(--ink);
+      }
+      .m-main .doc-h2 {
+        font-family: var(--ui);
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 32px 0 10px;
+        display: flex;
+        align-items: center;
+        gap: 11px;
+      }
+      .m-main .doc-h2::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--ink);
+      }
+      .m-main .hnum {
+        font-family: var(--mono);
+        font-size: 8px;
+        background: var(--ink);
+        color: var(--acid);
+        padding: 2px 4px;
+        letter-spacing: 0;
+      }
+      .m-main .doc p {
+        font-family: var(--serif);
+        font-size: 14px;
+        line-height: 1.55;
+        color: #26241f;
+        margin: 9px 0;
+      }
+      .m-main .doc p a {
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 2px;
+      }
+      .m-main .doc code {
+        font-family: var(--mono);
+        font-size: 10px;
+        background: var(--acid);
+        color: var(--ink);
+        padding: 2px 4px;
+      }
+      .m-main .doc mark {
+        background: var(--acid);
+        color: var(--ink);
+        padding: 1px 3px;
+      }
+      .m-main .doc blockquote {
+        margin: 18px 0;
+        padding: 12px 16px;
+        border: 2px solid var(--ink);
+        background: var(--acid);
+      }
+      .m-main .doc blockquote p {
+        margin: 4px 0;
+        font-style: italic;
+        color: var(--ink);
+      }
+      .m-main .tasks {
+        font-family: var(--serif);
+        font-size: 13px;
+      }
+      .m-main .tasks li::before {
+        border: 1px solid var(--ink);
+        border-radius: 0;
+      }
+      .m-main .tasks li.done::before {
+        background: var(--ink);
+        border-color: var(--ink);
+        box-shadow: inset 0 0 0 2px var(--acid);
+      }
+      .m-main .code {
+        background: var(--ink);
+        color: var(--acid);
+        border-radius: 0;
+        padding: 14px 17px;
+      }
+      .m-main .code .kw {
+        color: #ff9b84;
+      }
+      .m-main .code .fn {
+        color: #fff;
+      }
+      .m-main .inline-math {
+        font-size: 15px;
+      }
+      .m-main .math-block {
+        border-top: 1px solid var(--ink);
+        border-bottom: 1px solid var(--ink);
+      }
+      .m-main .math {
+        font-size: 24px;
+      }
+      .m-main .eq-no {
+        background: var(--ink);
+        color: var(--acid);
+        padding: 2px 4px;
+        font-size: 8px;
+      }
+      .m-main .doc-table th {
+        font-family: var(--mono);
+        font-size: 7.5px;
+        letter-spacing: 0.08em;
+        border-bottom: 2px solid var(--ink);
+        color: var(--ink);
+      }
+      .m-main .doc-table td {
+        font-family: var(--serif);
+        font-size: 11.5px;
+        border-bottom: 1px solid var(--line);
+        color: #26241f;
+      }
+      .m-right {
+        border-left: 2px solid var(--ink);
+        background: var(--paper);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .m-right .side-tabs {
+        display: flex;
+        height: 38px;
+        flex: none;
+        border-bottom: 2px solid var(--ink);
+      }
+      .m-right .side-tab {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        border-right: 1px solid var(--ink);
+        font-family: var(--mono);
+        font-size: 7.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .m-right .side-tab .ic {
+        width: 12px;
+        height: 12px;
+      }
+      .m-right .side-tab.active {
+        background: var(--ink);
+        color: var(--acid);
+      }
+      .m-right .side-tab:hover:not(.active) {
+        background: var(--acid);
+      }
+      .m-right .side-tab-add {
+        width: 33px;
+        display: grid;
+        place-items: center;
+        border-right: 0;
+      }
+      .m-right .side-content {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+      }
+      .m-right .outline-head,
+      .m-right .notes-head {
+        padding: 18px 16px 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      .m-right .outline-head strong,
+      .m-right .notes-head strong {
+        font-family: var(--serif);
+        font-size: 18px;
+        font-weight: 500;
+      }
+      .m-right .outline-head .eyebrow,
+      .m-right .notes-head .eyebrow {
+        color: var(--orange);
+        font-family: var(--mono);
+      }
+      .m-right .outline-progress {
+        background: var(--line);
+        margin: 0 16px 12px;
+        height: 3px;
+      }
+      .m-right .outline-progress span {
+        background: var(--orange);
+      }
+      .m-right .outline-list {
+        padding: 0 9px;
+      }
+      .m-right .outline-row {
+        border-left: 2px solid var(--line);
+        color: var(--muted);
+        font-size: 10px;
+        border-radius: 0;
+      }
+      .m-right .outline-row:hover,
+      .m-right .outline-row.active {
+        background: var(--acid);
+        color: var(--ink);
+        border-left-color: var(--ink);
+      }
+      .m-right .outline-num {
+        color: var(--orange);
+        font-weight: 700;
+      }
+      .m-right .outline-row.active .outline-num {
+        color: var(--ink);
+      }
+      .m-right .reading-dot {
+        background: var(--ink);
+      }
+      .m-right .outline-foot {
+        border-top: 2px solid var(--ink);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 7.5px;
+        text-transform: uppercase;
+      }
+      .m-right .pulse {
+        background: var(--green, #3f7f4f);
+      }
+      .m-right .key {
+        border: 1px solid var(--ink);
+        border-radius: 0;
+        color: var(--ink);
+      }
+      .m-right .chat-head {
+        padding: 15px 15px 11px;
+        border-bottom: 1px solid var(--line);
+      }
+      .m-right .chat-mark {
+        background: var(--ink);
+        color: var(--acid);
+        border-radius: 0;
+      }
+      .m-right .chat-brand strong {
+        font-family: var(--mono);
+        font-size: 9px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .m-right .chat-brand span {
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 7px;
+        text-transform: uppercase;
+      }
+      .m-right .signed-in {
+        color: var(--muted);
+        font-family: var(--mono);
+        text-transform: uppercase;
+      }
+      .m-right .context-chip {
+        border: 1px solid var(--ink);
+        border-radius: 0;
+        background: var(--paper);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 7.5px;
+      }
+      .m-right .msg.user .bubble {
+        background: var(--ink);
+        color: var(--paper);
+        border-radius: 0;
+        font-family: var(--ui);
+        font-size: 10px;
+      }
+      .m-right .msg.assistant .bubble {
+        font-family: var(--serif);
+        font-size: 12px;
+        line-height: 1.5;
+        color: #26241f;
+        border-left: 2px solid var(--orange);
+        padding-left: 9px;
+      }
+      .m-right .ai-avatar {
+        background: var(--acid);
+        border: 1px solid var(--ink);
+        color: var(--ink);
+        border-radius: 0;
+      }
+      .m-right .typing-line {
+        background: var(--line);
+        border-radius: 0;
+      }
+      .m-right .composer {
+        border: 2px solid var(--ink);
+        background: var(--paper);
+        border-radius: 0;
+        box-shadow: 3px 3px 0 var(--ink);
+      }
+      .m-right .composer .ic {
+        color: var(--ink);
+      }
+      .m-right .send {
+        background: var(--ink);
+        color: var(--acid);
+        border-radius: 0;
+      }
+      .m-right .chat-foot {
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 6.5px;
+        text-transform: uppercase;
+      }
+      .m-right .files-head {
+        padding-top: 15px;
+        border-bottom: 1px solid var(--line);
+      }
+      .m-right .mini-search {
+        background: var(--paper);
+        border: 1px solid var(--ink);
+        border-radius: 0;
+        color: var(--muted);
+      }
+      .m-right .files-pane .tree-row {
+        color: var(--muted);
+        border-radius: 0;
+      }
+      .m-right .files-pane .tree-row.active {
+        background: var(--acid);
+        color: var(--ink);
+        box-shadow: inset 2px 0 0 var(--ink);
+      }
+      .m-right .files-foot {
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 7.5px;
+        text-transform: uppercase;
+      }
+      .m-right .note-card {
+        background: var(--paper);
+        border: 1px solid var(--ink);
+        border-radius: 0;
+      }
+      .m-right .note-card.active {
+        background: var(--acid);
+      }
+      .m-right .note-date {
+        color: var(--orange);
+        font-family: var(--mono);
+      }
+      .m-right .note-card strong {
+        font-family: var(--serif);
+        font-weight: 500;
+      }
+      .m-right .note-card p {
+        font-family: var(--serif);
+        color: var(--muted);
+      }
+      .m-right .note-editor {
+        border-color: var(--line);
+        color: var(--muted);
+        font-family: var(--mono);
+      }
+      .m-status {
+        background: var(--ink);
+        color: var(--paper);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        font-family: var(--mono);
+        font-size: 7.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .m-status span {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .m-status .status-dot {
+        background: var(--acid);
+        box-shadow: none;
+      }
+      .monograph .palette-scrim {
+        background: #11111166;
+        backdrop-filter: blur(2px);
+        padding-top: 132px;
+      }
+      .monograph .palette {
+        background: var(--paper);
+        border: 2px solid var(--ink);
+        border-radius: 0;
+        box-shadow: 7px 7px 0 var(--ink);
+      }
+      .monograph .palette-input {
+        border-bottom: 2px solid var(--ink);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 9.5px;
+      }
+      .monograph .palette-input kbd,
+      .monograph .palette-row kbd {
+        border: 1px solid var(--ink);
+        border-radius: 0;
+        color: var(--ink);
+      }
+      .monograph .palette-label {
+        color: var(--muted);
+      }
+      .monograph .palette-row:hover,
+      .monograph .palette-row.active {
+        background: var(--acid);
+      }
+      .monograph .row-icon {
+        background: var(--paper);
+        border: 1px solid var(--ink);
+        border-radius: 0;
+        color: var(--ink);
+      }
+      .monograph .row-main strong {
+        font-size: 9.5px;
+      }
+      .monograph .row-main small {
+        color: var(--muted);
+        font-family: var(--mono);
+      }
+      .monograph .palette-foot {
+        border-top: 2px solid var(--ink);
+        color: var(--muted);
+        font-family: var(--mono);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app monograph">
+      <header class="m-top">
+        <div class="m-word">Papyri<span>.</span></div>
+        <nav class="m-nav">
+          <button class="active">Read</button><button>Notes</button><button>Chat</button
+          ><button>Library</button>
+        </nav>
+        <div class="m-top-meta">
+          <span><strong>markdown.md</strong> · 1,842 words</span><span>11:28</span
+          ><button class="m-menu">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="5" cy="12" r="1"></circle>
+              <circle cx="12" cy="12" r="1"></circle>
+              <circle cx="19" cy="12" r="1"></circle>
+            </svg>
+          </button>
+        </div>
+      </header>
+      <div class="m-body">
+        <aside class="m-rail">
+          <button class="active">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"
+              ></path></svg
+            ><span>Read</span>
+          </button>
+          <button>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg
+            ><span>Outline</span>
+          </button>
+          <button>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"></path></svg
+            ><span>Chat</span>
+          </button>
+          <button>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+              ></path></svg
+            ><span>Files</span>
+          </button>
+          <span class="rail-grow"></span>
+          <button>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"
+              ></path></svg
+            ><span>Settings</span>
+          </button>
+        </aside>
+        <main class="m-main">
+          <div class="doc-scroll">
+            <article class="doc">
+              <div class="doc-crumb">
+                <span>showcase</span><span class="slash">/</span
+                ><span class="file">markdown.md</span><span class="kind">MARKDOWN</span>
+              </div>
+              <h1 class="doc-title">Markdown and<br />mathematics</h1>
+              <p class="doc-dek">A test page for typography, links, math, code and footnotes.</p>
+              <div class="doc-meta">
+                <span>Updated just now</span><span>1,842 words</span><span>6 min read</span>
+              </div>
+              <div class="doc-links">
+                <a>Back to the showcase</a><span>·</span><a>Open diagrams</a><span>·</span
+                ><a>Jump to references</a>
+              </div>
+              <h2 class="doc-h2"><span class="hnum">01</span>Text and links</h2>
+              <p>
+                This page exercises <strong>bold</strong>, <em>emphasis</em>,
+                <del>strikethrough</del>, <code>inline code</code>, an <a>external link</a>, and an
+                autolink: <a>https://example.org</a>. <mark>PAPYRI-NEEDLE</mark> is a distinctive
+                search target.
+              </p>
+              <blockquote>
+                <p>A block quote can contain a second paragraph.</p>
+                <p>Use the outline to navigate between headings.</p>
+              </blockquote>
+              <ul class="tasks">
+                <li class="done">Open the project</li>
+                <li>Try split view</li>
+                <li class="nested">A nested bullet</li>
+              </ul>
+              <h2 class="doc-h2"><span class="hnum">02</span>Code and layout</h2>
+              <pre
+                class="code"
+              ><code><span class="kw">def</span> <span class="fn">mean</span>(values):
+    <span class="kw">return</span> <span class="fn">sum</span>(values) / <span class="fn">len</span>(values)</code></pre>
+              <h2 class="doc-h2"><span class="hnum">03</span>Mathematics and references</h2>
+              <p>
+                Inline math uses the default delimiters:
+                <span class="inline-math">e<sup>iπ</sup> + 1 = 0</span>. Equation (7) should link to
+                its target.
+              </p>
+              <div class="math-block">
+                <span class="math">∫<sub>−∞</sub><sup>∞</sup> e<sup>−x²</sup> dx = √π</span
+                ><span class="eq-no">(7)</span>
+              </div>
+              <table class="doc-table">
+                <thead>
+                  <tr>
+                    <th>Feature</th>
+                    <th>Example</th>
+                    <th>Expected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Table</td>
+                    <td>Three columns</td>
+                    <td>Aligned content</td>
+                  </tr>
+                  <tr>
+                    <td>Footnote</td>
+                    <td>Local note<sup class="fn-ref">1</sup></td>
+                    <td>Clickable</td>
+                  </tr>
+                </tbody>
+              </table>
+            </article>
+          </div>
+        </main>
+        <aside class="m-right">
+          <div class="side-tabs mono-tabs">
+            <button class="side-tab" data-tab-target="outline">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg
+              ><span>Outline</span>
+            </button>
+            <button class="side-tab" data-tab-target="chat">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"></path></svg
+              ><span>ChatGPT</span>
+            </button>
+            <button class="side-tab" data-tab-target="files">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                ></path></svg
+              ><span>Files</span>
+            </button>
+            <button class="side-tab" data-tab-target="notes">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6"></path></svg
+              ><span>Notes</span>
+            </button>
+            <button class="side-tab-add" aria-label="Add tab">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="side-content">
+            <div class="pane outline-pane" data-pane="outline">
+              <div class="outline-head">
+                <div><span class="eyebrow">ON THIS PAGE</span><strong>6 sections</strong></div>
+                <svg
+                  class="ic ghost-ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>
+                </svg>
+              </div>
+              <div class="outline-progress"><span></span></div>
+              <nav class="outline-list">
+                <button class="outline-row active">
+                  <span class="outline-num">01</span><span>Markdown and mathematics</span
+                  ><span class="reading-dot"></span></button
+                ><button class="outline-row">
+                  <span class="outline-num">02</span><span>Text and links</span></button
+                ><button class="outline-row">
+                  <span class="outline-num">03</span><span>Code and layout</span></button
+                ><button class="outline-row">
+                  <span class="outline-num">04</span><span>Mathematics and references</span></button
+                ><button class="outline-row">
+                  <span class="outline-num">05</span><span>HTML and trust</span></button
+                ><button class="outline-row">
+                  <span class="outline-num">06</span><span>References</span>
+                </button>
+              </nav>
+              <div class="outline-foot">
+                <span class="pulse"></span>Outline follows scroll<span class="key">G</span>
+              </div>
+            </div>
+            <div class="pane chat-pane" data-pane="chat">
+              <div class="chat-head">
+                <div class="chat-brand">
+                  <span class="chat-mark"
+                    ><svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6Z"></path>
+                      <path d="M5 16l-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path></svg
+                  ></span>
+                  <div><strong>ChatGPT</strong><span>GPT-5 · this document</span></div>
+                </div>
+                <span class="signed-in"><span class="status-dot"></span>Signed in</span>
+              </div>
+              <div class="context-chip">
+                <svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                ><span>markdown.md</span
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M18 6 6 18M6 6l12 12"></path>
+                </svg>
+              </div>
+              <div class="thread">
+                <div class="msg user">
+                  <div class="bubble">Explain the nonresonance assumption in simpler terms.</div>
+                </div>
+                <div class="msg assistant">
+                  <div class="ai-avatar">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6Z"></path>
+                      <path d="M5 16l-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path>
+                    </svg>
+                  </div>
+                  <div class="bubble">
+                    The cavity has natural frequencies where sound forms standing waves. At those
+                    frequencies the ideal model has no unique finite response, so we assume the
+                    driving frequency avoids them. That keeps the Helmholtz solution well defined.
+                  </div>
+                </div>
+                <div class="msg user">
+                  <div class="bubble">Make it one sentence I can use in the thesis.</div>
+                </div>
+                <div class="msg assistant typing">
+                  <div class="ai-avatar">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6Z"></path>
+                      <path d="M5 16l-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path>
+                    </svg>
+                  </div>
+                  <div class="bubble">
+                    <span class="typing-line"></span><span class="typing-line short"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="composer">
+                <button class="composer-add">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg></button
+                ><span class="composer-placeholder">Ask about this document…</span
+                ><button class="composer-mic">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"></path>
+                  </svg></button
+                ><button class="send">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 19V5M6 11l6-6 6 6"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="chat-foot">ChatGPT can make mistakes. Check important info.</div>
+            </div>
+            <div class="pane files-pane" data-pane="files">
+              <div class="files-head">
+                <div class="mini-search">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <path d="m21 21-4.3-4.3"></path></svg
+                  ><span>Filter files</span><kbd>⌘P</kbd>
+                </div>
+                <button class="ghost-btn">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="tree">
+                <button class="tree-row folder" style="--depth: 0">
+                  <svg
+                    class="ic twist"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m6 9 6 6 6-6"></path></svg
+                  ><svg
+                    class="ic file-ic folder"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                    ></path></svg
+                  ><span class="tree-name">examples</span></button
+                ><button class="tree-row folder" style="--depth: 1">
+                  <svg
+                    class="ic twist"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m6 9 6 6 6-6"></path></svg
+                  ><svg
+                    class="ic file-ic folder"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                    ></path></svg
+                  ><span class="tree-name">showcase</span></button
+                ><button class="tree-row active" style="--depth: 2">
+                  <span class="twist"></span
+                  ><svg
+                    class="ic file-ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                  ><span class="tree-name">markdown.md</span
+                  ><span class="active-dot"></span></button
+                ><button class="tree-row" style="--depth: 2">
+                  <span class="twist"></span
+                  ><svg
+                    class="ic file-ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                  ><span class="tree-name">diagrams.md</span></button
+                ><button class="tree-row" style="--depth: 2">
+                  <span class="twist"></span
+                  ><svg
+                    class="ic file-ic pdf"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                  ><span class="tree-name">paged.pdf</span></button
+                ><button class="tree-row" style="--depth: 2">
+                  <span class="twist"></span
+                  ><svg
+                    class="ic file-ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                  ><span class="tree-name">paged.typ</span></button
+                ><button class="tree-row" style="--depth: 2">
+                  <span class="twist"></span
+                  ><svg
+                    class="ic file-ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                  ><span class="tree-name">README.md</span></button
+                ><button class="tree-row folder" style="--depth: 1">
+                  <svg
+                    class="ic twist"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m9 18 6-6-6-6"></path></svg
+                  ><svg
+                    class="ic file-ic folder"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                    ></path></svg
+                  ><span class="tree-name">assets</span></button
+                ><button class="tree-row" style="--depth: 1">
+                  <span class="twist"></span
+                  ><svg
+                    class="ic file-ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                  ><span class="tree-name">linked.md</span>
+                </button>
+              </div>
+              <div class="files-foot">
+                <span class="status-dot"></span>Local folder · live<span class="grow"></span
+                ><button class="text-btn">Open folder</button>
+              </div>
+            </div>
+            <div class="pane notes-pane" data-pane="notes">
+              <div class="notes-head">
+                <div><span class="eyebrow">NOTES</span><strong>Reading notes</strong></div>
+                <button class="ghost-btn">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="note-card active">
+                <span class="note-date">TODAY · 11:28</span
+                ><strong>Nonresonance vs. resonance</strong>
+                <p>
+                  Need to clarify why the unique solution fails exactly at the eigenfrequencies.
+                </p>
+              </div>
+              <div class="note-card">
+                <span class="note-date">YESTERDAY</span><strong>Outline structure</strong>
+                <p>Keep the math section before references.</p>
+              </div>
+              <div class="note-editor">
+                <span>Write a note…</span
+                ><button>
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 19V5M6 11l6-6 6 6"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <footer class="m-status">
+        <span><span class="status-dot"></span>Read-only · local</span
+        ><span>Markdown · UTF-8<span>·</span>Network blocked</span>
+      </footer>
+      <div class="palette-scrim">
+        <div class="palette">
+          <div class="palette-input">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m21 21-4.3-4.3"></path></svg
+            ><span>Search files, headings, and commands…</span><kbd>Esc</kbd>
+          </div>
+          <div class="palette-body">
+            <div class="palette-label">RECENT</div>
+            <button class="palette-row active">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg></span
+              ><span class="row-main"
+                ><strong>Markdown and mathematics</strong><small>showcase/markdown.md</small></span
+              ><span class="row-hint">↵</span>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg></span
+              ><span class="row-main"
+                ><strong>Diagrams</strong><small>showcase/diagrams.md</small></span
+              >
+            </button>
+            <div class="palette-label">COMMANDS</div>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"
+                  ></path></svg></span
+              ><span class="row-main"
+                ><strong>Toggle ChatGPT panel</strong><small>View · assistant</small></span
+              ><kbd>⌘⇧B</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <path d="M15 3v18"></path></svg></span
+              ><span class="row-main"
+                ><strong>Toggle outline panel</strong><small>View · outline</small></span
+              >
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                  <path d="M12 4v16"></path></svg></span
+              ><span class="row-main"
+                ><strong>Split document</strong><small>View · panes</small></span
+              ><kbd>⌘</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <path
+                    d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+                  ></path></svg></span
+              ><span class="row-main"><strong>Toggle theme</strong><small>Appearance</small></span>
+            </button>
+          </div>
+          <div class="palette-foot">
+            <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span
+            ><span><kbd>esc</kbd> close</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const tab = params.get('tab') || 'chat';
+      document.querySelectorAll('[data-tab-target]').forEach((el) => {
+        el.classList.toggle('active', el.dataset.tabTarget === tab);
+      });
+      document.querySelectorAll('[data-pane]').forEach((el) => {
+        el.classList.toggle('active', el.dataset.pane === tab);
+      });
+      if (params.get('modal') === 'palette')
+        document.querySelector('.palette-scrim')?.classList.add('open');
+      document.querySelectorAll('[data-tab-target]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const next = el.dataset.tabTarget;
+          document
+            .querySelectorAll('[data-tab-target]')
+            .forEach((x) => x.classList.toggle('active', x.dataset.tabTarget === next));
+          document
+            .querySelectorAll('[data-pane]')
+            .forEach((x) => x.classList.toggle('active', x.dataset.pane === next));
+        });
+      });
+    </script>
+  </body>
+</html>

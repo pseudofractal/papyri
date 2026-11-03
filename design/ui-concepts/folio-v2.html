@@ -1,0 +1,3951 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Papyri — Folio v2</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        border: 0;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .ic {
+        width: 16px;
+        height: 16px;
+        flex: none;
+        display: block;
+      }
+      .grow {
+        flex: 1;
+      }
+      .eyebrow {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .pane {
+        display: none;
+        min-height: 0;
+      }
+      .pane.active {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+      .palette-scrim {
+        display: none;
+      }
+      .palette-scrim.open {
+        display: flex;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, currentColor 18%, transparent);
+        border-radius: 99px;
+      }
+
+      .status-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #55705a;
+        box-shadow: 0 0 0 3px #55705a18;
+        flex: none;
+      }
+      .tree {
+        padding: 8px;
+        overflow: auto;
+        flex: 1;
+        min-height: 0;
+      }
+      .tree-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px 6px calc(8px + var(--depth) * 14px);
+        border-radius: 5px;
+        font-size: 10.5px;
+        color: #7d7668;
+        text-align: left;
+      }
+      .tree-row:hover {
+        background: #00000008;
+      }
+      .tree-row.folder {
+        font-weight: 550;
+      }
+      .tree-row.active {
+        font-weight: 550;
+      }
+      .twist {
+        width: 11px;
+        height: 11px;
+        flex: none;
+        opacity: 0.6;
+      }
+      .file-ic {
+        width: 13px;
+        height: 13px;
+        flex: none;
+        opacity: 0.8;
+      }
+      .tree-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .active-dot {
+        width: 5px;
+        height: 5px;
+        margin-left: auto;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .side-content {
+        min-height: 0;
+        flex: 1;
+        display: flex;
+      }
+      .side-tabs {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        height: 48px;
+        padding: 0 10px;
+        flex: none;
+      }
+      .side-tab {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 100%;
+        padding: 0 10px;
+        font-size: 9.5px;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+      }
+      .side-tab .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .side-tab-add {
+        margin-left: auto;
+        width: 24px;
+        height: 24px;
+        display: grid;
+        place-items: center;
+        border-radius: 5px;
+      }
+      .outline-head,
+      .notes-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 18px 12px;
+      }
+      .outline-head > div,
+      .notes-head > div {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .outline-head strong,
+      .notes-head strong {
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .ghost-ic {
+        width: 15px;
+        height: 15px;
+        opacity: 0.65;
+      }
+      .outline-progress {
+        height: 2px;
+        margin: 0 18px 12px;
+      }
+      .outline-progress span {
+        display: block;
+        width: 18%;
+        height: 100%;
+      }
+      .outline-list {
+        padding: 0 10px;
+        overflow: auto;
+        min-height: 0;
+      }
+      .outline-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        text-align: left;
+        padding: 8px 9px;
+        font-size: 10.5px;
+        border-left: 1px solid transparent;
+      }
+      .outline-num {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+      }
+      .reading-dot {
+        margin-left: auto;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+      }
+      .outline-foot {
+        margin-top: auto;
+        padding: 13px 18px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 9px;
+      }
+      .pulse {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+      }
+      .key {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+        border: 1px solid currentColor;
+        opacity: 0.8;
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+      .chat-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 16px 10px;
+        gap: 8px;
+      }
+      .chat-brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+      }
+      .chat-mark {
+        width: 29px;
+        height: 29px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .chat-mark .ic {
+        width: 15px;
+        height: 15px;
+      }
+      .chat-brand > div {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+      }
+      .chat-brand strong {
+        font-size: 11px;
+      }
+      .chat-brand span {
+        font-size: 8.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .signed-in {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 8px;
+        white-space: nowrap;
+      }
+      .context-chip {
+        margin: 0 16px 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: fit-content;
+        max-width: calc(100% - 32px);
+        border-radius: 5px;
+        padding: 4px 6px;
+        font-size: 8.5px;
+      }
+      .context-chip .ic {
+        width: 11px;
+        height: 11px;
+      }
+      .context-chip .ic:last-child {
+        margin-left: 4px;
+        opacity: 0.5;
+      }
+      .thread {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 6px 16px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+      }
+      .msg {
+        display: flex;
+        gap: 7px;
+      }
+      .msg.user {
+        justify-content: flex-end;
+      }
+      .msg.user .bubble {
+        border-radius: 10px 10px 3px 10px;
+        max-width: 86%;
+        padding: 8px 10px;
+        font-size: 10.5px;
+        line-height: 1.45;
+      }
+      .msg.assistant {
+        align-items: flex-start;
+      }
+      .ai-avatar {
+        width: 21px;
+        height: 21px;
+        flex: none;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+      }
+      .ai-avatar .ic {
+        width: 11px;
+        height: 11px;
+      }
+      .msg.assistant .bubble {
+        font-size: 11.5px;
+        line-height: 1.5;
+        padding: 2px 0;
+      }
+      .typing-line {
+        display: block;
+        width: 150px;
+        height: 6px;
+        margin: 5px 0;
+        border-radius: 99px;
+      }
+      .typing-line.short {
+        width: 100px;
+      }
+      .composer {
+        margin: 0 12px 10px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        min-height: 39px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 7px;
+        flex: none;
+      }
+      .composer .ic {
+        width: 14px;
+        height: 14px;
+      }
+      .composer-add,
+      .composer-mic {
+        width: 23px;
+        height: 23px;
+        display: grid;
+        place-items: center;
+      }
+      .composer-placeholder {
+        font-size: 10px;
+        flex: 1;
+      }
+      .send {
+        width: 25px;
+        height: 25px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .send .ic {
+        width: 12px;
+        height: 12px;
+      }
+      .chat-foot {
+        text-align: center;
+        font-size: 7.5px;
+        padding-bottom: 9px;
+      }
+      .files-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 14px 8px;
+      }
+      .mini-search {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        height: 29px;
+        padding: 0 8px;
+        flex: 1;
+        font-size: 9.5px;
+        min-width: 0;
+      }
+      .mini-search kbd {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+      }
+      .ghost-btn,
+      .text-btn {
+        font-size: 9px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .files-pane .tree {
+        padding: 5px 8px;
+      }
+      .files-foot {
+        margin-top: auto;
+        padding: 11px 15px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 8.5px;
+      }
+      .notes-head {
+        padding-bottom: 14px;
+      }
+      .note-card {
+        margin: 0 14px 9px;
+        padding: 12px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+      }
+      .note-date {
+        display: block;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 7.5px;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+      }
+      .note-card strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 5px;
+      }
+      .note-card p {
+        margin: 0;
+        font-size: 10.5px;
+        line-height: 1.45;
+      }
+      .note-editor {
+        margin: auto 14px 14px;
+        border-top: 1px solid transparent;
+        padding-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+      }
+      .note-editor button {
+        width: 24px;
+        height: 24px;
+        border: 1px solid currentColor;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+      }
+      .palette-scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 135px;
+      }
+      .palette {
+        width: min(560px, calc(100vw - 60px));
+        border: 1px solid transparent;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .palette-input {
+        height: 49px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 15px;
+        border-bottom: 1px solid transparent;
+        font-size: 11px;
+      }
+      .palette-input kbd {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+      .palette-body {
+        padding: 8px;
+        max-height: 390px;
+        overflow: auto;
+      }
+      .palette-label {
+        font-size: 7.5px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        padding: 10px 8px 5px;
+      }
+      .palette-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 8px;
+        border-radius: 6px;
+        text-align: left;
+      }
+      .row-icon {
+        width: 24px;
+        height: 24px;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .row-icon .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .row-main {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+      }
+      .row-main strong {
+        font-size: 10px;
+        font-weight: 550;
+      }
+      .row-main small {
+        font-size: 8px;
+      }
+      .row-hint,
+      .palette-row kbd {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+      }
+      .palette-row kbd {
+        padding: 2px 4px;
+        border-radius: 3px;
+        border: 1px solid currentColor;
+      }
+      .palette-foot {
+        height: 32px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 14px;
+        font-size: 8px;
+      }
+      .palette-foot span {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+      }
+      .palette-foot kbd {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 7px;
+        padding: 1px 3px;
+        border-radius: 2px;
+        border: 1px solid currentColor;
+      }
+      .doc-scroll {
+        height: 100%;
+        overflow: hidden;
+      }
+      .doc {
+        width: min(760px, calc(100% - 96px));
+        margin: 0 auto;
+        padding: 44px 0 80px;
+      }
+      .doc-crumb {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 9px;
+      }
+      .doc-crumb .slash {
+        opacity: 0.5;
+      }
+      .doc-crumb .kind {
+        margin-left: 7px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        padding: 2px 5px;
+        border-radius: 3px;
+        border: 1px solid currentColor;
+      }
+      .doc-title {
+        font-size: 47px;
+        line-height: 0.99;
+        font-weight: 500;
+        margin: 25px 0 15px;
+      }
+      .doc-dek {
+        font-size: 15px;
+        line-height: 1.45;
+        margin: 0 0 14px;
+        font-style: italic;
+      }
+      .doc-meta {
+        display: flex;
+        gap: 18px;
+        font-size: 9px;
+        padding: 10px 0 12px;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+      }
+      .doc-links {
+        font-size: 10.5px;
+        display: flex;
+        gap: 9px;
+        flex-wrap: wrap;
+        padding: 15px 0 4px;
+      }
+      .doc-links a {
+        border-bottom: 1px solid currentColor;
+      }
+      .doc-links span {
+        opacity: 0.5;
+      }
+      .doc-h2 {
+        font-size: 22px;
+        font-weight: 500;
+        margin: 28px 0 10px;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .hnum {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+        letter-spacing: 0.06em;
+      }
+      .doc p {
+        font-size: 14.5px;
+        line-height: 1.58;
+        margin: 10px 0;
+      }
+      .doc p a {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .doc code {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 10.5px;
+        padding: 2px 5px;
+        border-radius: 3px;
+      }
+      .doc mark {
+        padding: 1px 3px;
+      }
+      .doc blockquote {
+        margin: 17px 0;
+        padding: 3px 0 3px 17px;
+        border-left: 2px solid currentColor;
+      }
+      .doc blockquote p {
+        margin: 6px 0;
+        font-style: italic;
+      }
+      .tasks {
+        list-style: none;
+        padding: 0;
+        margin: 13px 0;
+        font-size: 13.5px;
+      }
+      .tasks li {
+        position: relative;
+        padding-left: 19px;
+        margin: 5px 0;
+      }
+      .tasks li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 9px;
+        height: 9px;
+        border: 1px solid currentColor;
+        border-radius: 2px;
+      }
+      .tasks li.done::before {
+        box-shadow: inset 0 0 0 2px currentColor;
+      }
+      .tasks li.nested {
+        margin-left: 18px;
+      }
+      .code {
+        margin: 14px 0 18px;
+        padding: 15px 18px;
+        border-radius: 7px;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 10.5px;
+        line-height: 1.6;
+        overflow: hidden;
+      }
+      .code code {
+        background: none;
+        color: inherit;
+        padding: 0;
+        font-size: inherit;
+      }
+      .doc .code code {
+        background: none !important;
+        color: inherit !important;
+        padding: 0 !important;
+        font-size: inherit !important;
+      }
+      .inline-math {
+        font-family: 'Latin Modern Math', 'DejaVu Math TeX Gyre', serif;
+        font-size: 15px;
+        white-space: nowrap;
+      }
+      .math-block {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        margin: 16px 0 18px;
+        padding: 16px 0;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+      }
+      .math {
+        font-family: 'Latin Modern Math', 'DejaVu Math TeX Gyre', serif;
+        font-size: 24px;
+        letter-spacing: 0.01em;
+      }
+      .math sub,
+      .math sup {
+        font-size: 10px;
+      }
+      .eq-no {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 9px;
+      }
+      .doc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11.5px;
+        margin: 14px 0;
+      }
+      .doc-table th {
+        text-align: left;
+        font-size: 8px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 6px 8px;
+        border-bottom: 1px solid currentColor;
+      }
+      .doc-table td {
+        padding: 7px 8px;
+        border-bottom: 1px solid currentColor;
+      }
+      .fn-ref {
+        font-size: 8px;
+      }
+
+      .fv2 {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background: var(--base);
+        color: var(--text);
+        font-family: var(--ui);
+        --ui: 'Adwaita Sans', 'Inter', system-ui, sans-serif;
+        --serif: 'Latin Modern Roman', 'Iowan Old Style', Georgia, serif;
+        --mono: 'DejaVu Sans Mono', ui-monospace, monospace;
+        --line: color-mix(in srgb, var(--text) 14%, transparent);
+        --line-soft: color-mix(in srgb, var(--text) 8%, transparent);
+        --muted: var(--subtext0);
+        --dim: var(--overlay0);
+        --panel: var(--mantle);
+        --shadow: color-mix(in srgb, var(--crust) 45%, transparent);
+      }
+      .fv2[data-theme='latte'] {
+        --base: #eff1f5;
+        --mantle: #e6e9ef;
+        --crust: #dce0e8;
+        --text: #4c4f69;
+        --subtext0: #6c6f85;
+        --subtext1: #5c5f77;
+        --overlay0: #9ca0b0;
+        --overlay1: #8c8fa1;
+        --surface0: #ccd0da;
+        --surface1: #bcc0cc;
+        --surface2: #acb0be;
+        --mauve: #8839ef;
+        --blue: #1e66f5;
+        --green: #40a02b;
+        --peach: #fe640b;
+        --red: #d20f39;
+        --yellow: #df8e1d;
+        --teal: #179299;
+        --lavender: #7287fd;
+        --on-accent: #eff1f5;
+        --on-highlight: #4c4f69;
+      }
+      .fv2[data-theme='mocha'] {
+        --base: #1e1e2e;
+        --mantle: #181825;
+        --crust: #11111b;
+        --text: #cdd6f4;
+        --subtext0: #a6adc8;
+        --subtext1: #bac2de;
+        --overlay0: #6c7086;
+        --overlay1: #7f849c;
+        --surface0: #313244;
+        --surface1: #45475a;
+        --surface2: #585b70;
+        --mauve: #cba6f7;
+        --blue: #89b4fa;
+        --green: #a6e3a1;
+        --peach: #fab387;
+        --red: #f38ba8;
+        --yellow: #f9e2af;
+        --teal: #94e2d5;
+        --lavender: #b4befe;
+        --on-accent: #11111b;
+        --on-highlight: #11111b;
+      }
+      .fv2 button {
+        color: inherit;
+      }
+      .fv2 .ic {
+        stroke-width: 1.75;
+      }
+      .fv2-top {
+        height: 52px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 14px;
+        background: var(--mantle);
+        border-bottom: 1px solid var(--line);
+      }
+      .fv2-brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        width: 190px;
+        flex: none;
+      }
+      .fv2-mark {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        background: var(--mauve);
+        color: var(--on-accent);
+        display: grid;
+        place-items: center;
+        font-family: var(--serif);
+        font-size: 16px;
+        line-height: 1;
+      }
+      .fv2-word {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+      }
+      .fv2-tabs {
+        display: flex;
+        align-items: stretch;
+        height: 100%;
+        flex: 1;
+        min-width: 0;
+        gap: 1px;
+      }
+      .fv2-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 100%;
+        padding: 0 13px;
+        color: var(--muted);
+        font-size: 10.5px;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+      }
+      .fv2-tab .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .fv2-tab.active {
+        color: var(--text);
+        border-bottom-color: var(--mauve);
+      }
+      .fv2-tab .x {
+        width: 11px;
+        height: 11px;
+        opacity: 0.45;
+        margin-left: 2px;
+      }
+      .fv2-tab-add {
+        width: 34px;
+        display: grid;
+        place-items: center;
+        color: var(--dim);
+      }
+      .fv2-top-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: none;
+      }
+      .fv2-command {
+        height: 30px;
+        width: 190px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--base);
+        color: var(--muted);
+        font-size: 9.5px;
+      }
+      .fv2-command kbd {
+        margin-left: auto;
+        font-family: var(--mono);
+        font-size: 8px;
+        color: var(--dim);
+        border: 1px solid var(--line-soft);
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+      .fv2-open {
+        height: 30px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        color: var(--text);
+        font-size: 9.5px;
+        background: var(--base);
+      }
+      .fv2-open .ic {
+        width: 14px;
+        height: 14px;
+        color: var(--peach);
+      }
+      .fv2-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .fv2-icon:hover,
+      .fv2-icon.active {
+        background: color-mix(in srgb, var(--mauve) 16%, transparent);
+        color: var(--mauve);
+      }
+      .fv2-icon .ic {
+        width: 16px;
+        height: 16px;
+      }
+      .fv2-theme .sun {
+        display: none;
+      }
+      .fv2[data-theme='mocha'] .fv2-theme .sun {
+        display: block;
+      }
+      .fv2[data-theme='mocha'] .fv2-theme .moon {
+        display: none;
+      }
+      .fv2-strip {
+        height: 40px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px 0 6px;
+        border-bottom: 1px solid var(--line);
+        background: var(--base);
+      }
+      .fv2-path {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        flex: 1;
+        font-size: 9.5px;
+        color: var(--dim);
+      }
+      .fv2-path .folder {
+        color: var(--muted);
+      }
+      .fv2-path strong {
+        color: var(--text);
+        font-weight: 550;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .fv2-path .sep {
+        color: var(--surface2);
+      }
+      .fv2-strip-actions {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+        flex: none;
+      }
+      .fv2-strip-icon {
+        width: 27px;
+        height: 27px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .fv2-strip-icon .ic {
+        width: 15px;
+        height: 15px;
+      }
+      .fv2-strip-icon:hover,
+      .fv2-strip-icon.active {
+        background: color-mix(in srgb, var(--mauve) 15%, transparent);
+        color: var(--mauve);
+      }
+      .fv2-sep {
+        width: 1px;
+        height: 16px;
+        background: var(--line);
+        margin: 0 4px;
+      }
+      .fv2-zoom {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+      }
+      .fv2-zoom .fv2-strip-icon {
+        width: 23px;
+        height: 25px;
+      }
+      .fv2-zoom-value {
+        min-width: 36px;
+        height: 25px;
+        border-radius: 5px;
+        color: var(--subtext1);
+        font-family: var(--mono);
+        font-size: 8.5px;
+      }
+      .fv2-zoom-value:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .fv2-fit {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        margin-left: 2px;
+        width: auto;
+        padding: 0 5px;
+        gap: 4px;
+        font-size: 8px;
+        color: var(--muted);
+      }
+      .fv2-trust {
+        height: 27px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0 6px;
+        border-radius: 6px;
+        color: var(--green);
+        font-size: 8.5px;
+        white-space: nowrap;
+      }
+      .fv2-trust .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .fv2-trust:hover {
+        background: color-mix(in srgb, var(--green) 12%, transparent);
+      }
+      .fv2-searchbar {
+        display: none;
+        height: 38px;
+        flex: none;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--line);
+        background: var(--mantle);
+      }
+      .fv2-searchbar.show {
+        display: flex;
+      }
+      .fv2-searchbar .ic {
+        color: var(--dim);
+        width: 15px;
+        height: 15px;
+      }
+      .fv2-searchbar input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--text);
+        font-size: 10.5px;
+      }
+      .fv2-searchbar .hint {
+        font-size: 8.5px;
+        color: var(--dim);
+      }
+      .fv2-searchbar .close {
+        width: 24px;
+        height: 24px;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+        color: var(--dim);
+      }
+      .fv2-searchbar .close:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .fv2-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+      }
+      .fv2-explorer {
+        width: var(--explorer-width, 232px);
+        flex: none;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--mantle);
+        border-right: 1px solid var(--line);
+      }
+      .fv2-explorer-resize,
+      .fv2-panel-resize {
+        width: 5px;
+        flex: none;
+        cursor: col-resize;
+        background: transparent;
+        position: relative;
+        z-index: 3;
+      }
+      .fv2-explorer-resize:hover,
+      .fv2-panel-resize:hover {
+        background: color-mix(in srgb, var(--mauve) 35%, transparent);
+      }
+      .fv2-explorer-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 13px 12px 9px 16px;
+      }
+      .fv2-explorer-head span {
+        font-size: 8.5px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        color: var(--dim);
+      }
+      .fv2-explorer-head div {
+        display: flex;
+        gap: 1px;
+      }
+      .fv2-small-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+        color: var(--dim);
+      }
+      .fv2-small-icon:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .fv2-left-tabs {
+        display: flex;
+        gap: 14px;
+        padding: 0 16px 8px;
+        border-bottom: 1px solid var(--line);
+      }
+      .fv2-left-tab {
+        font-size: 8.5px;
+        color: var(--dim);
+        padding-bottom: 6px;
+        border-bottom: 1px solid transparent;
+      }
+      .fv2-left-tab.active {
+        color: var(--text);
+        border-bottom-color: var(--mauve);
+      }
+      .fv2-source {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 8px 16px 9px;
+        font-size: 9.5px;
+        color: var(--muted);
+      }
+      .fv2-source .ic {
+        width: 14px;
+        height: 14px;
+        color: var(--peach);
+      }
+      .fv2-source span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .fv2-pathform {
+        display: flex;
+        margin: 0 12px 7px;
+        height: 26px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--base);
+      }
+      .fv2-pathform input {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        color: var(--dim);
+        font-family: var(--mono);
+        font-size: 8px;
+        padding: 0 7px;
+        outline: none;
+      }
+      .fv2-pathform button {
+        width: 25px;
+        display: grid;
+        place-items: center;
+        color: var(--dim);
+      }
+      .fv2-parent {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 17px;
+        font-size: 9px;
+        color: var(--dim);
+        text-align: left;
+      }
+      .fv2-parent .ic {
+        width: 12px;
+        height: 12px;
+      }
+      .fv2-parent:hover {
+        color: var(--text);
+      }
+      .fv2-explorer .tree {
+        padding: 4px 7px;
+      }
+      .fv2-explorer .tree-row {
+        font-size: 10px;
+        border-radius: 5px;
+      }
+      .fv2-explorer .tree-row.active {
+        background: color-mix(in srgb, var(--mauve) 14%, transparent);
+        color: var(--mauve);
+        box-shadow: inset 2px 0 0 var(--mauve);
+      }
+      .fv2-explorer .tree-row.active .file-ic {
+        color: var(--mauve);
+        opacity: 1;
+      }
+      .fv2-explorer .tree-row.folder {
+        color: var(--subtext1);
+      }
+      .fv2-explorer .tree-row:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .fv2-explorer .active-dot {
+        background: var(--mauve);
+      }
+      .fv2-explorer .status-dot {
+        background: var(--green);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 16%, transparent);
+      }
+      .fv2-explorer-foot {
+        border-top: 1px solid var(--line);
+        padding: 10px 15px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 8px;
+        color: var(--dim);
+        margin-top: auto;
+      }
+      .fv2-main {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        background: var(--base);
+      }
+      .fv2-panes {
+        display: flex;
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+      }
+      .fv2-pane {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .fv2-secondary {
+        display: none;
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        border-left: 1px solid var(--line);
+        flex-direction: column;
+      }
+      .fv2-panes.split .fv2-secondary {
+        display: flex;
+      }
+      .fv2-secondary-head {
+        height: 30px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px 0 12px;
+        border-bottom: 1px solid var(--line);
+        color: var(--dim);
+        font-size: 9px;
+        background: var(--mantle);
+      }
+      .fv2-secondary-head .fv2-small-icon {
+        width: 21px;
+        height: 21px;
+      }
+      .fv2.panel-off .fv2-side,
+      .fv2.panel-off .fv2-panel-resize {
+        display: none;
+      }
+      .fv2.sidebar-off .fv2-explorer,
+      .fv2.sidebar-off .fv2-explorer-resize {
+        display: none;
+      }
+      .fv2-panes.split .doc {
+        width: calc(100% - 44px);
+      }
+      .fv2-panes.split .doc-title {
+        font-size: 33px;
+      }
+      .fv2-panes.split .doc-h2 {
+        font-size: 18px;
+      }
+      .fv2-main .doc-scroll {
+        height: 100%;
+        overflow: hidden;
+      }
+      .fv2-main .doc {
+        width: min(720px, calc(100% - 76px));
+        margin: 0 auto;
+        padding: 34px 0 70px;
+      }
+      .fv2-main .doc-crumb {
+        display: none;
+      }
+      .fv2-main .doc-title {
+        font-family: var(--serif);
+        font-size: 46px;
+        line-height: 0.99;
+        font-weight: 500;
+        letter-spacing: -0.04em;
+        margin: 0 0 14px;
+      }
+      .fv2-main .doc-dek {
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 14.5px;
+        color: var(--muted);
+        margin: 0 0 13px;
+      }
+      .fv2-main .doc-meta {
+        border-color: var(--line);
+        color: var(--dim);
+        font-size: 8.5px;
+        padding: 9px 0 10px;
+      }
+      .fv2-main .doc-links {
+        font-size: 9.5px;
+        color: var(--mauve);
+        padding-top: 13px;
+      }
+      .fv2-main .doc-links a {
+        border-bottom-color: color-mix(in srgb, var(--mauve) 40%, transparent);
+      }
+      .fv2-main .doc-links span {
+        color: var(--surface2);
+      }
+      .fv2-main .doc-h2 {
+        font-family: var(--serif);
+        font-size: 22px;
+        font-weight: 500;
+        letter-spacing: -0.018em;
+        margin: 27px 0 8px;
+      }
+      .fv2-main .hnum {
+        font-family: var(--mono);
+        font-size: 8px;
+        color: var(--mauve);
+      }
+      .fv2-main .doc p {
+        font-family: var(--serif);
+        font-size: 14px;
+        line-height: 1.58;
+        color: var(--subtext1);
+        margin: 9px 0;
+      }
+      .fv2-main .doc p a {
+        color: var(--mauve);
+        text-decoration-color: color-mix(in srgb, var(--mauve) 40%, transparent);
+      }
+      .fv2-main .doc code {
+        font-family: var(--mono);
+        font-size: 10px;
+        background: var(--surface0);
+        color: var(--peach);
+        padding: 2px 4px;
+      }
+      .fv2-main .doc mark {
+        background: color-mix(in srgb, var(--yellow) 45%, transparent);
+        color: var(--on-highlight);
+      }
+      .fv2-main .doc blockquote {
+        border-left-color: var(--mauve);
+        background: color-mix(in srgb, var(--mauve) 7%, transparent);
+        padding: 10px 16px;
+        border-radius: 0 7px 7px 0;
+      }
+      .fv2-main .doc blockquote p {
+        color: var(--muted);
+        font-style: italic;
+        margin: 3px 0;
+      }
+      .fv2-main .tasks {
+        font-family: var(--serif);
+        font-size: 13px;
+        color: var(--subtext1);
+      }
+      .fv2-main .tasks li::before {
+        border-color: var(--surface2);
+      }
+      .fv2-main .tasks li.done::before {
+        background: var(--mauve);
+        border-color: var(--mauve);
+        box-shadow: inset 0 0 0 2px var(--base);
+      }
+      .fv2-main .code {
+        background: var(--crust);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        color: var(--subtext1);
+      }
+      .fv2-main .code .kw {
+        color: var(--mauve);
+      }
+      .fv2-main .code .fn {
+        color: var(--blue);
+      }
+      .fv2-main .inline-math {
+        color: var(--text);
+      }
+      .fv2-main .math-block {
+        border-color: var(--line);
+      }
+      .fv2-main .math {
+        color: var(--text);
+      }
+      .fv2-main .eq-no {
+        color: var(--dim);
+      }
+      .fv2-main .doc-table th {
+        color: var(--dim);
+        border-color: var(--surface1);
+      }
+      .fv2-main .doc-table td {
+        color: var(--subtext1);
+        border-color: var(--line);
+      }
+      .fv2-diagram-doc {
+        padding: 26px 24px;
+        overflow: hidden;
+      }
+      .fv2-diagram-doc .eyebrow {
+        color: var(--blue);
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 0.1em;
+      }
+      .fv2-diagram-doc h1 {
+        font-family: var(--serif);
+        font-size: 32px;
+        font-weight: 500;
+        margin: 10px 0 8px;
+      }
+      .fv2-diagram-doc p {
+        font-family: var(--serif);
+        font-size: 12.5px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+      .fv2-diagram {
+        margin-top: 20px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--mantle);
+        padding: 14px;
+      }
+      .fv2-diagram svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .fv2-side {
+        width: var(--panel-width, 400px);
+        flex: none;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--mantle);
+        border-left: 1px solid var(--line);
+      }
+      .fv2-side-tabs {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        height: 44px;
+        flex: none;
+        padding: 0 9px;
+        border-bottom: 1px solid var(--line);
+      }
+      .fv2-side-tab {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 100%;
+        padding: 0 9px;
+        color: var(--muted);
+        border-bottom: 2px solid transparent;
+        font-size: 9.5px;
+      }
+      .fv2-side-tab .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .fv2-side-tab.active {
+        color: var(--text);
+        border-bottom-color: var(--mauve);
+      }
+      .fv2-side-tab.add {
+        margin-left: auto;
+        width: 24px;
+        padding: 0;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        height: 24px;
+      }
+      .fv2-side-content {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+      }
+      .fv2-side-content .pane {
+        flex: 1;
+        min-height: 0;
+      }
+      .fv2-side .outline-head,
+      .fv2-side .notes-head {
+        padding: 17px 15px 10px;
+      }
+      .fv2-side .outline-head strong,
+      .fv2-side .notes-head strong {
+        font-family: var(--serif);
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .fv2-side .outline-head .eyebrow,
+      .fv2-side .notes-head .eyebrow {
+        color: var(--mauve);
+      }
+      .fv2-side .outline-progress {
+        background: var(--surface0);
+        margin: 0 15px 10px;
+      }
+      .fv2-side .outline-progress span {
+        background: var(--mauve);
+      }
+      .fv2-side .outline-list {
+        padding: 0 8px;
+      }
+      .fv2-side .outline-row {
+        border-left-color: var(--line);
+        color: var(--muted);
+        font-size: 10px;
+      }
+      .fv2-side .outline-row:hover,
+      .fv2-side .outline-row.active {
+        background: color-mix(in srgb, var(--mauve) 11%, transparent);
+        color: var(--text);
+        border-left-color: var(--mauve);
+      }
+      .fv2-side .outline-num {
+        color: var(--mauve);
+      }
+      .fv2-side .reading-dot {
+        background: var(--mauve);
+      }
+      .fv2-side .outline-foot {
+        border-top: 1px solid var(--line);
+        color: var(--dim);
+        font-size: 8px;
+      }
+      .fv2-side .pulse {
+        background: var(--green);
+      }
+      .fv2-side .key {
+        border-color: var(--line);
+        color: var(--dim);
+      }
+      .fv2-browser {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .fv2-browser-bar {
+        height: 37px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 1px;
+        padding: 0 7px;
+        border-bottom: 1px solid var(--line);
+        background: var(--mantle);
+      }
+      .fv2-browser-bar .fv2-strip-icon {
+        width: 24px;
+        height: 24px;
+      }
+      .fv2-address {
+        flex: 1;
+        min-width: 0;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin: 0 4px;
+        padding: 0 7px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--base);
+        color: var(--dim);
+        font-family: var(--mono);
+        font-size: 8px;
+      }
+      .fv2-address .ic {
+        width: 11px;
+        height: 11px;
+        color: var(--green);
+      }
+      .fv2-address span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .fv2-browser-page {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--base);
+      }
+      .gpt-head {
+        height: 47px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 13px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .gpt-mark {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--mauve);
+        color: var(--on-accent);
+      }
+      .gpt-mark .ic {
+        width: 14px;
+        height: 14px;
+      }
+      .gpt-head > div {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .gpt-head strong {
+        font-size: 10.5px;
+      }
+      .gpt-head span {
+        font-size: 8px;
+        color: var(--dim);
+        font-family: var(--mono);
+      }
+      .gpt-account {
+        margin-left: auto;
+        width: 23px;
+        height: 23px;
+        border-radius: 50%;
+        background: var(--blue);
+        color: var(--on-accent);
+        display: grid;
+        place-items: center;
+        font-size: 7px;
+        font-weight: 700;
+      }
+      .gpt-context {
+        margin: 8px 13px 0;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        width: fit-content;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 3px 5px;
+        color: var(--dim);
+        font-size: 8px;
+        font-family: var(--mono);
+      }
+      .gpt-context .ic {
+        width: 10px;
+        height: 10px;
+      }
+      .gpt-thread {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 10px 13px;
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+      }
+      .gpt-msg {
+        display: flex;
+        gap: 6px;
+      }
+      .gpt-msg.user {
+        justify-content: flex-end;
+      }
+      .gpt-msg.user .gpt-bubble {
+        background: var(--mauve);
+        color: var(--on-accent);
+        border-radius: 9px 9px 3px 9px;
+        padding: 7px 9px;
+        font-size: 10px;
+        line-height: 1.45;
+        max-width: 86%;
+      }
+      .gpt-msg.assistant {
+        align-items: flex-start;
+      }
+      .gpt-msg.assistant .gpt-bubble {
+        color: var(--subtext1);
+        font-family: var(--serif);
+        font-size: 11.5px;
+        line-height: 1.5;
+        padding-top: 2px;
+      }
+      .gpt-ai {
+        width: 20px;
+        height: 20px;
+        flex: none;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        display: grid;
+        place-items: center;
+        color: var(--mauve);
+      }
+      .gpt-ai .ic {
+        width: 10px;
+        height: 10px;
+      }
+      .gpt-typing {
+        background: var(--surface0);
+        height: 5px;
+        width: 140px;
+        border-radius: 99px;
+        margin-top: 7px;
+      }
+      .gpt-composer {
+        margin: 0 11px 9px;
+        height: 37px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 6px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--mantle);
+      }
+      .gpt-composer .ic {
+        width: 13px;
+        height: 13px;
+        color: var(--dim);
+      }
+      .gpt-composer span {
+        flex: 1;
+        color: var(--dim);
+        font-size: 9.5px;
+      }
+      .gpt-send {
+        width: 24px;
+        height: 24px;
+        border-radius: 5px;
+        background: var(--mauve);
+        color: var(--on-accent);
+        display: grid;
+        place-items: center;
+      }
+      .gpt-send .ic {
+        width: 12px;
+        height: 12px;
+        color: var(--on-accent);
+      }
+      .gpt-foot {
+        text-align: center;
+        color: var(--dim);
+        font-size: 6.5px;
+        padding-bottom: 7px;
+      }
+      .fv2-side .notes-head {
+        border-bottom: 1px solid var(--line);
+      }
+      .fv2-side .note-card {
+        border-color: var(--line);
+        background: var(--base);
+      }
+      .fv2-side .note-card.active {
+        border-color: color-mix(in srgb, var(--mauve) 40%, var(--line));
+        background: color-mix(in srgb, var(--mauve) 8%, var(--base));
+      }
+      .fv2-side .note-date {
+        color: var(--mauve);
+      }
+      .fv2-side .note-card strong {
+        font-family: var(--serif);
+        font-weight: 500;
+      }
+      .fv2-side .note-card p {
+        font-family: var(--serif);
+        color: var(--muted);
+      }
+      .fv2-side .note-editor {
+        border-color: var(--line);
+        color: var(--dim);
+      }
+      .fv2-status {
+        height: 26px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 13px;
+        border-top: 1px solid var(--line);
+        background: var(--mantle);
+        color: var(--dim);
+        font-size: 8px;
+      }
+      .fv2-status span {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .fv2-status .status-dot {
+        background: var(--green);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 15%, transparent);
+      }
+      .fv2-status button {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--dim);
+        font-size: 8px;
+      }
+      .fv2-status button:hover {
+        color: var(--text);
+      }
+      .fv2-status button .ic {
+        width: 12px;
+        height: 12px;
+      }
+      .fv2 .palette-scrim {
+        background: color-mix(in srgb, var(--crust) 62%, transparent);
+        backdrop-filter: blur(3px);
+        padding-top: 116px;
+      }
+      .fv2 .palette {
+        background: var(--base);
+        border-color: var(--surface1);
+        border-radius: 11px;
+        box-shadow:
+          0 24px 80px var(--shadow),
+          0 2px 8px color-mix(in srgb, var(--crust) 28%, transparent);
+      }
+      .fv2 .palette-input {
+        border-color: var(--line);
+        color: var(--dim);
+        font-size: 10.5px;
+      }
+      .fv2 .palette-input kbd,
+      .fv2 .palette-row kbd {
+        border-color: var(--line);
+        color: var(--dim);
+      }
+      .fv2 .palette-label {
+        color: var(--dim);
+      }
+      .fv2 .palette-row {
+        color: var(--text);
+      }
+      .fv2 .palette-row:hover,
+      .fv2 .palette-row.active {
+        background: color-mix(in srgb, var(--mauve) 12%, transparent);
+      }
+      .fv2 .row-icon {
+        background: var(--mantle);
+        border-color: var(--line);
+        color: var(--mauve);
+      }
+      .fv2 .row-main strong {
+        font-size: 9.5px;
+      }
+      .fv2 .row-main small {
+        color: var(--dim);
+      }
+      .fv2 .palette-foot {
+        border-color: var(--line);
+        color: var(--dim);
+      }
+      .fv2 .palette-foot kbd {
+        border-color: var(--line);
+      }
+      .fv2 .fv2-palette {
+        width: min(620px, calc(100vw - 60px));
+      }
+      .fv2 .palette-filters {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 7px 9px;
+        border-bottom: 1px solid var(--line);
+        overflow: auto;
+      }
+      .fv2 .palette-filters > button {
+        height: 22px;
+        padding: 0 7px;
+        border-radius: 4px;
+        color: var(--dim);
+        font-size: 8px;
+        white-space: nowrap;
+      }
+      .fv2 .palette-filters > button.active {
+        background: color-mix(in srgb, var(--mauve) 14%, transparent);
+        color: var(--mauve);
+      }
+      .fv2 .palette-scope {
+        margin-left: auto;
+        display: flex;
+        gap: 1px;
+        padding: 2px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        background: var(--mantle);
+      }
+      .fv2 .palette-scope button {
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 3px;
+        color: var(--dim);
+        font-size: 7px;
+      }
+      .fv2 .palette-scope button.active {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .fv2 .palette-count {
+        margin-left: auto;
+      }
+      .fv2-settings-scrim {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        background: color-mix(in srgb, var(--crust) 58%, transparent);
+        backdrop-filter: blur(3px);
+        align-items: center;
+        justify-content: center;
+      }
+      .fv2-settings-scrim.open {
+        display: flex;
+      }
+      .fv2-settings {
+        width: min(760px, calc(100vw - 48px));
+        max-height: calc(100vh - 75px);
+        background: var(--base);
+        border: 1px solid var(--surface1);
+        border-radius: 13px;
+        box-shadow: 0 30px 100px var(--shadow);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .fv2-settings-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: 20px 22px 0;
+      }
+      .fv2-settings-head h2 {
+        font-family: var(--serif);
+        font-size: 23px;
+        font-weight: 500;
+        margin: 0;
+      }
+      .fv2-settings-head p {
+        color: var(--dim);
+        font-size: 9px;
+        margin: 5px 0 0;
+      }
+      .fv2-settings-close {
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+      .fv2-settings-tabs {
+        display: flex;
+        gap: 18px;
+        padding: 18px 22px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .fv2-settings-tab {
+        padding: 0 0 9px;
+        color: var(--dim);
+        font-size: 9.5px;
+        border-bottom: 2px solid transparent;
+      }
+      .fv2-settings-tab.active {
+        color: var(--text);
+        border-bottom-color: var(--mauve);
+      }
+      .fv2-settings-body {
+        padding: 17px 22px;
+        overflow: auto;
+      }
+      .fv2-group-label {
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--dim);
+        text-transform: uppercase;
+        margin: 2px 0 10px;
+      }
+      .fv2-setting {
+        display: grid;
+        grid-template-columns: 1fr 270px;
+        gap: 20px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line-soft);
+        align-items: center;
+      }
+      .fv2-setting > div strong {
+        display: block;
+        font-size: 10px;
+        font-weight: 550;
+        margin-bottom: 3px;
+      }
+      .fv2-setting > div span {
+        display: block;
+        color: var(--dim);
+        font-size: 8.5px;
+        line-height: 1.4;
+      }
+      .fv2-input {
+        height: 28px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--mantle);
+        color: var(--subtext1);
+        font-family: var(--mono);
+        font-size: 8.5px;
+        padding: 0 8px;
+        width: 100%;
+      }
+      .fv2-theme-toggle {
+        display: flex;
+        gap: 3px;
+        padding: 3px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--mantle);
+      }
+      .fv2-theme-toggle button {
+        flex: 1;
+        height: 22px;
+        border-radius: 4px;
+        color: var(--dim);
+        font-size: 8.5px;
+      }
+      .fv2-theme-toggle button.active {
+        background: var(--mauve);
+        color: var(--on-accent);
+      }
+      .fv2-zoom-setting {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        justify-content: flex-end;
+      }
+      .fv2-zoom-setting button {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+      .fv2-zoom-setting span {
+        width: 42px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 8.5px;
+        color: var(--subtext1);
+      }
+      .fv2-settings-foot {
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 22px;
+        border-top: 1px solid var(--line);
+        color: var(--dim);
+        font-size: 8px;
+      }
+      .fv2-settings-foot button {
+        height: 28px;
+        border-radius: 6px;
+        padding: 0 12px;
+        background: var(--mauve);
+        color: var(--on-accent);
+        font-size: 9px;
+      }
+      .fv2-settings-foot button.ghost {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        margin-right: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app fv2" data-theme="latte">
+      <header class="fv2-top">
+        <div class="fv2-brand">
+          <span class="fv2-mark">P</span><span class="fv2-word">PAPYRI</span>
+        </div>
+        <div class="fv2-tabs">
+          <button class="fv2-tab active">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+              <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+            ><span>markdown.md</span
+            ><svg
+              class="ic x"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18M6 6l12 12"></path>
+            </svg>
+          </button>
+          <button class="fv2-tab">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+              <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+            ><span>diagrams.md</span
+            ><svg
+              class="ic x"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18M6 6l12 12"></path>
+            </svg>
+          </button>
+          <button class="fv2-tab-add" title="New tab">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="fv2-top-actions">
+          <button class="fv2-command" data-open-palette>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m21 21-4.3-4.3"></path></svg
+            ><span>Jump to</span><kbd>⌘K</kbd>
+          </button>
+          <button class="fv2-open">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+              ></path></svg
+            ><span>Open folder</span>
+          </button>
+          <button class="fv2-icon fv2-theme" title="Toggle Catppuccin flavor">
+            <svg
+              class="ic sun"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="4"></circle>
+              <path
+                d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+              ></path></svg
+            ><svg
+              class="ic moon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"></path>
+            </svg>
+          </button>
+          <button class="fv2-icon" title="Settings" data-open-settings>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+      <div class="fv2-strip">
+        <button class="fv2-strip-icon" title="Toggle explorer" data-toggle-sidebar>
+          <svg
+            class="ic"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <path d="M15 3v18"></path>
+          </svg>
+        </button>
+        <div class="fv2-path">
+          <span class="folder">examples</span><span class="sep">/</span
+          ><span class="folder">showcase</span><span class="sep">/</span
+          ><strong>markdown.md</strong>
+        </div>
+        <div class="fv2-strip-actions">
+          <button class="fv2-strip-icon" title="Find in document" data-toggle-search>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </svg>
+          </button>
+          <button class="fv2-strip-icon" title="Toggle split view" data-toggle-split>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+              <path d="M12 4v16"></path>
+            </svg>
+          </button>
+          <button class="fv2-strip-icon" title="Open ChatGPT panel" data-open-chat>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"></path>
+            </svg>
+          </button>
+          <button class="fv2-strip-icon active" title="Toggle outline panel" data-toggle-panel>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <path d="M15 3v18"></path>
+            </svg>
+          </button>
+          <span class="fv2-sep"></span>
+          <div class="fv2-zoom">
+            <button class="fv2-strip-icon" title="Zoom out">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14"></path>
+              </svg></button
+            ><button class="fv2-zoom-value" title="Reset document zoom">100%</button
+            ><button class="fv2-strip-icon" title="Zoom in">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+            </button>
+          </div>
+          <button class="fv2-strip-icon fv2-fit" title="Fit document to width">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"
+              ></path></svg
+            ><span>Fit</span>
+          </button>
+          <span class="fv2-sep"></span>
+          <button class="fv2-trust" title="Safe preview · scripts disabled">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path>
+              <path d="m9 12 2 2 4-4"></path></svg
+            ><span>Safe preview</span>
+          </button>
+        </div>
+      </div>
+      <div class="fv2-searchbar">
+        <svg
+          class="ic"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m21 21-4.3-4.3"></path></svg
+        ><input value="PAPYRI-NEEDLE" aria-label="Find in document" /><span class="hint"
+          >1 match · Markdown and PDF text</span
+        ><button class="close" title="Close search">
+          <svg
+            class="ic"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M18 6 6 18M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="fv2-body">
+        <aside class="fv2-explorer">
+          <div class="fv2-explorer-head">
+            <span>EXPLORER</span>
+            <div>
+              <button class="fv2-small-icon" title="Open a document">
+                <svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path>
+                </svg></button
+              ><button class="fv2-small-icon" title="Refresh files">
+                <svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="fv2-left-tabs">
+            <button class="fv2-left-tab active">Files</button
+            ><button class="fv2-left-tab">Recent</button
+            ><button class="fv2-left-tab">Starred</button>
+          </div>
+          <div class="fv2-source">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+              ></path></svg
+            ><span>Local filesystem</span>
+          </div>
+          <form class="fv2-pathform">
+            <input
+              value="/home/pseudofractal/GitHub/papyri/examples/showcase"
+              aria-label="Directory path"
+            /><button title="Go to directory">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m9 18 6-6-6-6"></path>
+              </svg>
+            </button>
+          </form>
+          <button class="fv2-parent">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 19V5M6 11l6-6 6 6"></path></svg
+            ><span>Parent folder</span>
+          </button>
+          <div class="tree">
+            <button class="tree-row folder" style="--depth: 0">
+              <svg
+                class="ic twist"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6"></path></svg
+              ><svg
+                class="ic file-ic folder"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                ></path></svg
+              ><span class="tree-name">examples</span></button
+            ><button class="tree-row folder" style="--depth: 1">
+              <svg
+                class="ic twist"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6"></path></svg
+              ><svg
+                class="ic file-ic folder"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                ></path></svg
+              ><span class="tree-name">showcase</span></button
+            ><button class="tree-row active" style="--depth: 2">
+              <span class="twist"></span
+              ><svg
+                class="ic file-ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+              ><span class="tree-name">markdown.md</span><span class="active-dot"></span></button
+            ><button class="tree-row" style="--depth: 2">
+              <span class="twist"></span
+              ><svg
+                class="ic file-ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+              ><span class="tree-name">diagrams.md</span></button
+            ><button class="tree-row" style="--depth: 2">
+              <span class="twist"></span
+              ><svg
+                class="ic file-ic pdf"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+              ><span class="tree-name">paged.pdf</span></button
+            ><button class="tree-row" style="--depth: 2">
+              <span class="twist"></span
+              ><svg
+                class="ic file-ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+              ><span class="tree-name">paged.typ</span></button
+            ><button class="tree-row" style="--depth: 2">
+              <span class="twist"></span
+              ><svg
+                class="ic file-ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+              ><span class="tree-name">README.md</span></button
+            ><button class="tree-row folder" style="--depth: 1">
+              <svg
+                class="ic twist"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m9 18 6-6-6-6"></path></svg
+              ><svg
+                class="ic file-ic folder"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                ></path></svg
+              ><span class="tree-name">assets</span></button
+            ><button class="tree-row" style="--depth: 1">
+              <span class="twist"></span
+              ><svg
+                class="ic file-ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+              ><span class="tree-name">linked.md</span>
+            </button>
+          </div>
+          <div class="fv2-explorer-foot">
+            <span class="status-dot"></span>Live · checks every 2 seconds
+          </div>
+        </aside>
+        <div class="fv2-explorer-resize" title="Resize explorer"></div>
+        <main class="fv2-main">
+          <div class="fv2-panes">
+            <section class="fv2-pane">
+              <div class="doc-scroll">
+                <div class="doc-scroll">
+                  <article class="doc">
+                    <div class="doc-crumb">
+                      <span>showcase</span><span class="slash">/</span
+                      ><span class="file">markdown.md</span><span class="kind">MARKDOWN</span>
+                    </div>
+                    <h1 class="doc-title">Markdown and<br />mathematics</h1>
+                    <p class="doc-dek">
+                      A test page for typography, links, math, code and footnotes.
+                    </p>
+                    <div class="doc-meta">
+                      <span>Updated just now</span><span>1,842 words</span><span>6 min read</span>
+                    </div>
+                    <div class="doc-links">
+                      <a>Back to the showcase</a><span>·</span><a>Open diagrams</a><span>·</span
+                      ><a>Jump to references</a>
+                    </div>
+                    <h2 class="doc-h2"><span class="hnum">01</span>Text and links</h2>
+                    <p>
+                      This page exercises <strong>bold</strong>, <em>emphasis</em>,
+                      <del>strikethrough</del>, <code>inline code</code>, an <a>external link</a>,
+                      and an autolink: <a>https://example.org</a>. <mark>PAPYRI-NEEDLE</mark> is a
+                      distinctive search target.
+                    </p>
+                    <blockquote>
+                      <p>A block quote can contain a second paragraph.</p>
+                      <p>Use the outline to navigate between headings.</p>
+                    </blockquote>
+                    <ul class="tasks">
+                      <li class="done">Open the project</li>
+                      <li>Try split view</li>
+                      <li class="nested">A nested bullet</li>
+                    </ul>
+                    <h2 class="doc-h2"><span class="hnum">02</span>Code and layout</h2>
+                    <pre
+                      class="code"
+                    ><code><span class="kw">def</span> <span class="fn">mean</span>(values):
+    <span class="kw">return</span> <span class="fn">sum</span>(values) / <span class="fn">len</span>(values)</code></pre>
+                    <h2 class="doc-h2"><span class="hnum">03</span>Mathematics and references</h2>
+                    <p>
+                      Inline math uses the default delimiters:
+                      <span class="inline-math">e<sup>iπ</sup> + 1 = 0</span>. Equation (7) should
+                      link to its target.
+                    </p>
+                    <div class="math-block">
+                      <span class="math">∫<sub>−∞</sub><sup>∞</sup> e<sup>−x²</sup> dx = √π</span
+                      ><span class="eq-no">(7)</span>
+                    </div>
+                    <table class="doc-table">
+                      <thead>
+                        <tr>
+                          <th>Feature</th>
+                          <th>Example</th>
+                          <th>Expected</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>Table</td>
+                          <td>Three columns</td>
+                          <td>Aligned content</td>
+                        </tr>
+                        <tr>
+                          <td>Footnote</td>
+                          <td>Local note<sup class="fn-ref">1</sup></td>
+                          <td>Clickable</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </article>
+                </div>
+              </div>
+            </section>
+            <section class="fv2-secondary">
+              <div class="fv2-secondary-head">
+                <span>diagrams.md</span
+                ><button class="fv2-small-icon" title="Close split">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 6 6 18M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="fv2-diagram-doc">
+                <div class="eyebrow">MERMAID · FLOWCHART</div>
+                <h1>Diagrams</h1>
+                <p>
+                  A second document in the split view. The document preview stays independent, with
+                  its own scroll position and source.
+                </p>
+                <div class="fv2-diagram">
+                  <svg viewBox="0 0 460 245" role="img" aria-label="Diagram preview">
+                    <defs>
+                      <marker
+                        id="arrow"
+                        viewBox="0 0 10 10"
+                        refX="8"
+                        refY="5"
+                        markerWidth="5"
+                        markerHeight="5"
+                        orient="auto-start-reverse"
+                      >
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--mauve)" />
+                      </marker>
+                    </defs>
+                    <rect
+                      x="24"
+                      y="24"
+                      width="130"
+                      height="48"
+                      rx="8"
+                      fill="var(--surface0)"
+                      stroke="var(--surface2)"
+                    ></rect>
+                    <text
+                      x="89"
+                      y="53"
+                      fill="var(--text)"
+                      font-size="10"
+                      text-anchor="middle"
+                      font-family="Adwaita Sans, sans-serif"
+                    >
+                      Markdown source
+                    </text>
+                    <rect
+                      x="24"
+                      y="102"
+                      width="130"
+                      height="48"
+                      rx="8"
+                      fill="var(--surface0)"
+                      stroke="var(--surface2)"
+                    ></rect>
+                    <text
+                      x="89"
+                      y="131"
+                      fill="var(--text)"
+                      font-size="10"
+                      text-anchor="middle"
+                      font-family="Adwaita Sans, sans-serif"
+                    >
+                      Parser worker
+                    </text>
+                    <rect
+                      x="24"
+                      y="180"
+                      width="130"
+                      height="48"
+                      rx="8"
+                      fill="var(--surface0)"
+                      stroke="var(--surface2)"
+                    ></rect>
+                    <text
+                      x="89"
+                      y="209"
+                      fill="var(--text)"
+                      font-size="10"
+                      text-anchor="middle"
+                      font-family="Adwaita Sans, sans-serif"
+                    >
+                      Safe frame
+                    </text>
+                    <rect
+                      x="262"
+                      y="102"
+                      width="166"
+                      height="48"
+                      rx="8"
+                      fill="color-mix(in srgb, var(--mauve) 15%, var(--surface0))"
+                      stroke="var(--mauve)"
+                    ></rect>
+                    <text
+                      x="345"
+                      y="131"
+                      fill="var(--text)"
+                      font-size="10"
+                      text-anchor="middle"
+                      font-family="Adwaita Sans, sans-serif"
+                    >
+                      Preview DOM
+                    </text>
+                    <path
+                      d="M 89 72 L 89 102"
+                      stroke="var(--mauve)"
+                      stroke-width="1.5"
+                      marker-end="url(#arrow)"
+                      fill="none"
+                    ></path>
+                    <path
+                      d="M 89 150 L 89 180"
+                      stroke="var(--mauve)"
+                      stroke-width="1.5"
+                      marker-end="url(#arrow)"
+                      fill="none"
+                    ></path>
+                    <path
+                      d="M 154 204 C 220 204 220 126 262 126"
+                      stroke="var(--mauve)"
+                      stroke-width="1.5"
+                      marker-end="url(#arrow)"
+                      fill="none"
+                    ></path>
+                    <path
+                      d="M 154 48 C 220 48 220 126 262 126"
+                      stroke="var(--blue)"
+                      stroke-width="1.2"
+                      stroke-dasharray="4 4"
+                      marker-end="url(#arrow)"
+                      fill="none"
+                    ></path>
+                  </svg>
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
+        <div class="fv2-panel-resize" title="Resize panel"></div>
+        <aside class="fv2-side">
+          <div class="fv2-side-tabs">
+            <button class="fv2-side-tab" data-tab-target="outline">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg
+              ><span>Outline</span>
+            </button>
+            <button class="fv2-side-tab" data-tab-target="chat">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"></path></svg
+              ><span>ChatGPT</span>
+            </button>
+            <button class="fv2-side-tab" data-tab-target="notes">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6"></path></svg
+              ><span>Notes</span>
+            </button>
+            <button class="fv2-side-tab add" title="Add panel">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="fv2-side-content">
+            <div class="pane outline-pane" data-pane="outline">
+              <div class="outline-head">
+                <div><span class="eyebrow">ON THIS PAGE</span><strong>6 sections</strong></div>
+                <svg
+                  class="ic ghost-ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>
+                </svg>
+              </div>
+              <div class="outline-progress"><span></span></div>
+              <nav class="outline-list">
+                <button class="outline-row active">
+                  <span class="outline-num">01</span><span>Markdown and mathematics</span
+                  ><span class="reading-dot"></span></button
+                ><button class="outline-row">
+                  <span class="outline-num">02</span><span>Text and links</span></button
+                ><button class="outline-row">
+                  <span class="outline-num">03</span><span>Code and layout</span></button
+                ><button class="outline-row">
+                  <span class="outline-num">04</span><span>Mathematics and references</span></button
+                ><button class="outline-row">
+                  <span class="outline-num">05</span><span>HTML and trust</span></button
+                ><button class="outline-row">
+                  <span class="outline-num">06</span><span>References</span>
+                </button>
+              </nav>
+              <div class="outline-foot">
+                <span class="pulse"></span>Outline follows scroll<span class="key">G</span>
+              </div>
+            </div>
+            <div class="pane" data-pane="chat">
+              <div class="fv2-browser">
+                <div class="fv2-browser-bar">
+                  <button class="fv2-strip-icon" title="Back">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M19 12H5M11 18l-6-6 6-6"></path>
+                    </svg>
+                  </button>
+                  <button class="fv2-strip-icon" title="Forward">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M5 12h14M13 6l6 6-6 6"></path>
+                    </svg>
+                  </button>
+                  <button class="fv2-strip-icon" title="Reload">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"></path>
+                    </svg>
+                  </button>
+                  <div class="fv2-address">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="5" y="10" width="14" height="11" rx="2"></rect>
+                      <path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg
+                    ><span>https://chatgpt.com/</span>
+                  </div>
+                  <button class="fv2-strip-icon" title="Open in system browser">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                      ></path>
+                    </svg>
+                  </button>
+                  <button class="fv2-strip-icon" title="Close browser">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M18 6 6 18M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div class="fv2-browser-page">
+                  <div class="gpt-head">
+                    <span class="gpt-mark"
+                      ><svg
+                        class="ic"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6Z"></path>
+                        <path d="M5 16l-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path></svg
+                    ></span>
+                    <div><strong>ChatGPT</strong><span>GPT-5 · this document</span></div>
+                    <span class="gpt-account">PF</span>
+                  </div>
+                  <div class="gpt-context">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                      <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                    ><span>markdown.md</span>
+                  </div>
+                  <div class="gpt-thread">
+                    <div class="gpt-msg user">
+                      <div class="gpt-bubble">
+                        Explain the nonresonance assumption in simpler terms.
+                      </div>
+                    </div>
+                    <div class="gpt-msg assistant">
+                      <span class="gpt-ai"
+                        ><svg
+                          class="ic"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.7"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6Z"></path>
+                          <path d="M5 16l-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path></svg
+                      ></span>
+                      <div class="gpt-bubble">
+                        The cavity has natural frequencies where sound forms standing waves. At
+                        those frequencies the ideal model has no unique finite response, so we
+                        assume the driving frequency avoids them. That keeps the Helmholtz solution
+                        well defined.
+                      </div>
+                    </div>
+                    <div class="gpt-msg user">
+                      <div class="gpt-bubble">Make it one sentence I can use in the thesis.</div>
+                    </div>
+                    <div class="gpt-msg assistant">
+                      <span class="gpt-ai"
+                        ><svg
+                          class="ic"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.7"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6Z"></path>
+                          <path d="M5 16l-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path></svg
+                      ></span>
+                      <div class="gpt-bubble"><div class="gpt-typing"></div></div>
+                    </div>
+                  </div>
+                  <div class="gpt-composer">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 5v14M5 12h14"></path></svg
+                    ><span>Ask about this document…</span
+                    ><svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"></path></svg
+                    ><button class="gpt-send">
+                      <svg
+                        class="ic"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 19V5M6 11l6-6 6 6"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="gpt-foot">ChatGPT can make mistakes. Check important info.</div>
+                </div>
+              </div>
+            </div>
+            <div class="pane notes-pane" data-pane="notes">
+              <div class="notes-head">
+                <div><span class="eyebrow">NOTES</span><strong>Reading notes</strong></div>
+                <button class="ghost-btn">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="note-card active">
+                <span class="note-date">TODAY · 11:28</span
+                ><strong>Nonresonance vs. resonance</strong>
+                <p>
+                  Need to clarify why the unique solution fails exactly at the eigenfrequencies.
+                </p>
+              </div>
+              <div class="note-card">
+                <span class="note-date">YESTERDAY</span><strong>Outline structure</strong>
+                <p>Keep the math section before references.</p>
+              </div>
+              <div class="note-editor">
+                <span>Write a note…</span
+                ><button>
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 19V5M6 11l6-6 6 6"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <footer class="fv2-status">
+        <span><span class="status-dot"></span>Read-only<span class="sep">/</span>Linux</span
+        ><span
+          >External content blocked<button class="fv2-status-help">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M9.1 9a3 3 0 1 1 5.3 1.8c-.8.7-1.4 1.2-1.4 2.2"></path>
+              <path d="M12 17h.01"></path></svg
+            ><span>Shortcuts</span>
+          </button></span
+        >
+      </footer>
+      <div class="palette-scrim">
+        <div class="palette fv2-palette">
+          <div class="palette-input">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m21 21-4.3-4.3"></path></svg
+            ><span>Search files, headings, tabs and commands…</span><kbd>Esc</kbd>
+          </div>
+          <div class="palette-filters">
+            <button class="active">All</button><button>Files</button><button>Commands</button
+            ><button>Headings</button><button>Tabs</button><button>Text</button
+            ><button>Recent</button><button>Pages</button>
+            <div class="palette-scope">
+              <button class="active">Folder</button><button>Parent</button
+              ><button>Workspace</button>
+            </div>
+          </div>
+          <div class="palette-body">
+            <div class="palette-label">RECENT FILES</div>
+            <button class="palette-row active">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg></span
+              ><span class="row-main"
+                ><strong>Markdown and mathematics</strong><small>showcase/markdown.md</small></span
+              ><span class="row-hint">↵</span>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg></span
+              ><span class="row-main"
+                ><strong>Diagrams</strong><small>showcase/diagrams.md</small></span
+              >
+            </button>
+            <div class="palette-label">COMMANDS</div>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg></span
+              ><span class="row-main"><strong>Open file…</strong><small>Files</small></span
+              ><kbd>⌘O</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                  ></path></svg></span
+              ><span class="row-main"><strong>Open folder…</strong><small>Files</small></span
+              ><kbd>⌘⇧O</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <path d="M15 3v18"></path></svg></span
+              ><span class="row-main"
+                ><strong>Toggle explorer</strong><small>View · sidebar</small></span
+              ><kbd>⌘B</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"
+                  ></path></svg></span
+              ><span class="row-main"
+                ><strong>Toggle ChatGPT panel</strong><small>View · assistant</small></span
+              ><kbd>⌘⇧B</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <path d="M15 3v18"></path></svg></span
+              ><span class="row-main"
+                ><strong>Toggle outline panel</strong><small>View · outline</small></span
+              ><kbd>⌘⇧O</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                  <path d="M12 4v16"></path></svg></span
+              ><span class="row-main"
+                ><strong>Split document</strong><small>View · panes</small></span
+              ><kbd>⌘</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"
+                  ></path></svg></span
+              ><span class="row-main"
+                ><strong>Fit document to width</strong><small>View · reading</small></span
+              ><kbd>⌘=</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="7"></circle>
+                  <path d="m21 21-4.3-4.3"></path></svg></span
+              ><span class="row-main"
+                ><strong>Find in document</strong><small>View · search</small></span
+              ><kbd>⌘F</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <path
+                    d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"
+                  ></path></svg></span
+              ><span class="row-main"
+                ><strong>Toggle Catppuccin flavor</strong><small>Appearance</small></span
+              >
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path
+                    d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"
+                  ></path></svg></span
+              ><span class="row-main"><strong>Open settings</strong><small>Preferences</small></span
+              ><kbd>⌘,</kbd>
+            </button>
+            <button class="palette-row">
+              <span class="row-icon"
+                ><svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M9.1 9a3 3 0 1 1 5.3 1.8c-.8.7-1.4 1.2-1.4 2.2"></path>
+                  <path d="M12 17h.01"></path></svg></span
+              ><span class="row-main"
+                ><strong>Keyboard shortcuts and help</strong><small>Help</small></span
+              >
+            </button>
+          </div>
+          <div class="palette-foot">
+            <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span><span><kbd>↵</kbd> open</span
+            ><span><kbd>esc</kbd> close</span><span class="palette-count">12 results</span>
+          </div>
+        </div>
+      </div>
+      <div class="fv2-settings-scrim">
+        <div
+          class="fv2-settings"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="fv2-settings-title"
+        >
+          <div class="fv2-settings-head">
+            <div>
+              <h2 id="fv2-settings-title">Reading preferences</h2>
+              <p>Catppuccin only · saved on this device</p>
+            </div>
+            <button class="fv2-settings-close" title="Close settings">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 6 6 18M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="fv2-settings-tabs">
+            <button class="fv2-settings-tab active">Appearance</button
+            ><button class="fv2-settings-tab">Reading</button
+            ><button class="fv2-settings-tab">Documents</button
+            ><button class="fv2-settings-tab">Compilers</button>
+          </div>
+          <div class="fv2-settings-body">
+            <div class="fv2-group-label">Theme</div>
+            <div class="fv2-setting">
+              <div>
+                <strong>Catppuccin flavor</strong
+                ><span>Mocha and Latte are the only available palettes.</span>
+              </div>
+              <div class="fv2-theme-toggle">
+                <button class="active">Mocha</button><button>Latte</button>
+              </div>
+            </div>
+            <div class="fv2-group-label" style="margin-top: 18px">Typography</div>
+            <div class="fv2-setting">
+              <div>
+                <strong>Interface font</strong><span>Explorer, toolbar, dialogs and settings.</span>
+              </div>
+              <input class="fv2-input" value="Inter, ui-sans-serif, system-ui" />
+            </div>
+            <div class="fv2-setting">
+              <div>
+                <strong>Document font</strong
+                ><span>The reading surface and rendered Markdown.</span>
+              </div>
+              <input class="fv2-input" value="Latin Modern Roman, Georgia, serif" />
+            </div>
+            <div class="fv2-setting">
+              <div>
+                <strong>Code font</strong><span>Inline code, fenced blocks and source.</span>
+              </div>
+              <input class="fv2-input" value="DejaVu Sans Mono, monospace" />
+            </div>
+            <div class="fv2-setting">
+              <div>
+                <strong>Interface magnification</strong
+                ><span>Ctrl Alt + / − / 0. Does not change the document scale.</span>
+              </div>
+              <div class="fv2-zoom-setting">
+                <button>
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 12h14"></path>
+                  </svg></button
+                ><span>100%</span
+                ><button>
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="fv2-settings-foot">
+            <span>Preferences are stored locally.</span>
+            <div><button class="ghost">Reset</button><button>Apply preferences</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const fv2 = document.querySelector('.fv2');
+      const params = new URLSearchParams(location.search);
+      const theme = params.get('theme') === 'mocha' ? 'mocha' : 'latte';
+      fv2.dataset.theme = theme;
+      const tab = params.get('tab') || 'outline';
+      function setTab(next) {
+        document
+          .querySelectorAll('[data-tab-target]')
+          .forEach((el) => el.classList.toggle('active', el.dataset.tabTarget === next));
+        document
+          .querySelectorAll('[data-pane]')
+          .forEach((el) => el.classList.toggle('active', el.dataset.pane === next));
+      }
+      setTab(tab);
+      if (params.get('search') === '1') {
+        document.querySelector('.fv2-searchbar').classList.add('show');
+        document.querySelector('[data-toggle-search]')?.classList.add('active');
+      }
+      if (params.get('split') === '1') {
+        document.querySelector('.fv2-panes').classList.add('split');
+        document.querySelector('[data-toggle-split]')?.classList.add('active');
+      }
+      if (params.get('panel') === '0') {
+        fv2.classList.add('panel-off');
+        document.querySelector('[data-toggle-panel]')?.classList.remove('active');
+      }
+      if (params.get('sidebar') === '0') fv2.classList.add('sidebar-off');
+      if (tab === 'chat') document.querySelector('[data-open-chat]')?.classList.add('active');
+      if (params.get('modal') === 'palette')
+        document.querySelector('.palette-scrim').classList.add('open');
+      if (params.get('modal') === 'settings')
+        document.querySelector('.fv2-settings-scrim').classList.add('open');
+      document
+        .querySelectorAll('[data-tab-target]')
+        .forEach((el) => el.addEventListener('click', () => setTab(el.dataset.tabTarget)));
+      document
+        .querySelector('[data-open-palette]')
+        ?.addEventListener('click', () =>
+          document.querySelector('.palette-scrim').classList.add('open'),
+        );
+      document.querySelector('.palette-scrim')?.addEventListener('click', (e) => {
+        if (e.target.classList.contains('palette-scrim')) e.currentTarget.classList.remove('open');
+      });
+      document
+        .querySelector('[data-open-settings]')
+        ?.addEventListener('click', () =>
+          document.querySelector('.fv2-settings-scrim').classList.add('open'),
+        );
+      document
+        .querySelector('.fv2-settings-close')
+        ?.addEventListener('click', () =>
+          document.querySelector('.fv2-settings-scrim').classList.remove('open'),
+        );
+      document.querySelector('.fv2-theme')?.addEventListener('click', () => {
+        fv2.dataset.theme = fv2.dataset.theme === 'mocha' ? 'latte' : 'mocha';
+      });
+      document.querySelector('[data-toggle-search]')?.addEventListener('click', (e) => {
+        document.querySelector('.fv2-searchbar').classList.toggle('show');
+        e.currentTarget.classList.toggle('active');
+      });
+      document.querySelector('[data-toggle-split]')?.addEventListener('click', (e) => {
+        document.querySelector('.fv2-panes').classList.toggle('split');
+        e.currentTarget.classList.toggle('active');
+      });
+      document.querySelector('[data-open-chat]')?.addEventListener('click', (e) => {
+        document.querySelector('.fv2').classList.remove('panel-off');
+        document.querySelector('[data-toggle-panel]')?.classList.add('active');
+        e.currentTarget.classList.add('active');
+        setTab('chat');
+      });
+      document.querySelector('[data-toggle-panel]')?.addEventListener('click', (e) => {
+        document.querySelector('.fv2').classList.toggle('panel-off');
+        e.currentTarget.classList.toggle('active');
+      });
+      document
+        .querySelector('.fv2-secondary .fv2-small-icon')
+        ?.addEventListener('click', () =>
+          document.querySelector('.fv2-panes').classList.remove('split'),
+        );
+      document.querySelector('.fv2-searchbar .close')?.addEventListener('click', () => {
+        document.querySelector('.fv2-searchbar').classList.remove('show');
+        document.querySelector('[data-toggle-search]')?.classList.remove('active');
+      });
+      document.querySelector('[data-toggle-sidebar]')?.addEventListener('click', (e) => {
+        document.querySelector('.fv2').classList.toggle('sidebar-off');
+        e.currentTarget.classList.toggle('active');
+      });
+      const bindResize = (handle, target, variable, min, max, invert) => {
+        let startX = 0,
+          start = 0,
+          drag = false;
+        handle?.addEventListener('pointerdown', (e) => {
+          drag = true;
+          startX = e.clientX;
+          start = target.getBoundingClientRect().width;
+          handle.setPointerCapture(e.pointerId);
+        });
+        handle?.addEventListener('pointermove', (e) => {
+          if (!drag) return;
+          const delta = (e.clientX - startX) * (invert ? -1 : 1);
+          target.parentElement.parentElement.style.setProperty(
+            variable,
+            Math.max(min, Math.min(max, start + delta)) + 'px',
+          );
+        });
+        handle?.addEventListener('pointerup', () => {
+          drag = false;
+        });
+        handle?.addEventListener('pointercancel', () => {
+          drag = false;
+        });
+      };
+      bindResize(
+        document.querySelector('.fv2-explorer-resize'),
+        document.querySelector('.fv2-explorer'),
+        '--explorer-width',
+        200,
+        320,
+        false,
+      );
+      bindResize(
+        document.querySelector('.fv2-panel-resize'),
+        document.querySelector('.fv2-side'),
+        '--panel-width',
+        330,
+        560,
+        true,
+      );
+    </script>
+  </body>
+</html>

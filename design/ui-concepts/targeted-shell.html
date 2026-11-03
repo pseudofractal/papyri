@@ -1,0 +1,3343 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Papyri — targeted shell mockup</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      button,
+      input,
+      textarea {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        border: 0;
+        background: none;
+        padding: 0;
+        cursor: pointer;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .ic {
+        width: 16px;
+        height: 16px;
+        flex: none;
+        display: block;
+      }
+      .grow {
+        flex: 1;
+      }
+      .eyebrow {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .pane {
+        display: none;
+        min-height: 0;
+      }
+      .pane.active {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+      .palette-scrim {
+        display: none;
+      }
+      .palette-scrim.open {
+        display: flex;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, currentColor 18%, transparent);
+        border-radius: 99px;
+      }
+
+      .status-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #55705a;
+        box-shadow: 0 0 0 3px #55705a18;
+        flex: none;
+      }
+      .tree {
+        padding: 8px;
+        overflow: auto;
+        flex: 1;
+        min-height: 0;
+      }
+      .tree-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px 6px calc(8px + var(--depth) * 14px);
+        border-radius: 5px;
+        font-size: 10.5px;
+        color: #7d7668;
+        text-align: left;
+      }
+      .tree-row:hover {
+        background: #00000008;
+      }
+      .tree-row.folder {
+        font-weight: 550;
+      }
+      .tree-row.active {
+        font-weight: 550;
+      }
+      .twist {
+        width: 11px;
+        height: 11px;
+        flex: none;
+        opacity: 0.6;
+      }
+      .file-ic {
+        width: 13px;
+        height: 13px;
+        flex: none;
+        opacity: 0.8;
+      }
+      .tree-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .active-dot {
+        width: 5px;
+        height: 5px;
+        margin-left: auto;
+        border-radius: 50%;
+        background: currentColor;
+      }
+      .side-content {
+        min-height: 0;
+        flex: 1;
+        display: flex;
+      }
+      .side-tabs {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        height: 48px;
+        padding: 0 10px;
+        flex: none;
+      }
+      .side-tab {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 100%;
+        padding: 0 10px;
+        font-size: 9.5px;
+        border-bottom: 2px solid transparent;
+        white-space: nowrap;
+      }
+      .side-tab .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .side-tab-add {
+        margin-left: auto;
+        width: 24px;
+        height: 24px;
+        display: grid;
+        place-items: center;
+        border-radius: 5px;
+      }
+      .outline-head,
+      .notes-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 18px 12px;
+      }
+      .outline-head > div,
+      .notes-head > div {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .outline-head strong,
+      .notes-head strong {
+        font-size: 16px;
+        font-weight: 500;
+      }
+      .ghost-ic {
+        width: 15px;
+        height: 15px;
+        opacity: 0.65;
+      }
+      .outline-progress {
+        height: 2px;
+        margin: 0 18px 12px;
+      }
+      .outline-progress span {
+        display: block;
+        width: 18%;
+        height: 100%;
+      }
+      .outline-list {
+        padding: 0 10px;
+        overflow: auto;
+        min-height: 0;
+      }
+      .outline-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        text-align: left;
+        padding: 8px 9px;
+        font-size: 10.5px;
+        border-left: 1px solid transparent;
+      }
+      .outline-num {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+      }
+      .reading-dot {
+        margin-left: auto;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+      }
+      .outline-foot {
+        margin-top: auto;
+        padding: 13px 18px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 9px;
+      }
+      .pulse {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+      }
+      .key {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+        border: 1px solid currentColor;
+        opacity: 0.8;
+        padding: 2px 4px;
+        border-radius: 3px;
+      }
+      .chat-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 16px 10px;
+        gap: 8px;
+      }
+      .chat-brand {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+      }
+      .chat-mark {
+        width: 29px;
+        height: 29px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .chat-mark .ic {
+        width: 15px;
+        height: 15px;
+      }
+      .chat-brand > div {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+      }
+      .chat-brand strong {
+        font-size: 11px;
+      }
+      .chat-brand span {
+        font-size: 8.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .signed-in {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 8px;
+        white-space: nowrap;
+      }
+      .context-chip {
+        margin: 0 16px 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: fit-content;
+        max-width: calc(100% - 32px);
+        border-radius: 5px;
+        padding: 4px 6px;
+        font-size: 8.5px;
+      }
+      .context-chip .ic {
+        width: 11px;
+        height: 11px;
+      }
+      .context-chip .ic:last-child {
+        margin-left: 4px;
+        opacity: 0.5;
+      }
+      .thread {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 6px 16px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+      }
+      .msg {
+        display: flex;
+        gap: 7px;
+      }
+      .msg.user {
+        justify-content: flex-end;
+      }
+      .msg.user .bubble {
+        border-radius: 10px 10px 3px 10px;
+        max-width: 86%;
+        padding: 8px 10px;
+        font-size: 10.5px;
+        line-height: 1.45;
+      }
+      .msg.assistant {
+        align-items: flex-start;
+      }
+      .ai-avatar {
+        width: 21px;
+        height: 21px;
+        flex: none;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+      }
+      .ai-avatar .ic {
+        width: 11px;
+        height: 11px;
+      }
+      .msg.assistant .bubble {
+        font-size: 11.5px;
+        line-height: 1.5;
+        padding: 2px 0;
+      }
+      .typing-line {
+        display: block;
+        width: 150px;
+        height: 6px;
+        margin: 5px 0;
+        border-radius: 99px;
+      }
+      .typing-line.short {
+        width: 100px;
+      }
+      .composer {
+        margin: 0 12px 10px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        min-height: 39px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 7px;
+        flex: none;
+      }
+      .composer .ic {
+        width: 14px;
+        height: 14px;
+      }
+      .composer-add,
+      .composer-mic {
+        width: 23px;
+        height: 23px;
+        display: grid;
+        place-items: center;
+      }
+      .composer-placeholder {
+        font-size: 10px;
+        flex: 1;
+      }
+      .send {
+        width: 25px;
+        height: 25px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .send .ic {
+        width: 12px;
+        height: 12px;
+      }
+      .chat-foot {
+        text-align: center;
+        font-size: 7.5px;
+        padding-bottom: 9px;
+      }
+      .files-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 14px 8px;
+      }
+      .mini-search {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        height: 29px;
+        padding: 0 8px;
+        flex: 1;
+        font-size: 9.5px;
+        min-width: 0;
+      }
+      .mini-search kbd {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+      }
+      .ghost-btn,
+      .text-btn {
+        font-size: 9px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .files-pane .tree {
+        padding: 5px 8px;
+      }
+      .files-foot {
+        margin-top: auto;
+        padding: 11px 15px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 8.5px;
+      }
+      .notes-head {
+        padding-bottom: 14px;
+      }
+      .note-card {
+        margin: 0 14px 9px;
+        padding: 12px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+      }
+      .note-date {
+        display: block;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 7.5px;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+      }
+      .note-card strong {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 5px;
+      }
+      .note-card p {
+        margin: 0;
+        font-size: 10.5px;
+        line-height: 1.45;
+      }
+      .note-editor {
+        margin: auto 14px 14px;
+        border-top: 1px solid transparent;
+        padding-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+      }
+      .note-editor button {
+        width: 24px;
+        height: 24px;
+        border: 1px solid currentColor;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+      }
+      .palette-scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 135px;
+      }
+      .palette {
+        width: min(560px, calc(100vw - 60px));
+        border: 1px solid transparent;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .palette-input {
+        height: 49px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 15px;
+        border-bottom: 1px solid transparent;
+        font-size: 11px;
+      }
+      .palette-input kbd {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+        padding: 2px 5px;
+        border-radius: 4px;
+      }
+      .palette-body {
+        padding: 8px;
+        max-height: 390px;
+        overflow: auto;
+      }
+      .palette-label {
+        font-size: 7.5px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        padding: 10px 8px 5px;
+      }
+      .palette-row {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 8px;
+        border-radius: 6px;
+        text-align: left;
+      }
+      .row-icon {
+        width: 24px;
+        height: 24px;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .row-icon .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .row-main {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+      }
+      .row-main strong {
+        font-size: 10px;
+        font-weight: 550;
+      }
+      .row-main small {
+        font-size: 8px;
+      }
+      .row-hint,
+      .palette-row kbd {
+        margin-left: auto;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+      }
+      .palette-row kbd {
+        padding: 2px 4px;
+        border-radius: 3px;
+        border: 1px solid currentColor;
+      }
+      .palette-foot {
+        height: 32px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 14px;
+        font-size: 8px;
+      }
+      .palette-foot span {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+      }
+      .palette-foot kbd {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 7px;
+        padding: 1px 3px;
+        border-radius: 2px;
+        border: 1px solid currentColor;
+      }
+      .doc-scroll {
+        height: 100%;
+        overflow: hidden;
+      }
+      .doc {
+        width: min(760px, calc(100% - 96px));
+        margin: 0 auto;
+        padding: 44px 0 80px;
+      }
+      .doc-crumb {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 9px;
+      }
+      .doc-crumb .slash {
+        opacity: 0.5;
+      }
+      .doc-crumb .kind {
+        margin-left: 7px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        padding: 2px 5px;
+        border-radius: 3px;
+        border: 1px solid currentColor;
+      }
+      .doc-title {
+        font-size: 47px;
+        line-height: 0.99;
+        font-weight: 500;
+        margin: 25px 0 15px;
+      }
+      .doc-dek {
+        font-size: 15px;
+        line-height: 1.45;
+        margin: 0 0 14px;
+        font-style: italic;
+      }
+      .doc-meta {
+        display: flex;
+        gap: 18px;
+        font-size: 9px;
+        padding: 10px 0 12px;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+      }
+      .doc-links {
+        font-size: 10.5px;
+        display: flex;
+        gap: 9px;
+        flex-wrap: wrap;
+        padding: 15px 0 4px;
+      }
+      .doc-links a {
+        border-bottom: 1px solid currentColor;
+      }
+      .doc-links span {
+        opacity: 0.5;
+      }
+      .doc-h2 {
+        font-size: 22px;
+        font-weight: 500;
+        margin: 28px 0 10px;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .hnum {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 8px;
+        letter-spacing: 0.06em;
+      }
+      .doc p {
+        font-size: 14.5px;
+        line-height: 1.58;
+        margin: 10px 0;
+      }
+      .doc p a {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+      }
+      .doc code {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 10.5px;
+        padding: 2px 5px;
+        border-radius: 3px;
+      }
+      .doc mark {
+        padding: 1px 3px;
+      }
+      .doc blockquote {
+        margin: 17px 0;
+        padding: 3px 0 3px 17px;
+        border-left: 2px solid currentColor;
+      }
+      .doc blockquote p {
+        margin: 6px 0;
+        font-style: italic;
+      }
+      .tasks {
+        list-style: none;
+        padding: 0;
+        margin: 13px 0;
+        font-size: 13.5px;
+      }
+      .tasks li {
+        position: relative;
+        padding-left: 19px;
+        margin: 5px 0;
+      }
+      .tasks li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 9px;
+        height: 9px;
+        border: 1px solid currentColor;
+        border-radius: 2px;
+      }
+      .tasks li.done::before {
+        box-shadow: inset 0 0 0 2px currentColor;
+      }
+      .tasks li.nested {
+        margin-left: 18px;
+      }
+      .code {
+        margin: 14px 0 18px;
+        padding: 15px 18px;
+        border-radius: 7px;
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 10.5px;
+        line-height: 1.6;
+        overflow: hidden;
+      }
+      .code code {
+        background: none;
+        color: inherit;
+        padding: 0;
+        font-size: inherit;
+      }
+      .doc .code code {
+        background: none !important;
+        color: inherit !important;
+        padding: 0 !important;
+        font-size: inherit !important;
+      }
+      .inline-math {
+        font-family: 'Latin Modern Math', 'DejaVu Math TeX Gyre', serif;
+        font-size: 15px;
+        white-space: nowrap;
+      }
+      .math-block {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        margin: 16px 0 18px;
+        padding: 16px 0;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+      }
+      .math {
+        font-family: 'Latin Modern Math', 'DejaVu Math TeX Gyre', serif;
+        font-size: 24px;
+        letter-spacing: 0.01em;
+      }
+      .math sub,
+      .math sup {
+        font-size: 10px;
+      }
+      .eq-no {
+        font-family: var(--mono, ui-monospace, monospace);
+        font-size: 9px;
+      }
+      .doc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11.5px;
+        margin: 14px 0;
+      }
+      .doc-table th {
+        text-align: left;
+        font-size: 8px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 6px 8px;
+        border-bottom: 1px solid currentColor;
+      }
+      .doc-table td {
+        padding: 7px 8px;
+        border-bottom: 1px solid currentColor;
+      }
+      .fn-ref {
+        font-size: 8px;
+      }
+
+      .tg {
+        height: 100%;
+        display: flex;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        --base: #1e1e2e;
+        --mantle: #181825;
+        --crust: #11111b;
+        --text: #cdd6f4;
+        --subtext: #a6adc8;
+        --subtext1: #bac2de;
+        --overlay: #6c7086;
+        --surface0: #313244;
+        --surface1: #45475a;
+        --surface2: #585b70;
+        --mauve: #cba6f7;
+        --blue: #89b4fa;
+        --green: #a6e3a1;
+        --peach: #fab387;
+        --yellow: #f9e2af;
+        --teal: #94e2d5;
+        --red: #f38ba8;
+        --line: color-mix(in srgb, var(--text) 14%, transparent);
+        --line-soft: color-mix(in srgb, var(--text) 8%, transparent);
+        --ui: 'Adwaita Sans', 'Inter', system-ui, sans-serif;
+        --mono: 'DejaVu Sans Mono', ui-monospace, monospace;
+        font-family: var(--ui);
+      }
+      .tg-shell {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+      .tg-top {
+        height: 52px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 0 10px;
+        background: var(--mantle);
+        border-bottom: 1px solid var(--line);
+      }
+      .tg-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: none;
+        margin-right: 5px;
+      }
+      .tg-logo {
+        width: 25px;
+        height: 25px;
+        display: block;
+        color: var(--text);
+      }
+      .tg-logo svg {
+        width: 25px;
+        height: 25px;
+        display: block;
+      }
+      .tg-word {
+        font-size: 15px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+      }
+      .tg-spacer {
+        flex: 1;
+        min-width: 8px;
+      }
+      .tg-tabs {
+        display: flex;
+        align-items: stretch;
+        height: 100%;
+        flex: none;
+        gap: 1px;
+        max-width: 430px;
+        min-width: 0;
+      }
+      .tg-tab {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        height: 52px;
+        padding: 0 12px;
+        border-bottom: 2px solid transparent;
+        color: var(--subtext);
+        font-size: 10px;
+        white-space: nowrap;
+      }
+      .tg-tab .ic {
+        width: 12px;
+        height: 12px;
+        color: var(--mauve);
+      }
+      .tg-tab.active {
+        color: var(--text);
+        border-bottom-color: var(--mauve);
+        background: var(--base);
+      }
+      .tg-tab .x {
+        width: 10px;
+        height: 10px;
+        opacity: 0.45;
+        margin-left: 1px;
+      }
+      .tg-actions {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+        flex: none;
+      }
+      .tg-icon {
+        width: 29px;
+        height: 29px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        color: var(--subtext);
+      }
+      .tg-icon .ic {
+        width: 16px;
+        height: 16px;
+      }
+      .tg-icon:hover,
+      .tg-icon.active {
+        background: color-mix(in srgb, var(--mauve) 17%, transparent);
+        color: var(--mauve);
+      }
+      .tg-explorer-toggle {
+        margin-left: 1px;
+      }
+      .tg-tab-add {
+        width: 30px;
+        height: 52px;
+        display: grid;
+        place-items: center;
+        color: var(--overlay);
+      }
+      .tg-zoom {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+        margin: 0 2px;
+      }
+      .tg-zoom .tg-icon {
+        width: 23px;
+        height: 26px;
+      }
+      .tg-zoom-value {
+        height: 26px;
+        min-width: 38px;
+        border-radius: 5px;
+        color: var(--subtext1);
+        font-family: var(--mono);
+        font-size: 8.5px;
+      }
+      .tg-zoom-value:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .tg-sep {
+        width: 1px;
+        height: 17px;
+        background: var(--line);
+        margin: 0 4px;
+      }
+      .tg-searchbar {
+        display: none;
+        height: 37px;
+        flex: none;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        background: var(--mantle);
+        border-bottom: 1px solid var(--line);
+      }
+      .tg-searchbar.show {
+        display: flex;
+      }
+      .tg-searchbar .ic {
+        width: 14px;
+        height: 14px;
+        color: var(--overlay);
+      }
+      .tg-searchbar input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--text);
+        font-size: 10.5px;
+      }
+      .tg-searchbar .hint {
+        color: var(--overlay);
+        font-size: 8.5px;
+      }
+      .tg-searchbar .close {
+        width: 24px;
+        height: 24px;
+        border-radius: 5px;
+        display: grid;
+        place-items: center;
+        color: var(--overlay);
+      }
+      .tg-searchbar .close:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .tg-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+      }
+      .tg-explorer {
+        width: var(--explorer-width, 238px);
+        flex: none;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--mantle);
+        border-right: 1px solid var(--line);
+      }
+      .tg-explorer-resize,
+      .tg-panel-resize {
+        width: 5px;
+        flex: none;
+        cursor: col-resize;
+        background: transparent;
+        position: relative;
+        z-index: 3;
+      }
+      .tg-explorer-resize:hover,
+      .tg-panel-resize:hover {
+        background: color-mix(in srgb, var(--mauve) 30%, transparent);
+      }
+      .tg-explorer-path {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 10px 7px;
+      }
+      .tg-path-box {
+        flex: 1;
+        min-width: 0;
+        height: 27px;
+        display: flex;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--base);
+      }
+      .tg-path-box input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--subtext);
+        padding: 0 7px;
+        font-family: var(--mono);
+        font-size: 8px;
+      }
+      .tg-path-go {
+        width: 23px;
+        height: 100%;
+        display: grid;
+        place-items: center;
+        color: var(--overlay);
+      }
+      .tg-path-up {
+        width: 27px;
+        height: 27px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        color: var(--overlay);
+      }
+      .tg-path-up:hover {
+        color: var(--text);
+        background: var(--surface0);
+      }
+      .tg-explorer-tools {
+        height: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 11px 5px;
+      }
+      .tg-explorer-tools span {
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--overlay);
+      }
+      .tg-explorer-tools div {
+        display: flex;
+        gap: 1px;
+      }
+      .tg-small {
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        display: grid;
+        place-items: center;
+        color: var(--overlay);
+      }
+      .tg-small .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .tg-small:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .tg-explorer .tree {
+        padding: 2px 6px;
+      }
+      .tg-explorer .tree-row {
+        font-size: 10px;
+        border-radius: 5px;
+        color: var(--subtext);
+      }
+      .tg-explorer .tree-row.folder {
+        color: var(--subtext1);
+      }
+      .tg-explorer .tree-row:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .tg-explorer .tree-row.active {
+        background: color-mix(in srgb, var(--mauve) 15%, transparent);
+        color: var(--mauve);
+        box-shadow: inset 2px 0 0 var(--mauve);
+      }
+      .tg-explorer .tree-row.active .file-ic {
+        color: var(--mauve);
+        opacity: 1;
+      }
+      .tg-explorer .active-dot {
+        background: var(--mauve);
+      }
+      .tg-explorer .status-dot {
+        background: var(--green);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent);
+      }
+      .tg-explorer-foot {
+        margin-top: auto;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px;
+        border-top: 1px solid var(--line);
+      }
+      .tg-open-folder {
+        flex: 1;
+        height: 29px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border-radius: 5px;
+        background: var(--mauve);
+        color: var(--crust);
+        font-size: 8.5px;
+        font-weight: 600;
+      }
+      .tg-open-folder .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .tg-recent {
+        height: 29px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0 7px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        color: var(--subtext);
+        font-size: 8.5px;
+      }
+      .tg-recent .ic {
+        width: 12px;
+        height: 12px;
+      }
+      .tg-recent:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .tg-main {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        background: var(--base);
+      }
+      .tg-panes {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+      }
+      .tg-pane {
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .tg-secondary {
+        display: none;
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+        border-left: 1px solid var(--line);
+        flex-direction: column;
+      }
+      .tg-panes.split .tg-secondary {
+        display: flex;
+      }
+      .tg-secondary-head {
+        height: 29px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px 0 12px;
+        border-bottom: 1px solid var(--line);
+        background: var(--mantle);
+        color: var(--overlay);
+        font-size: 9px;
+      }
+      .tg .doc-scroll {
+        height: 100%;
+        overflow: hidden;
+      }
+      .tg .doc {
+        width: min(760px, calc(100% - 80px));
+        margin: 0 auto;
+        padding: 34px 0 70px;
+      }
+      .tg .doc-crumb {
+        display: none;
+      }
+      .tg .doc-title {
+        font-family: var(--ui);
+        font-size: calc(40px * var(--reading-scale));
+        line-height: 1.06;
+        font-weight: 650;
+        letter-spacing: -0.04em;
+        margin: 0 0 12px;
+      }
+      .tg .doc-dek {
+        font-family: var(--ui);
+        font-size: calc(13.5px * var(--reading-scale));
+        font-style: normal;
+        color: var(--subtext);
+        margin: 0 0 12px;
+      }
+      .tg .doc-meta {
+        border-color: var(--line);
+        color: var(--overlay);
+        font-size: 8.5px;
+        padding: 9px 0 10px;
+      }
+      .tg .doc-links {
+        font-size: calc(9.5px * var(--reading-scale));
+        color: var(--mauve);
+        padding-top: 12px;
+      }
+      .tg .doc-links a {
+        border-bottom-color: color-mix(in srgb, var(--mauve) 40%, transparent);
+      }
+      .tg .doc-links span {
+        color: var(--surface2);
+      }
+      .tg .doc-h2 {
+        font-family: var(--ui);
+        font-size: calc(22px * var(--reading-scale));
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        margin: 26px 0 8px;
+        gap: 0;
+      }
+      .tg .hnum {
+        display: none;
+      }
+      .tg .doc p {
+        font-family: var(--ui);
+        font-size: calc(14.5px * var(--reading-scale));
+        line-height: 1.7;
+        color: var(--subtext1);
+        margin: 9px 0;
+      }
+      .tg .doc p a {
+        color: var(--mauve);
+        text-decoration-color: color-mix(in srgb, var(--mauve) 40%, transparent);
+      }
+      .tg .doc code {
+        font-family: var(--mono);
+        font-size: calc(10px * var(--reading-scale));
+        background: var(--surface0);
+        color: var(--peach);
+      }
+      .tg .doc mark {
+        background: color-mix(in srgb, var(--yellow) 40%, transparent);
+        color: var(--crust);
+      }
+      .tg .doc blockquote {
+        border-left: 2px solid var(--mauve);
+        background: color-mix(in srgb, var(--mauve) 8%, transparent);
+        padding: 9px 16px;
+        border-radius: 0 7px 7px 0;
+      }
+      .tg .doc blockquote p {
+        color: var(--subtext);
+        font-style: normal;
+        margin: 3px 0;
+      }
+      .tg .tasks {
+        font-family: var(--ui);
+        font-size: calc(12.5px * var(--reading-scale));
+        color: var(--subtext1);
+      }
+      .tg .tasks li::before {
+        border-color: var(--surface2);
+      }
+      .tg .tasks li.done::before {
+        background: var(--mauve);
+        border-color: var(--mauve);
+        box-shadow: inset 0 0 0 2px var(--base);
+      }
+      .tg .code {
+        background: var(--crust);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        color: var(--subtext1);
+      }
+      .tg .code .kw {
+        color: var(--mauve);
+      }
+      .tg .code .fn {
+        color: var(--blue);
+      }
+      .tg .inline-math {
+        color: var(--text);
+        font-size: calc(15px * var(--reading-scale));
+      }
+      .tg .math-block {
+        border-color: var(--line);
+      }
+      .tg .math {
+        color: var(--text);
+        font-size: calc(24px * var(--reading-scale));
+      }
+      .tg .eq-no {
+        color: var(--overlay);
+      }
+      .tg .doc-table th {
+        color: var(--overlay);
+        border-color: var(--surface1);
+      }
+      .tg .doc-table td {
+        color: var(--subtext1);
+        border-color: var(--line);
+      }
+      .tg .doc-title br {
+        display: none;
+      }
+      .tg-panes.split .doc {
+        width: calc(100% - 44px);
+      }
+      .tg-panes.split .doc-title {
+        font-size: 31px;
+      }
+      .tg-panes.split .doc-h2 {
+        font-size: 19px;
+      }
+      .tg-diagram-doc {
+        padding: 24px 22px;
+        overflow: hidden;
+      }
+      .tg-diagram-doc .eyebrow {
+        color: var(--blue);
+        font-family: var(--mono);
+        font-size: 8px;
+        letter-spacing: 0.1em;
+      }
+      .tg-diagram-doc h1 {
+        font-family: var(--ui);
+        font-size: 30px;
+        font-weight: 650;
+        margin: 10px 0 7px;
+      }
+      .tg-diagram-doc p {
+        font-family: var(--ui);
+        font-size: 12px;
+        line-height: 1.65;
+        color: var(--subtext);
+      }
+      .tg-diagram {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--mantle);
+        padding: 13px;
+      }
+      .tg-diagram svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .tg-side {
+        width: var(--panel-width, 390px);
+        flex: none;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--mantle);
+        border-left: 1px solid var(--line);
+      }
+      .tg-panel-top {
+        height: 52px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0 10px;
+        border-bottom: 1px solid var(--line);
+        background: var(--mantle);
+      }
+      .tg-panel-tab {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        height: 100%;
+        padding: 0 9px;
+        color: var(--subtext);
+        font-size: 9.5px;
+        border-bottom: 2px solid transparent;
+      }
+      .tg-panel-tab .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .tg-panel-tab.active {
+        color: var(--text);
+        border-bottom-color: var(--mauve);
+      }
+      .tg-panel-tab.add {
+        margin-left: auto;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+      }
+      .tg-panel-tab:hover:not(.add) {
+        color: var(--text);
+      }
+      .tg-panel-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+      }
+      .tg-panel-body .pane {
+        flex: 1;
+        min-height: 0;
+      }
+      .tg-panel-body .outline-head {
+        padding: 17px 15px 10px;
+      }
+      .tg-panel-body .outline-head strong {
+        font-family: var(--ui);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .tg-panel-body .outline-head .eyebrow {
+        color: var(--mauve);
+      }
+      .tg-panel-body .outline-progress {
+        background: var(--surface0);
+        margin: 0 15px 10px;
+      }
+      .tg-panel-body .outline-progress span {
+        background: var(--mauve);
+      }
+      .tg-panel-body .outline-list {
+        padding: 0 8px;
+      }
+      .tg-panel-body .outline-row {
+        border-left-color: var(--line);
+        color: var(--subtext);
+        font-size: 10px;
+      }
+      .tg-panel-body .outline-row:hover,
+      .tg-panel-body .outline-row.active {
+        background: color-mix(in srgb, var(--mauve) 12%, transparent);
+        color: var(--text);
+        border-left-color: var(--mauve);
+      }
+      .tg-panel-body .outline-num {
+        color: var(--mauve);
+      }
+      .tg-panel-body .reading-dot {
+        background: var(--mauve);
+      }
+      .tg-panel-body .outline-foot {
+        border-top: 1px solid var(--line);
+        color: var(--overlay);
+      }
+      .tg-panel-body .reading-tip {
+        margin: auto 14px 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 12px 14px;
+        color: var(--subtext);
+        font-size: 10px;
+        line-height: 1.6;
+      }
+      .tg-panel-body .reading-tip p {
+        margin: 0;
+      }
+      .tg-panel-body .reading-tip kbd {
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 1px 4px;
+        font-family: var(--mono);
+        font-size: 8px;
+      }
+      .tg-panel-body .pulse {
+        background: var(--green);
+      }
+      .tg-panel-body .key {
+        border-color: var(--line);
+        color: var(--overlay);
+      }
+      .tg-browser {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .tg-browser-bar {
+        height: 37px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 1px;
+        padding: 0 7px;
+        border-bottom: 1px solid var(--line);
+        background: var(--mantle);
+      }
+      .tg-browser-bar .tg-small {
+        width: 23px;
+        height: 23px;
+      }
+      .tg-address {
+        flex: 1;
+        min-width: 0;
+        height: 25px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin: 0 4px;
+        padding: 0 7px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--base);
+        color: var(--overlay);
+        font-family: var(--mono);
+        font-size: 8px;
+      }
+      .tg-address .ic {
+        width: 11px;
+        height: 11px;
+        color: var(--green);
+      }
+      .tg-address span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tg-browser-page {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--base);
+      }
+      .tg-gpt-head {
+        height: 45px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .tg-gpt-mark {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: var(--mauve);
+        color: var(--crust);
+      }
+      .tg-gpt-mark .ic {
+        width: 13px;
+        height: 13px;
+      }
+      .tg-gpt-head > div {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .tg-gpt-head strong {
+        font-size: 10.5px;
+      }
+      .tg-gpt-head span {
+        font-size: 7.5px;
+        color: var(--overlay);
+        font-family: var(--mono);
+      }
+      .tg-avatar {
+        margin-left: auto;
+        width: 23px;
+        height: 23px;
+        border-radius: 50%;
+        background: var(--blue);
+        color: var(--crust);
+        display: grid;
+        place-items: center;
+        font-size: 7px;
+        font-weight: 700;
+      }
+      .tg-context {
+        margin: 8px 12px 0;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        width: fit-content;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 3px 5px;
+        color: var(--overlay);
+        font-size: 8px;
+        font-family: var(--mono);
+      }
+      .tg-context .ic {
+        width: 10px;
+        height: 10px;
+      }
+      .tg-thread {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 9px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .tg-msg {
+        display: flex;
+        gap: 6px;
+      }
+      .tg-msg.user {
+        justify-content: flex-end;
+      }
+      .tg-msg.user .tg-bubble {
+        background: var(--mauve);
+        color: var(--crust);
+        border-radius: 9px 9px 3px 9px;
+        padding: 7px 9px;
+        font-size: 10px;
+        line-height: 1.45;
+        max-width: 88%;
+      }
+      .tg-msg.assistant {
+        align-items: flex-start;
+      }
+      .tg-msg.assistant .tg-bubble {
+        color: var(--subtext1);
+        font-size: 10.5px;
+        line-height: 1.58;
+        padding-top: 2px;
+      }
+      .tg-ai {
+        width: 19px;
+        height: 19px;
+        flex: none;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        display: grid;
+        place-items: center;
+        color: var(--mauve);
+      }
+      .tg-ai .ic {
+        width: 10px;
+        height: 10px;
+      }
+      .tg-typing {
+        background: var(--surface0);
+        height: 5px;
+        width: 135px;
+        border-radius: 99px;
+        margin-top: 7px;
+      }
+      .tg-composer {
+        margin: 0 10px 9px;
+        height: 37px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0 6px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: var(--mantle);
+      }
+      .tg-composer .ic {
+        width: 13px;
+        height: 13px;
+        color: var(--overlay);
+      }
+      .tg-composer span {
+        flex: 1;
+        color: var(--overlay);
+        font-size: 9px;
+      }
+      .tg-send {
+        width: 24px;
+        height: 24px;
+        border-radius: 5px;
+        background: var(--mauve);
+        color: var(--crust);
+        display: grid;
+        place-items: center;
+      }
+      .tg-send .ic {
+        width: 12px;
+        height: 12px;
+      }
+      .tg-gpt-foot {
+        text-align: center;
+        color: var(--overlay);
+        font-size: 6.5px;
+        padding-bottom: 7px;
+      }
+      .tg-panel-body .notes-head {
+        padding: 17px 15px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+      .tg-panel-body .notes-head strong {
+        font-family: var(--ui);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .tg-panel-body .notes-head .eyebrow {
+        color: var(--mauve);
+      }
+      .tg-panel-body .note-card {
+        border-color: var(--line);
+        background: var(--base);
+      }
+      .tg-panel-body .note-card.active {
+        border-color: color-mix(in srgb, var(--mauve) 40%, var(--line));
+        background: color-mix(in srgb, var(--mauve) 8%, var(--base));
+      }
+      .tg-panel-body .note-date {
+        color: var(--mauve);
+      }
+      .tg-panel-body .note-card strong {
+        font-family: var(--ui);
+        font-weight: 600;
+      }
+      .tg-panel-body .note-card p {
+        font-family: var(--ui);
+        color: var(--subtext);
+      }
+      .tg-panel-body .note-editor {
+        border-color: var(--line);
+        color: var(--overlay);
+      }
+      .tg-status {
+        height: 29px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 0;
+        padding: 0 10px 0 13px;
+        border-top: 1px solid var(--line);
+        background: var(--mantle);
+        color: var(--overlay);
+        font-size: 8px;
+      }
+      .tg-live {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+      .tg-live .status-dot {
+        background: var(--green);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 17%, transparent);
+      }
+      .tg-dotsep {
+        color: var(--surface2);
+      }
+      .tg-status-spacer {
+        flex: 1;
+        min-width: 12px;
+      }
+      .tg-stats {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        white-space: nowrap;
+        color: var(--subtext);
+        font-family: var(--mono);
+        font-size: 8px;
+      }
+      .tg-help {
+        width: 22px;
+        height: 22px;
+        display: grid;
+        place-items: center;
+        color: var(--overlay);
+        border-radius: 4px;
+        margin-left: 1px;
+      }
+      .tg-help:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .tg-help .ic {
+        width: 12px;
+        height: 12px;
+      }
+      .tg-status-gap {
+        width: 22px;
+        flex: none;
+      }
+      .tg-zoom-bottom {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+        flex: none;
+      }
+      .tg-zoom-bottom .tg-icon {
+        width: 23px;
+        height: 24px;
+      }
+      .tg-zoom-value {
+        height: 24px;
+        min-width: 39px;
+        border-radius: 4px;
+        color: var(--subtext1);
+        font-family: var(--mono);
+        font-size: 8.5px;
+      }
+      .tg-zoom-value:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .tg-copy {
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0 8px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--subtext);
+        font-size: 9px;
+        white-space: nowrap;
+        margin: 0 2px;
+      }
+      .tg-copy .ic {
+        width: 14px;
+        height: 14px;
+      }
+      .tg-copy:hover {
+        background: var(--surface0);
+        color: var(--text);
+      }
+      .tg-copy.copied {
+        border-color: var(--green);
+        color: var(--green);
+      }
+      .tg-toast {
+        position: absolute;
+        left: 50%;
+        bottom: 42px;
+        transform: translate(-50%, 6px);
+        background: var(--surface0);
+        border: 1px solid var(--surface2);
+        color: var(--text);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 9px;
+        opacity: 0;
+        pointer-events: none;
+        transition: 0.18s ease;
+        z-index: 20;
+      }
+      .tg-toast.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+      .tg {
+        --reading-scale: 1;
+      }
+      .tg.panel-off .tg-side,
+      .tg.panel-off .tg-panel-resize {
+        display: none;
+      }
+      .tg.explorer-off .tg-explorer,
+      .tg.explorer-off .tg-explorer-resize {
+        display: none;
+      }
+      .tg-panel-body .side-content {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+      }
+      .tg-panel-body .side-tabs {
+        display: none;
+      }
+      @media (max-width: 1100px) {
+        .tg-top {
+          gap: 2px;
+          padding: 0 7px;
+        }
+        .tg-brand {
+          gap: 6px;
+          margin-right: 2px;
+        }
+        .tg-actions {
+          gap: 0;
+        }
+        .tg-icon {
+          width: 27px;
+        }
+        .tg-tabs {
+          max-width: 240px;
+        }
+        .tg-side {
+          --panel-width: 330px;
+        }
+        .tg-explorer {
+          --explorer-width: 210px;
+        }
+        .tg-copy {
+          width: 29px;
+          padding: 0;
+          justify-content: center;
+        }
+        .tg-copy span {
+          display: none;
+        }
+        .tg-tabs {
+          max-width: 260px;
+        }
+        .tg-tab {
+          padding: 0 8px;
+        }
+        .tg-stats [data-stat='read'] {
+          display: none;
+        }
+        .tg-status-gap {
+          width: 10px;
+        }
+      }
+      @media (max-width: 900px) {
+        .tg-copy {
+          width: 27px;
+          padding: 0;
+          justify-content: center;
+        }
+        .tg-copy span {
+          display: none;
+        }
+        .tg-tabs .tg-tab:nth-child(2) {
+          display: none;
+        }
+      }
+      @media (max-width: 820px) {
+        .tg-side {
+          --panel-width: 300px;
+        }
+        .tg-explorer {
+          --explorer-width: 190px;
+        }
+        .tg-stats [data-stat='chars'] {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app tg panel-off explorer-off" data-panel="none" data-explorer="0">
+      <div class="tg-shell">
+        <header class="tg-top">
+          <div class="tg-brand">
+            <span class="tg-logo"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 96 96"
+                role="img"
+                aria-label="Papyri"
+              >
+                <g
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="5.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="22" y="13" width="52" height="70" rx="10" />
+                  <path d="M48 69V42M48 42L35 33M48 42V27M48 42L61 33" />
+                </g></svg></span
+            ><span class="tg-word">Papyri</span>
+          </div>
+          <button class="tg-icon tg-explorer-toggle" title="Toggle explorer" data-toggle-explorer>
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+              <path d="M9 3v18"></path>
+            </svg>
+          </button>
+          <span class="tg-spacer"></span>
+          <div class="tg-tabs">
+            <button class="tg-tab active">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+              ><span>markdown.md</span
+              ><svg
+                class="ic x"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 6 6 18M6 6l12 12"></path>
+              </svg>
+            </button>
+            <button class="tg-tab">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+              ><span>diagrams.md</span
+              ><svg
+                class="ic x"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M18 6 6 18M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+          <span class="tg-spacer"></span>
+          <div class="tg-actions">
+            <button class="tg-icon" title="Find in document" data-toggle-search>
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
+            </button>
+            <button class="tg-icon" title="Split view" data-toggle-split>
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                <path d="M12 4v16"></path>
+              </svg>
+            </button>
+            <button class="tg-copy" title="Copy raw content of markdown.md" data-copy-raw>
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg
+              ><span>Copy raw</span>
+            </button>
+            <button class="tg-icon" title="Fit document to width">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"
+                ></path>
+              </svg>
+            </button>
+            <button class="tg-icon" title="Settings" data-open-settings>
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                  d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"
+                ></path>
+              </svg>
+            </button>
+            <button class="tg-icon" title="Toggle right panel" data-toggle-panel>
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                <path d="M15 3v18"></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+        <div class="tg-searchbar">
+          <svg
+            class="ic"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m21 21-4.3-4.3"></path></svg
+          ><input value="PAPYRI-NEEDLE" aria-label="Find in document" /><span class="hint"
+            >1 match · Markdown and PDF text</span
+          ><button class="close" title="Close search">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 6 6 18M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="tg-body">
+          <aside class="tg-explorer">
+            <div class="tg-explorer-path">
+              <div class="tg-path-box">
+                <input
+                  value="/home/pseudofractal/GitHub/papyri/examples/showcase"
+                  aria-label="Directory path"
+                /><button class="tg-path-go" title="Go to directory">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="m9 18 6-6-6-6"></path>
+                  </svg>
+                </button>
+              </div>
+              <button class="tg-path-up" title="Parent folder">
+                <svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 19V5M6 11l6-6 6 6"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="tg-explorer-tools">
+              <span>FILES</span>
+              <div>
+                <button class="tg-small" title="Open document">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"></path>
+                  </svg></button
+                ><button class="tg-small" title="Refresh files">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="tree">
+              <button class="tree-row folder" style="--depth: 0">
+                <svg
+                  class="ic twist"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m6 9 6 6 6-6"></path></svg
+                ><svg
+                  class="ic file-ic folder"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                  ></path></svg
+                ><span class="tree-name">examples</span></button
+              ><button class="tree-row folder" style="--depth: 1">
+                <svg
+                  class="ic twist"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m6 9 6 6 6-6"></path></svg
+                ><svg
+                  class="ic file-ic folder"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                  ></path></svg
+                ><span class="tree-name">showcase</span></button
+              ><button class="tree-row active" style="--depth: 2">
+                <span class="twist"></span
+                ><svg
+                  class="ic file-ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                ><span class="tree-name">markdown.md</span><span class="active-dot"></span></button
+              ><button class="tree-row" style="--depth: 2">
+                <span class="twist"></span
+                ><svg
+                  class="ic file-ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                ><span class="tree-name">diagrams.md</span></button
+              ><button class="tree-row" style="--depth: 2">
+                <span class="twist"></span
+                ><svg
+                  class="ic file-ic pdf"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                ><span class="tree-name">paged.pdf</span></button
+              ><button class="tree-row" style="--depth: 2">
+                <span class="twist"></span
+                ><svg
+                  class="ic file-ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                ><span class="tree-name">paged.typ</span></button
+              ><button class="tree-row" style="--depth: 2">
+                <span class="twist"></span
+                ><svg
+                  class="ic file-ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                ><span class="tree-name">README.md</span></button
+              ><button class="tree-row folder" style="--depth: 1">
+                <svg
+                  class="ic twist"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m9 18 6-6-6-6"></path></svg
+                ><svg
+                  class="ic file-ic folder"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                  ></path></svg
+                ><span class="tree-name">assets</span></button
+              ><button class="tree-row" style="--depth: 1">
+                <span class="twist"></span
+                ><svg
+                  class="ic file-ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                  <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                ><span class="tree-name">linked.md</span>
+              </button>
+            </div>
+            <div class="tg-explorer-foot">
+              <button class="tg-open-folder">
+                <svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                  ></path></svg
+                ><span>Open folder</span></button
+              ><button class="tg-recent">
+                <svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+                  <path d="M3 3v5h5M12 7v5l3 2"></path></svg
+                ><span>Recent</span>
+              </button>
+            </div>
+          </aside>
+          <div class="tg-explorer-resize" title="Resize explorer"></div>
+          <main class="tg-main">
+            <div class="tg-panes">
+              <section class="tg-pane">
+                <div class="doc-scroll">
+                  <div class="doc-scroll">
+                    <article class="doc">
+                      <div class="doc-crumb">
+                        <span>showcase</span><span class="slash">/</span
+                        ><span class="file">markdown.md</span><span class="kind">MARKDOWN</span>
+                      </div>
+                      <h1 class="doc-title">Markdown and mathematics</h1>
+                      <p class="doc-dek">
+                        A test page for typography, links, math, code and footnotes.
+                      </p>
+                      <div class="doc-meta">
+                        <span>Updated just now</span><span>1,842 words</span><span>6 min read</span>
+                      </div>
+                      <div class="doc-links">
+                        <a>Back to the showcase</a><span>·</span><a>Open diagrams</a><span>·</span
+                        ><a>Jump to references</a>
+                      </div>
+                      <h2 class="doc-h2"><span class="hnum">01</span>Text and links</h2>
+                      <p>
+                        This page exercises <strong>bold</strong>, <em>emphasis</em>,
+                        <del>strikethrough</del>, <code>inline code</code>, an <a>external link</a>,
+                        and an autolink: <a>https://example.org</a>. <mark>PAPYRI-NEEDLE</mark> is a
+                        distinctive search target.
+                      </p>
+                      <blockquote>
+                        <p>A block quote can contain a second paragraph.</p>
+                        <p>Use the outline to navigate between headings.</p>
+                      </blockquote>
+                      <ul class="tasks">
+                        <li class="done">Open the project</li>
+                        <li>Try split view</li>
+                        <li class="nested">A nested bullet</li>
+                      </ul>
+                      <h2 class="doc-h2"><span class="hnum">02</span>Code and layout</h2>
+                      <pre
+                        class="code"
+                      ><code><span class="kw">def</span> <span class="fn">mean</span>(values):
+    <span class="kw">return</span> <span class="fn">sum</span>(values) / <span class="fn">len</span>(values)</code></pre>
+                      <h2 class="doc-h2"><span class="hnum">03</span>Mathematics and references</h2>
+                      <p>
+                        Inline math uses the default delimiters:
+                        <span class="inline-math">e<sup>iπ</sup> + 1 = 0</span>. Equation (7) should
+                        link to its target.
+                      </p>
+                      <div class="math-block">
+                        <span class="math">∫<sub>−∞</sub><sup>∞</sup> e<sup>−x²</sup> dx = √π</span
+                        ><span class="eq-no">(7)</span>
+                      </div>
+                      <table class="doc-table">
+                        <thead>
+                          <tr>
+                            <th>Feature</th>
+                            <th>Example</th>
+                            <th>Expected</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>Table</td>
+                            <td>Three columns</td>
+                            <td>Aligned content</td>
+                          </tr>
+                          <tr>
+                            <td>Footnote</td>
+                            <td>Local note<sup class="fn-ref">1</sup></td>
+                            <td>Clickable</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </article>
+                  </div>
+                </div>
+              </section>
+              <section class="tg-secondary">
+                <div class="tg-secondary-head">
+                  <span>diagrams.md</span
+                  ><button class="tg-small" title="Close split">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M18 6 6 18M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div class="tg-diagram-doc">
+                  <div class="eyebrow">MERMAID · FLOWCHART</div>
+                  <h1>Diagrams</h1>
+                  <p>
+                    A second document in the split view. The first document and its scroll position
+                    remain untouched.
+                  </p>
+                  <div class="tg-diagram">
+                    <svg viewBox="0 0 460 245" role="img" aria-label="Diagram preview">
+                      <defs>
+                        <marker
+                          id="tgarrow"
+                          viewBox="0 0 10 10"
+                          refX="8"
+                          refY="5"
+                          markerWidth="5"
+                          markerHeight="5"
+                          orient="auto-start-reverse"
+                        >
+                          <path d="M 0 0 L 10 5 L 0 10 z" fill="#cba6f7" />
+                        </marker>
+                      </defs>
+                      <rect
+                        x="24"
+                        y="24"
+                        width="130"
+                        height="48"
+                        rx="8"
+                        fill="#313244"
+                        stroke="#585b70"
+                      ></rect>
+                      <text
+                        x="89"
+                        y="53"
+                        fill="#cdd6f4"
+                        font-size="10"
+                        text-anchor="middle"
+                        font-family="Adwaita Sans, sans-serif"
+                      >
+                        Markdown source
+                      </text>
+                      <rect
+                        x="24"
+                        y="102"
+                        width="130"
+                        height="48"
+                        rx="8"
+                        fill="#313244"
+                        stroke="#585b70"
+                      ></rect>
+                      <text
+                        x="89"
+                        y="131"
+                        fill="#cdd6f4"
+                        font-size="10"
+                        text-anchor="middle"
+                        font-family="Adwaita Sans, sans-serif"
+                      >
+                        Parser worker
+                      </text>
+                      <rect
+                        x="24"
+                        y="180"
+                        width="130"
+                        height="48"
+                        rx="8"
+                        fill="#313244"
+                        stroke="#585b70"
+                      ></rect>
+                      <text
+                        x="89"
+                        y="209"
+                        fill="#cdd6f4"
+                        font-size="10"
+                        text-anchor="middle"
+                        font-family="Adwaita Sans, sans-serif"
+                      >
+                        Safe frame
+                      </text>
+                      <rect
+                        x="262"
+                        y="102"
+                        width="166"
+                        height="48"
+                        rx="8"
+                        fill="#313244"
+                        stroke="#cba6f7"
+                      ></rect>
+                      <text
+                        x="345"
+                        y="131"
+                        fill="#cdd6f4"
+                        font-size="10"
+                        text-anchor="middle"
+                        font-family="Adwaita Sans, sans-serif"
+                      >
+                        Preview DOM
+                      </text>
+                      <path
+                        d="M 89 72 L 89 102"
+                        stroke="#cba6f7"
+                        stroke-width="1.5"
+                        marker-end="url(#tgarrow)"
+                        fill="none"
+                      ></path>
+                      <path
+                        d="M 89 150 L 89 180"
+                        stroke="#cba6f7"
+                        stroke-width="1.5"
+                        marker-end="url(#tgarrow)"
+                        fill="none"
+                      ></path>
+                      <path
+                        d="M 154 204 C 220 204 220 126 262 126"
+                        stroke="#cba6f7"
+                        stroke-width="1.5"
+                        marker-end="url(#tgarrow)"
+                        fill="none"
+                      ></path>
+                      <path
+                        d="M 154 48 C 220 48 220 126 262 126"
+                        stroke="#89b4fa"
+                        stroke-width="1.2"
+                        stroke-dasharray="4 4"
+                        marker-end="url(#tgarrow)"
+                        fill="none"
+                      ></path>
+                    </svg>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
+        <footer class="tg-status">
+          <div class="tg-live">
+            <span class="status-dot"></span><span>Local folder</span><span class="tg-dotsep">·</span
+            ><span>Live · checks every 2s</span>
+          </div>
+          <div class="tg-status-spacer"></div>
+          <div class="tg-stats">
+            <span data-stat="words">314 words</span><span data-stat="chars">2,451 characters</span
+            ><span data-stat="read">2 min read</span
+            ><button class="tg-help" title="Keyboard shortcuts">
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9"></circle>
+                <path d="M9.1 9a3 3 0 1 1 5.3 1.8c-.8.7-1.4 1.2-1.4 2.2"></path>
+                <path d="M12 17h.01"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="tg-status-gap"></div>
+          <div class="tg-zoom-bottom">
+            <button class="tg-icon" title="Zoom out" data-zoom-out>
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14"></path>
+              </svg></button
+            ><button
+              class="tg-zoom-value"
+              title="Reset document zoom"
+              data-zoom-reset
+              data-zoom-value
+            >
+              100%</button
+            ><button class="tg-icon" title="Zoom in" data-zoom-in>
+              <svg
+                class="ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+            </button>
+          </div>
+        </footer>
+        <div class="tg-toast" role="status">Copied raw Markdown</div>
+      </div>
+      <div class="tg-panel-resize" title="Resize panel"></div>
+      <aside class="tg-side">
+        <div class="tg-panel-top">
+          <button class="tg-panel-tab" data-tab-target="outline">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg
+            ><span>Outline</span>
+          </button>
+          <button class="tg-panel-tab" data-tab-target="chat">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"></path></svg
+            ><span>ChatGPT</span>
+          </button>
+          <button class="tg-panel-tab" data-tab-target="notes">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+              <path d="M14 2v6h6"></path></svg
+            ><span>Notes</span>
+          </button>
+          <button class="tg-panel-tab add" title="Add panel">
+            <svg
+              class="ic"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="tg-panel-body">
+          <div class="pane" data-pane="outline">
+            <div class="outline-head">
+              <div><span class="eyebrow">ON THIS PAGE</span></div>
+              <svg
+                class="ic ghost-ic"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path>
+              </svg>
+            </div>
+            <nav class="outline-list">
+              <button class="outline-row active">
+                <span>Markdown and mathematics</span><span class="reading-dot"></span></button
+              ><button class="outline-row"><span>Text and links</span></button
+              ><button class="outline-row"><span>Code and layout</span></button
+              ><button class="outline-row"><span>Mathematics and references</span></button
+              ><button class="outline-row"><span>HTML and trust</span></button
+              ><button class="outline-row"><span>References</span></button>
+            </nav>
+            <div class="reading-tip">
+              <p><kbd>Ctrl B</kbd> toggles the explorer.</p>
+            </div>
+          </div>
+          <div class="pane" data-pane="chat">
+            <div class="tg-browser">
+              <div class="tg-browser-bar">
+                <button class="tg-small" title="Back">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M19 12H5M11 18l-6-6 6-6"></path>
+                  </svg>
+                </button>
+                <button class="tg-small" title="Forward">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6"></path>
+                  </svg>
+                </button>
+                <button class="tg-small" title="Reload">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"></path>
+                  </svg>
+                </button>
+                <div class="tg-address">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="5" y="10" width="14" height="11" rx="2"></rect>
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg
+                  ><span>https://chatgpt.com/</span>
+                </div>
+                <button class="tg-small" title="Open in system browser">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                    ></path>
+                  </svg>
+                </button>
+                <button class="tg-small" title="Close browser">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 6 6 18M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              <div class="tg-browser-page">
+                <div class="tg-gpt-head">
+                  <span class="tg-gpt-mark"
+                    ><svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6Z"></path>
+                      <path d="M5 16l-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path></svg
+                  ></span>
+                  <div><strong>ChatGPT</strong><span>GPT-5 · this document</span></div>
+                  <span class="tg-avatar">PF</span>
+                </div>
+                <div class="tg-context">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"></path>
+                    <path d="M14 2v6h6M8 13h8M8 17h5"></path></svg
+                  ><span>markdown.md</span>
+                </div>
+                <div class="tg-thread">
+                  <div class="tg-msg user">
+                    <div class="tg-bubble">
+                      Explain the nonresonance assumption in simpler terms.
+                    </div>
+                  </div>
+                  <div class="tg-msg assistant">
+                    <span class="tg-ai"
+                      ><svg
+                        class="ic"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6Z"></path>
+                        <path d="M5 16l-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path></svg
+                    ></span>
+                    <div class="tg-bubble">
+                      The cavity has natural frequencies where sound forms standing waves. At those
+                      frequencies the ideal model has no unique finite response, so we assume the
+                      driving frequency avoids them. That keeps the Helmholtz solution well defined.
+                    </div>
+                  </div>
+                  <div class="tg-msg user">
+                    <div class="tg-bubble">Make it one sentence I can use in the thesis.</div>
+                  </div>
+                  <div class="tg-msg assistant">
+                    <span class="tg-ai"
+                      ><svg
+                        class="ic"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="m12 3-1.6 4.4L6 9l4.4 1.6L12 15l1.6-4.4L18 9l-4.4-1.6Z"></path>
+                        <path d="M5 16l-.8 2.2L2 19l2.2.8L5 22l.8-2.2L8 19l-2.2-.8Z"></path></svg
+                    ></span>
+                    <div class="tg-bubble"><div class="tg-typing"></div></div>
+                  </div>
+                </div>
+                <div class="tg-composer">
+                  <svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14M5 12h14"></path></svg
+                  ><span>Ask about this document…</span
+                  ><svg
+                    class="ic"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"></path></svg
+                  ><button class="tg-send">
+                    <svg
+                      class="ic"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 19V5M6 11l6-6 6 6"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div class="tg-gpt-foot">ChatGPT can make mistakes. Check important info.</div>
+              </div>
+            </div>
+          </div>
+          <div class="pane notes-pane" data-pane="notes">
+            <div class="notes-head">
+              <div><span class="eyebrow">NOTES</span><strong>Reading notes</strong></div>
+              <button class="ghost-btn">
+                <svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="note-card active">
+              <span class="note-date">TODAY · 11:28</span
+              ><strong>Nonresonance vs. resonance</strong>
+              <p>Need to clarify why the unique solution fails exactly at the eigenfrequencies.</p>
+            </div>
+            <div class="note-card">
+              <span class="note-date">YESTERDAY</span><strong>Outline structure</strong>
+              <p>Keep the math section before references.</p>
+            </div>
+            <div class="note-editor">
+              <span>Write a note…</span
+              ><button>
+                <svg
+                  class="ic"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 19V5M6 11l6-6 6 6"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+    <script>
+      const tg = document.querySelector('.tg');
+      const rawBytes = Uint8Array.from(
+        atob(
+          'IyBNYXJrZG93biBhbmQgbWF0aGVtYXRpY3MKCltCYWNrIHRvIHRoZSBzaG93Y2FzZV0oLi9SRUFETUUubWQpIMK3IFtPcGVuIGRpYWdyYW1zXSguL2RpYWdyYW1zLm1kKSDCtyBbSnVtcCB0byByZWZlcmVuY2VzXSgjcmVmZXJlbmNlcykKCiMjIFRleHQgYW5kIGxpbmtzCgpUaGlzIHBhZ2UgZXhlcmNpc2VzICoqYm9sZCoqLCBfZW1waGFzaXNfLCB+fnN0cmlrZXRocm91Z2h+fiwgYGlubGluZSBjb2RlYCwgYW4gW2V4dGVybmFsIGxpbmtdKGh0dHBzOi8vZXhhbXBsZS5vcmcpLCBhbmQgYW4gYXV0b2xpbms6IGh0dHBzOi8vZXhhbXBsZS5vcmcuIFBBUFlSSS1ORUVETEUgaXMgYSBkaXN0aW5jdGl2ZSBzZWFyY2ggdGFyZ2V0LgoKPiBBIGJsb2NrIHF1b3RlIGNhbiBjb250YWluIGEgc2Vjb25kIHBhcmFncmFwaC4KPgo+IFVzZSB0aGUgb3V0bGluZSB0byBuYXZpZ2F0ZSBiZXR3ZWVuIGhlYWRpbmdzLgoKLSBbeF0gT3BlbiB0aGUgcHJvamVjdAotIFsgXSBUcnkgc3BsaXQgdmlldwogIC0gQSBuZXN0ZWQgYnVsbGV0CiAgLSBBbm90aGVyIG5lc3RlZCBidWxsZXQKCjEuIEZpcnN0IG51bWJlcmVkIGl0ZW0KMi4gU2Vjb25kIG51bWJlcmVkIGl0ZW0KCnwgRmVhdHVyZSAgfCBFeGFtcGxlICAgICAgICAgICB8IEV4cGVjdGVkICAgICAgICAgICB8CnwgOi0tLS0tLS0gfCA6LS0tLS0tLS0tLS0tLS0tLSB8IDotLS0tLS0tLS0tLS0tLS0tLSB8CnwgVGFibGUgICAgfCBUaHJlZSBjb2x1bW5zICAgICB8IEFsaWduZWQgY29udGVudCAgICB8CnwgRm9vdG5vdGUgfCBMb2NhbCBub3RlW15ub3RlXSB8IENsaWNrYWJsZSBmb290bm90ZSB8CnwgSW1hZ2UgICAgfCBMb2NhbCBTVkcgICAgICAgICB8IFZpc2libGUgYmVsb3cgICAgICB8CgohW0EgdmlvbGV0IG9yYml0IGFyb3VuZCBhIHNtYWxsIHN0YXJdKC4vYXNzZXRzL29yYml0LnN2ZykKCltebm90ZV06IFRoaXMgaXMgYW4gb3JkaW5hcnkgZm9vdG5vdGUgd2l0aCBhIHJldHVybiBsaW5rLgoKIyMgQ29kZSBhbmQgbGF5b3V0CgpgYGBweXRob24KZGVmIG1lYW4odmFsdWVzKToKICAgIHJldHVybiBzdW0odmFsdWVzKSAvIGxlbih2YWx1ZXMpCgpwcmludChtZWFuKFsxLCAyLCAzXSkpCmBgYAoKQSBsb25nIGxpbmUgZm9yIHRlc3RpbmcgaG9yaXpvbnRhbCBzY3JvbGxpbmcgaW4gbm9ybWFsIHJlYWRpbmcgbW9kZSBhbmQgd3JhcHBpbmcgaW4gZml0LXRvLXdpZHRoIG1vZGU6CgpgYGB0ZXh0ClBBUFlSSS1ORUVETEUgL2RvY3VtZW50cy9vYnNlcnZhdGlvbnMvbWVhc3VyZW1lbnRzLzIwMjYvc2Vzc2lvbi92ZXJ5LWxvbmctZXhhbXBsZS1wYXRoL3dpdGgtc2V2ZXJhbC1zZWdtZW50cy90by1jaGVjay1ob3Jpem9udGFsLXNjcm9sbGluZy1hbmQtZml0LXdpZHRoLnR4dApgYGAKCiMjIE1hdGhlbWF0aWNzIGFuZCByZWZlcmVuY2VzCgpJbmxpbmUgbWF0aCB1c2VzIHRoZSBkZWZhdWx0IGBcKGAgYW5kIGBcKWAgZGVsaW1pdGVyczogXChlXntpXHBpfSsxPTBcKS4gRXF1YXRpb24gKDcpIGFuZCBjaXRhdGlvbiBbMV0gc2hvdWxkIGxpbmsgdG8gdGhlaXIgdGFyZ2V0cy4gVW5tYXRjaGVkIFs5OV0gcmVtYWlucyBwbGFpbiB0ZXh0LgoKJCQKXGludF97LVxpbmZ0eX1ee1xpbmZ0eX0gZV57LXheMn1cLGR4ID0gXHNxcnR7XHBpfSBcdGFnezd9CiQkCgpcWwpcYmVnaW57Ym1hdHJpeH1hICYgYlxcYyAmIGRcZW5ke2JtYXRyaXh9ClxiZWdpbntibWF0cml4fXhcXHlcZW5ke2JtYXRyaXh9Cj0KClxiZWdpbntibWF0cml4fWF4K2J5XFxjeCtkeVxlbmR7Ym1hdHJpeH0KXF0KClsgXGZyYWN7MX17bn1cc3VtX3tpPTF9XntufSB4X2kgXQoKIyMgSFRNTCBhbmQgdHJ1c3QKCjxkZXRhaWxzPjxzdW1tYXJ5Pk9wZW4gdGhpcyBkaXNjbG9zdXJlPC9zdW1tYXJ5PjxwPlNhZmUgc2VtYW50aWMgSFRNTCBpcyByZW5kZXJlZCBpbnNpZGUgdGhlIGlzb2xhdGVkIHByZXZpZXcuPC9wPjwvZGV0YWlscz4KCjxzcGFuIGlkPSJ0cnVzdC1leGFtcGxlIj5UaGUgb3B0aW9uYWwgc2NyaXB0IGhhcyBub3QgcnVuLjwvc3Bhbj4KCjxzY3JpcHQ+CmRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd0cnVzdC1leGFtcGxlJykudGV4dENvbnRlbnQgPSAnVHJ1c3RlZCBzY3JpcHQgcmFuIGluIHRoZSBpc29sYXRlZCBwcmV2aWV3Lic7Cjwvc2NyaXB0PgoKSW4gc2FmZSBtb2RlIHRoZSBzY3JpcHQgaXMgcmVtb3ZlZC4gVG8gdGVzdCB0cnVzdGVkIHNjcmlwdHMsIHRydXN0IHRoaXMgZG9jdW1lbnQgdXNpbmcgdGhlIGFwcCdzIHNoaWVsZCBjb250cm9sOyB0aGUgbWVzc2FnZSBhYm92ZSBzaG91bGQgY2hhbmdlLiBPbmx5IHRydXN0IGZpbGVzIHlvdSBrbm93LiBUaGUgZXhhbXBsZSBtYWtlcyBubyBuZXR3b3JrIHJlcXVlc3RzLgoKIyMgUmVmZXJlbmNlcwoKMS4gRXhhbXBsZSwgQS4gX0EgU21hbGwgUmVmZXJlbmNlIGZvciBQYXB5cmlfLiAyMDI0LgoyLiBSZWFkZXIsIEIuIF9BIFNlY29uZCBSZWZlcmVuY2VfLiAyMDI1Lgo=',
+        ),
+        (c) => c.charCodeAt(0),
+      );
+      const RAW_MARKDOWN = new TextDecoder().decode(rawBytes);
+      const wordCount = RAW_MARKDOWN.trim().split(/\s+/).filter(Boolean).length;
+      const charCount = RAW_MARKDOWN.length;
+      const readMinutes = Math.max(1, Math.round(wordCount / 250));
+      document
+        .querySelectorAll('[data-stat="words"]')
+        .forEach((el) => (el.textContent = wordCount.toLocaleString() + ' words'));
+      document
+        .querySelectorAll('[data-stat="chars"]')
+        .forEach((el) => (el.textContent = charCount.toLocaleString() + ' characters'));
+      document
+        .querySelectorAll('[data-stat="read"]')
+        .forEach((el) => (el.textContent = readMinutes + ' min read'));
+      const docMeta = document.querySelector('.tg .doc-meta');
+      if (docMeta)
+        docMeta.innerHTML =
+          '<span>Updated just now</span><span>' +
+          wordCount.toLocaleString() +
+          ' words</span><span>' +
+          readMinutes +
+          ' min read</span>';
+      let zoom = 100;
+      function setZoom(value) {
+        zoom = Math.max(50, Math.min(200, Math.round(value / 10) * 10));
+        tg.style.setProperty('--reading-scale', String(zoom / 100));
+        document
+          .querySelectorAll('[data-zoom-value]')
+          .forEach((el) => (el.textContent = zoom + '%'));
+      }
+      document.querySelector('[data-zoom-in]')?.addEventListener('click', () => setZoom(zoom + 10));
+      document
+        .querySelector('[data-zoom-out]')
+        ?.addEventListener('click', () => setZoom(zoom - 10));
+      document.querySelector('[data-zoom-reset]')?.addEventListener('click', () => setZoom(100));
+      async function writeClipboard(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          try {
+            const area = document.createElement('textarea');
+            area.value = text;
+            area.style.position = 'fixed';
+            area.style.opacity = '0';
+            document.body.appendChild(area);
+            area.select();
+            const ok = document.execCommand('copy');
+            area.remove();
+            return ok;
+          } catch {
+            return false;
+          }
+        }
+      }
+      const copyButton = document.querySelector('[data-copy-raw]');
+      const toast = document.querySelector('.tg-toast');
+      let copyTimer;
+      copyButton?.addEventListener('click', async () => {
+        const ok = await writeClipboard(RAW_MARKDOWN);
+        const label = copyButton.querySelector('span');
+        copyButton.classList.toggle('copied', ok);
+        if (label) label.textContent = ok ? 'Copied' : 'Copy failed';
+        if (toast) {
+          toast.textContent = ok
+            ? 'Copied raw markdown.md · ' + charCount.toLocaleString() + ' characters'
+            : 'Clipboard unavailable — the raw content is in the active document';
+          toast.classList.add('show');
+        }
+        clearTimeout(copyTimer);
+        copyTimer = setTimeout(() => {
+          copyButton.classList.remove('copied');
+          if (label) label.textContent = 'Copy raw';
+          toast?.classList.remove('show');
+        }, 1800);
+      });
+      const params = new URLSearchParams(location.search);
+      const panel = params.get('panel') || 'none';
+      const explorer = params.get('explorer') === '1';
+      const tab = params.get('tab') || (panel === 'none' ? 'outline' : panel);
+      function setPanel(next) {
+        tg.dataset.panel = next;
+        tg.classList.toggle('panel-off', next === 'none');
+        document.querySelector('[data-toggle-panel]').classList.toggle('active', next !== 'none');
+        const target = next === 'none' ? params.get('tab') || 'outline' : next;
+        setTab(target);
+      }
+      function setExplorer(open) {
+        tg.dataset.explorer = open ? '1' : '0';
+        tg.classList.toggle('explorer-off', !open);
+        document.querySelector('[data-toggle-explorer]').classList.toggle('active', open);
+      }
+      function setTab(next) {
+        document
+          .querySelectorAll('[data-tab-target]')
+          .forEach((el) => el.classList.toggle('active', el.dataset.tabTarget === next));
+        document
+          .querySelectorAll('[data-pane]')
+          .forEach((el) => el.classList.toggle('active', el.dataset.pane === next));
+      }
+      setPanel(panel);
+      setExplorer(explorer);
+      if (panel !== 'none') setTab(tab);
+      if (params.get('search') === '1') {
+        document.querySelector('.tg-searchbar').classList.add('show');
+        document.querySelector('[data-toggle-search]').classList.add('active');
+      }
+      if (params.get('split') === '1') {
+        document.querySelector('.tg-panes').classList.add('split');
+        document.querySelector('[data-toggle-split]').classList.add('active');
+      }
+      document
+        .querySelectorAll('[data-tab-target]')
+        .forEach((el) => el.addEventListener('click', () => setTab(el.dataset.tabTarget)));
+      document
+        .querySelector('[data-toggle-panel]')
+        ?.addEventListener('click', () =>
+          setPanel(tg.dataset.panel === 'none' ? params.get('tab') || 'chat' : 'none'),
+        );
+      document
+        .querySelector('[data-toggle-explorer]')
+        ?.addEventListener('click', () => setExplorer(tg.dataset.explorer !== '1'));
+      document.querySelector('[data-toggle-search]')?.addEventListener('click', (e) => {
+        document.querySelector('.tg-searchbar').classList.toggle('show');
+        e.currentTarget.classList.toggle('active');
+      });
+      document.querySelector('[data-toggle-split]')?.addEventListener('click', (e) => {
+        document.querySelector('.tg-panes').classList.toggle('split');
+        e.currentTarget.classList.toggle('active');
+      });
+      document.querySelector('.tg-secondary .tg-small')?.addEventListener('click', () => {
+        document.querySelector('.tg-panes').classList.remove('split');
+        document.querySelector('[data-toggle-split]').classList.remove('active');
+      });
+      document.querySelector('.tg-searchbar .close')?.addEventListener('click', () => {
+        document.querySelector('.tg-searchbar').classList.remove('show');
+        document.querySelector('[data-toggle-search]').classList.remove('active');
+      });
+      const bind = (handle, target, variable, min, max, invert) => {
+        let startX = 0,
+          start = 0,
+          drag = false;
+        handle?.addEventListener('pointerdown', (e) => {
+          drag = true;
+          startX = e.clientX;
+          start = target.getBoundingClientRect().width;
+          handle.setPointerCapture(e.pointerId);
+        });
+        handle?.addEventListener('pointermove', (e) => {
+          if (!drag) return;
+          const delta = (e.clientX - startX) * (invert ? -1 : 1);
+          tg.style.setProperty(variable, Math.max(min, Math.min(max, start + delta)) + 'px');
+        });
+        handle?.addEventListener('pointerup', () => {
+          drag = false;
+        });
+        handle?.addEventListener('pointercancel', () => {
+          drag = false;
+        });
+      };
+      bind(
+        document.querySelector('.tg-explorer-resize'),
+        document.querySelector('.tg-explorer'),
+        '--explorer-width',
+        200,
+        320,
+        false,
+      );
+      bind(
+        document.querySelector('.tg-panel-resize'),
+        document.querySelector('.tg-side'),
+        '--panel-width',
+        320,
+        560,
+        true,
+      );
+    </script>
+  </body>
+</html>
