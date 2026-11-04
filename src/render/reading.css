@@ -36,7 +36,23 @@ body {
   background: var(--selection);
 }
 .math:has(> .katex.selection-highlight) {
+  position: relative;
   background: var(--selection);
+}
+.math:has(> .katex.selection-highlight)::before,
+.math:has(> .katex.selection-highlight)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 0.4em;
+  background: var(--selection);
+}
+.math:has(> .katex.selection-highlight)::before {
+  top: -0.4em;
+}
+.math:has(> .katex.selection-highlight)::after {
+  bottom: -0.4em;
 }
 .math:has(> .katex.selection-highlight)::selection {
   background: transparent;
@@ -316,8 +332,10 @@ input[type='checkbox'] {
   padding-inline: 0.125em;
   display: inline-block;
   max-width: 100%;
-  overflow-x: auto;
   vertical-align: middle;
+}
+.math.scrollable {
+  overflow-x: auto;
 }
 .math-block {
   margin: 1.25em 0;

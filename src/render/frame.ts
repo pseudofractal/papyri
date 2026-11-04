@@ -56,6 +56,21 @@ export function sanitize(html: string) {
     ALLOW_DATA_ATTR: true,
   });
 }
+let mathOverflowFrame = 0;
+
+/** Keep overflow only on inline math wider than the reading column. */
+function updateMathOverflow() {
+  mathOverflowFrame = 0;
+  for (const element of root.querySelectorAll<HTMLElement>('.math')) {
+    element.classList.toggle('scrollable', element.scrollWidth > element.clientWidth + 1);
+  }
+}
+
+function scheduleMathOverflowUpdate() {
+  if (mathOverflowFrame) return;
+  mathOverflowFrame = requestAnimationFrame(updateMathOverflow);
+}
+
 function applyPresentation(presentation: Record<string, unknown>) {
   const { theme, documentZoom, uiZoom, fitWidth, textFont, codeFont, mathFont } = presentation;
   const page = document.documentElement;
@@ -100,10 +115,13 @@ function applyPresentation(presentation: Record<string, unknown>) {
   }
   if (typeof fitWidth === 'boolean') page.dataset.fitWidth = String(fitWidth);
   syncViewportSize();
+  scheduleMathOverflowUpdate();
 }
 applyPresentation(payload);
 root.innerHTML = payload.trusted ? payload.html : sanitize(payload.html);
 resolveReferenceTargets(root);
+updateMathOverflow();
+document.fonts?.ready.then(updateMathOverflow);
 
 type MathSelection = { tex: string; display: boolean };
 
@@ -602,6 +620,7 @@ window.addEventListener('message', (event) => {
 window.addEventListener('scroll', () => notifyHost({ type: 'scroll', y: window.scrollY }), {
   passive: true,
 });
+window.addEventListener('resize', scheduleMathOverflowUpdate, { passive: true });
 // Hidden loading frames can suspend animation callbacks. Styles and DOM are ready here.
 setTimeout(() => {
   scrollWindowTo(0, payload.scroll);
