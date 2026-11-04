@@ -325,6 +325,10 @@ test('shows recent folders in a centered dialog', async ({ page }) => {
   expect(box).not.toBeNull();
   expect(Math.abs(box!.x + box!.width / 2 - viewport.width / 2)).toBeLessThan(20);
   expect(Math.abs(box!.y + box!.height / 2 - viewport.height / 2)).toBeLessThan(20);
+  await dialog.getByRole('button', { name: 'Close recent folders' }).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button', { name: 'Recent', exact: true }).click();
+  await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', { name: /showcase/ })).toBeVisible();
   await dialog.getByRole('button', { name: /showcase/ }).click();
   await expect(dialog).toHaveCount(0);

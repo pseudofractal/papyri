@@ -1970,11 +1970,29 @@ textarea:focus-visible {
     calc(var(--dialog-viewport-width, 100vw) * 0.9 / var(--ui-scale, 1))
   );
 }
-.recent-dialog h2 {
-  margin: 0 0 6px;
+.recent-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.recent-dialog-head h2 {
+  margin: 0;
+}
+.recent-dialog-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: -4px -4px 0 0;
+  color: var(--muted);
+}
+.recent-dialog-close:hover,
+.recent-dialog-close:focus-visible {
+  color: var(--color-base-content);
+  background: var(--line);
 }
 .recent-dialog-lead {
-  margin: 0 0 14px;
+  margin: 6px 0 14px;
   color: var(--muted);
   font-size: 11px;
 }

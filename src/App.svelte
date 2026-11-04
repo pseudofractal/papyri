@@ -1529,7 +1529,14 @@
                 oncancel={() => (recentOpen = false)}
               >
                 <div class="modal-box recent-dialog">
-                  <h2 id="recent-title">Recent folders</h2>
+                  <div class="recent-dialog-head">
+                    <h2 id="recent-title">Recent folders</h2>
+                    <button
+                      class="icon-button recent-dialog-close"
+                      aria-label="Close recent folders"
+                      onclick={() => (recentOpen = false)}><X size={16} /></button
+                    >
+                  </div>
                   <p class="recent-dialog-lead">Pick up where you left off.</p>
                   {#if recentFolders.length}
                     <div class="recent-dialog-list">
@@ -1556,9 +1563,6 @@
                         recentOpen = false;
                         void chooseFolder();
                       }}>Open folder…</button
-                    >
-                    <button class="btn btn-primary" onclick={() => (recentOpen = false)}
-                      >Close</button
                     >
                   </div>
                 </div>
