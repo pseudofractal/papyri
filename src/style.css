@@ -1953,51 +1953,97 @@ textarea:focus-visible {
   gap: 6px;
   font-size: 10px;
 }
-.recent-wrap {
-  position: relative;
-}
 .recent-action {
   gap: 5px;
   font-size: 10px;
 }
-.recent-popover {
-  position: absolute;
-  z-index: 10;
-  right: 0;
-  bottom: calc(100% + 7px);
-  width: min(330px, 70vw);
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--color-base-200);
-  box-shadow: 0 18px 45px #0007;
+.recent-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: min(
+    calc(560px / var(--ui-scale, 1)),
+    calc(var(--dialog-viewport-width, 100vw) * 0.9 / var(--ui-scale, 1))
+  );
+  max-width: min(
+    calc(560px / var(--ui-scale, 1)),
+    calc(var(--dialog-viewport-width, 100vw) * 0.9 / var(--ui-scale, 1))
+  );
 }
-.recent-label {
-  padding: 5px 8px;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+.recent-dialog h2 {
+  margin: 0 0 6px;
+}
+.recent-dialog-lead {
+  margin: 0 0 14px;
   color: var(--muted);
+  font-size: 11px;
 }
-.recent-item {
+.recent-dialog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: min(360px, 45vh);
+  overflow: auto;
+  margin: 0 0 14px;
+  padding: 1px;
+}
+.recent-dialog-item {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 6px 8px;
-  border-radius: 5px;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--color-base-100);
   color: var(--color-base-content);
-  font-size: 10px;
   text-align: left;
 }
-.recent-item:hover {
-  background: var(--line);
+.recent-dialog-item:hover,
+.recent-dialog-item:focus-visible {
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--line));
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-base-100));
+  outline: none;
 }
-.recent-item span {
+.recent-dialog-item > svg:first-child {
+  flex: none;
+  color: var(--muted);
+}
+.recent-dialog-item > svg:last-child {
+  flex: none;
+  color: var(--muted);
+}
+.recent-dialog-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.recent-dialog-copy strong {
   overflow: hidden;
+  color: var(--color-base-content);
+  font-size: 11px;
+  font-weight: 550;
   text-overflow: ellipsis;
   white-space: nowrap;
-  direction: rtl;
+}
+.recent-dialog-copy small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-dialog-empty {
+  margin: 8px 0 18px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.recent-dialog-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .status-bar {

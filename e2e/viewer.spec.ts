@@ -306,6 +306,30 @@ test('shows recently opened folders and navigates back to them', async ({ page }
   await expect(pathInput).toHaveValue('/showcase');
 });
 
+test('shows recent folders in a centered dialog', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Import selected folder').setInputFiles('examples/showcase');
+  if (!(await page.getByLabel('Directory path').isVisible()))
+    await page.getByRole('button', { name: 'Toggle explorer' }).click();
+  await page.locator('.file-row').filter({ hasText: 'README.md' }).click();
+  await expect(
+    page.frameLocator('iframe').getByRole('heading', { name: 'Papyri feature showcase' }),
+  ).toBeVisible();
+  if (!(await page.getByLabel('Directory path').isVisible()))
+    await page.getByRole('button', { name: 'Toggle explorer' }).click();
+  await page.getByRole('button', { name: 'Recent', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Recent folders' });
+  await expect(dialog).toBeVisible();
+  const box = await dialog.locator('.recent-dialog').boundingBox();
+  const viewport = page.viewportSize()!;
+  expect(box).not.toBeNull();
+  expect(Math.abs(box!.x + box!.width / 2 - viewport.width / 2)).toBeLessThan(20);
+  expect(Math.abs(box!.y + box!.height / 2 - viewport.height / 2)).toBeLessThan(20);
+  await expect(dialog.getByRole('button', { name: /showcase/ })).toBeVisible();
+  await dialog.getByRole('button', { name: /showcase/ }).click();
+  await expect(dialog).toHaveCount(0);
+});
+
 test('keeps the palette within the viewport and gives commands distinct icons', async ({
   page,
 }) => {

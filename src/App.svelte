@@ -1080,6 +1080,10 @@
     command.run();
   }
   function dismiss() {
+    if (recentOpen) {
+      recentOpen = false;
+      return;
+    }
     if (settings) {
       settings = false;
       return;
@@ -1511,28 +1515,54 @@
             <button class="btn btn-primary btn-sm open-folder-action" onclick={chooseFolder}
               ><FolderOpen size={14} /><span>Open folder</span></button
             >
-            <div class="recent-wrap">
-              <button
-                class="btn btn-ghost btn-sm recent-action"
-                aria-expanded={recentOpen}
-                aria-haspopup="menu"
-                onclick={() => (recentOpen = !recentOpen)}
-                ><History size={14} /><span>Recent</span></button
+            <button
+              class="btn btn-ghost btn-sm recent-action"
+              aria-expanded={recentOpen}
+              aria-haspopup="dialog"
+              onclick={() => (recentOpen = !recentOpen)}
+              ><History size={14} /><span>Recent</span></button
+            >
+            {#if recentOpen}<dialog
+                use:openDialog
+                class="modal modal-open"
+                aria-labelledby="recent-title"
+                oncancel={() => (recentOpen = false)}
               >
-              {#if recentOpen}<div class="recent-popover" role="menu">
-                  <div class="recent-label">RECENT FOLDERS</div>
+                <div class="modal-box recent-dialog">
+                  <h2 id="recent-title">Recent folders</h2>
+                  <p class="recent-dialog-lead">Pick up where you left off.</p>
                   {#if recentFolders.length}
-                    {#each recentFolders as folder (folder.path)}<button
-                        class="recent-item"
-                        role="menuitem"
-                        onclick={() => {
-                          recentOpen = false;
-                          void openRecentProject(folder.path, folder.lastFile);
-                        }}><FolderOpen size={13} /><span>{folder.path}</span></button
-                      >{/each}
-                  {:else}<p class="tree-note">No recent folders.</p>{/if}
-                </div>{/if}
-            </div>
+                    <div class="recent-dialog-list">
+                      {#each recentFolders as folder (folder.path)}<button
+                          class="recent-dialog-item"
+                          onclick={() => {
+                            recentOpen = false;
+                            void openRecentProject(folder.path, folder.lastFile);
+                          }}
+                        >
+                          <FolderOpen size={16} />
+                          <span class="recent-dialog-copy">
+                            <strong>{folder.path}</strong>
+                            {#if folder.lastFile}<small>{basename(folder.lastFile)}</small>{/if}
+                          </span>
+                          <ChevronRight size={14} />
+                        </button>{/each}
+                    </div>
+                  {:else}<p class="recent-dialog-empty">No recent folders yet.</p>{/if}
+                  <div class="modal-action recent-dialog-actions">
+                    <button
+                      class="btn btn-ghost"
+                      onclick={() => {
+                        recentOpen = false;
+                        void chooseFolder();
+                      }}>Open folder…</button
+                    >
+                    <button class="btn btn-primary" onclick={() => (recentOpen = false)}
+                      >Close</button
+                    >
+                  </div>
+                </div>
+              </dialog>{/if}
           </div>
         </aside>
         <SidebarResize
