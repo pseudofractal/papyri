@@ -255,8 +255,32 @@ mark {
 .task-list-item {
   list-style: none;
 }
+ul,
+ol {
+  list-style: none;
+}
 li {
-  list-style-position: inside;
+  position: relative;
+}
+ol {
+  counter-reset: list-item;
+}
+ol > li {
+  counter-increment: list-item;
+}
+ul > li::before,
+ol > li::before {
+  position: absolute;
+  left: -1.15em;
+}
+ul > li::before {
+  content: '•';
+}
+ol > li::before {
+  content: counter(list-item) '.';
+}
+.task-list-item::before {
+  content: none;
 }
 .footnotes {
   font-size: 0.85em;
