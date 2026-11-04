@@ -33,8 +33,16 @@ body {
   background: var(--selection);
 }
 .katex.selection-highlight {
-  border-radius: 4px;
   background: var(--selection);
+}
+.math:has(> .katex.selection-highlight) {
+  background: var(--selection);
+}
+.math:has(> .katex.selection-highlight)::selection {
+  background: transparent;
+}
+.math > .katex.selection-highlight {
+  background: transparent;
 }
 .katex.selection-highlight::selection,
 .katex.selection-highlight ::selection {
@@ -246,6 +254,9 @@ mark {
 }
 .task-list-item {
   list-style: none;
+}
+li {
+  list-style-position: inside;
 }
 .footnotes {
   font-size: 0.85em;

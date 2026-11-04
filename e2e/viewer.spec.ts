@@ -1609,7 +1609,16 @@ Inline math: \(e^{i\pi} + 1 = 0\) with text.
     selection.addRange(range);
   });
   await expect.poll(() => formula.getAttribute('class')).toContain('selection-highlight');
-  expect(await formula.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe(
+  const highlight = await frame
+    .locator('.math')
+    .first()
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, radius: style.borderRadius };
+    });
+  expect(highlight.background).not.toBe('rgba(0, 0, 0, 0)');
+  expect(highlight.radius).toBe('0px');
+  expect(await formula.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
     'rgba(0, 0, 0, 0)',
   );
 });
