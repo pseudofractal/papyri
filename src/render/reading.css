@@ -332,7 +332,6 @@ input[type='checkbox'] {
   padding-inline: 0.125em;
   display: inline-block;
   max-width: 100%;
-  vertical-align: middle;
 }
 .math.scrollable {
   overflow-x: auto;
