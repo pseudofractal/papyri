@@ -24,7 +24,6 @@
     Code,
     Type as TypeIcon,
     TextQuote,
-    Save,
   } from '@lucide/svelte';
   import ZoomControls from './components/ZoomControls.svelte';
   import SidebarResize from './components/SidebarResize.svelte';
@@ -48,7 +47,6 @@
   } from './lib/view';
   import Explorer from './components/Explorer.svelte';
   import Preview from './components/Preview.svelte';
-  import { EditorDraft } from './lib/editor-draft';
   import Settings from './components/Settings.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { invokeHost } from './lib/native';
@@ -81,17 +79,7 @@
     type RecentFolder,
   } from './lib/recent';
   import { traceStartup } from './lib/startup-trace';
-  import {
-    basename,
-    dirname,
-    isDocument,
-    isMarkdown,
-    isPdf,
-    isTypst,
-    isLatex,
-    normalize,
-    resolveLink,
-  } from './lib/paths';
+  import { basename, dirname, isDocument, isMarkdown, normalize, resolveLink } from './lib/paths';
   import type { Heading, LatexEngine, Preferences, Source } from './lib/types';
   import type { PaletteCommand } from './lib/palette';
   import { createControlExecutor, type ControlState } from './lib/control';
@@ -158,121 +146,6 @@
   let selectionStats = $state<{ words: number; characters: number } | null>(null);
   let primaryPreview = $state<PreviewControls>();
   let secondaryPreview = $state<PreviewControls>();
-  const drafts = new Map<Source, Map<string, EditorDraft>>();
-  let editorDraft = $state.raw<EditorDraft | null>(null);
-  let SourceEditor = $state.raw<typeof import('./components/SourceEditor.svelte').default>();
-  let editorSource = $state.raw<Source | null>(null);
-  let editing = $state(false);
-  let editorBusy = $state(false);
-  let editorRevision = $state(0);
-  let editorError = $state('');
-  workspace.canClose = (path) => {
-    const source = workspace.source;
-    const draft = source && drafts.get(source)?.get(path);
-    if (draft && editorBusy && editorDraft === draft) return false;
-    if (draft?.dirty && !window.confirm(`Discard unsaved changes to ${basename(path)}?`))
-      return false;
-    if (source) drafts.get(source)?.delete(path);
-    if (editorDraft === draft) {
-      editorDraft = null;
-      editorSource = null;
-      editing = false;
-    }
-    return true;
-  };
-  workspace.canChangeSource = () => {
-    if (editorBusy) return false;
-    const source = workspace.source;
-    const pending =
-      source && [...(drafts.get(source)?.values() ?? [])].some((draft) => draft.dirty);
-    if (pending && !window.confirm('Discard unsaved changes before switching folders?'))
-      return false;
-    if (source) drafts.delete(source);
-    editorDraft = null;
-    editorSource = null;
-    editing = false;
-    return true;
-  };
-  const editorVisible = $derived(
-    editing && editorSource === workspace.source && editorDraft?.path === workspace.active,
-  );
-  const editorDirty = $derived.by(() => {
-    void editorRevision;
-    return editorDraft?.dirty ?? false;
-  });
-  const editorLanguage = $derived(
-    isTypst(workspace.active) ? 'typst' : isLatex(workspace.active) ? 'latex' : 'markdown',
-  );
-
-  async function openEditor() {
-    const source = workspace.source;
-    const path = workspace.active;
-    if (!source || !path || isPdf(path) || !source.write || editorBusy) return;
-    editorBusy = true;
-    editorError = '';
-    try {
-      SourceEditor ??= (await import('./components/SourceEditor.svelte')).default;
-      if (workspace.source !== source || workspace.active !== path) return;
-      let sourceDrafts = drafts.get(source);
-      if (!sourceDrafts) {
-        sourceDrafts = new Map();
-        drafts.set(source, sourceDrafts);
-      }
-      let draft = sourceDrafts.get(path);
-      if (!draft) {
-        const file = await (source.readSource ?? source.read)(path);
-        if (workspace.source !== source || workspace.active !== path) return;
-        draft = new EditorDraft(path, file.text, file.stamp);
-        sourceDrafts.set(path, draft);
-      }
-      editorSource = source;
-      editorDraft = draft;
-      editorRevision++;
-      editing = true;
-    } catch (error) {
-      editorError = String(error);
-    } finally {
-      editorBusy = false;
-    }
-  }
-
-  function updateEditor(text: string) {
-    if (!editorDraft) return;
-    editorDraft.text = text;
-    editorRevision++;
-  }
-
-  async function reloadEditor() {
-    if (!editorDraft || !editorSource || editorBusy) return;
-    if (editorDraft.dirty && !window.confirm('Discard unsaved changes and reload the source?'))
-      return;
-    drafts.get(editorSource)?.delete(editorDraft.path);
-    editing = false;
-    editorDraft = null;
-    await openEditor();
-  }
-
-  async function saveEditor() {
-    const draft = editorDraft;
-    const source = editorSource;
-    if (!draft || !source?.write || editorBusy || !draft.dirty) return;
-    const text = draft.text;
-    editorBusy = true;
-    editorError = '';
-    try {
-      const saved = await source.write(draft.path, text, {
-        text: draft.expectedText,
-        stamp: draft.expectedStamp,
-      });
-      draft.saved(text, saved.stamp);
-      editorRevision++;
-      if (workspace.source === source) await workspace.refresh();
-    } catch (error) {
-      editorError = String(error);
-    } finally {
-      editorBusy = false;
-    }
-  }
   let resolveWorkspaceReady = () => {};
   const workspaceReady = new Promise<void>((resolve) => {
     resolveWorkspaceReady = resolve;
@@ -281,7 +154,6 @@
   const pagedDocument = $derived(!!workspace.activeTab?.bytes);
   const layoutWidth = $derived(viewportWidth / uiScale);
   const MIN_DOCUMENT_WIDTH = 420;
-  const MIN_HEADER_BRAND_WIDTH = 320;
   const PANEL_VIEWPORT_FRACTION = 0.95;
   const maximumSidebarWidth = $derived(
     Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, layoutWidth * PANEL_VIEWPORT_FRACTION)),
@@ -1353,27 +1225,7 @@
     split,
     refresh,
   });
-  const executeAction = createControlExecutor(controlActions);
-  const executeControl = async (method: string, params: Record<string, unknown>) => {
-    if (method === 'prepare-window-close') {
-      if (editorBusy) throw new Error('Wait for the source operation to finish before closing.');
-      const hasUnsavedDrafts = [...drafts.values()].some((items) =>
-        [...items.values()].some((draft) => draft.dirty),
-      );
-      if (hasUnsavedDrafts && !window.confirm('Discard unsaved source changes and quit?'))
-        throw new Error('Close cancelled.');
-      return { ready: true };
-    }
-    if (method === 'prepare-quit') {
-      if (
-        editorBusy ||
-        [...drafts.values()].some((items) => [...items.values()].some((draft) => draft.dirty))
-      )
-        throw new Error('Save or discard unsaved source changes before quitting.');
-      return { ready: true };
-    }
-    return executeAction(method, params);
-  };
+  const executeControl = createControlExecutor(controlActions);
   let controlPublishTimer: ReturnType<typeof setTimeout> | undefined;
   let lastPublishedState = '';
   let lastPublishedHeadings = '';
@@ -1406,13 +1258,6 @@
   });
   onMount(() => {
     let disposed = false;
-    const protectDrafts = (event: BeforeUnloadEvent) => {
-      if (![...drafts.values()].some((items) => [...items.values()].some((draft) => draft.dirty)))
-        return;
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', protectDrafts);
     let uninstallControl: (() => void) | undefined;
     let unlistenBrowser: (() => void) | undefined;
     const handleContextMenu = (event: MouseEvent) => {
@@ -1509,7 +1354,6 @@
       uninstallControl?.();
       unlistenBrowser?.();
       document.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('beforeunload', protectDrafts);
       if (copyTimer) clearTimeout(copyTimer);
       if (controlPublishTimer) clearTimeout(controlPublishTimer);
       clearInterval(timer);
@@ -1524,7 +1368,7 @@
 />
 <div class="app-shell" class:decorationless data-theme={preferences.theme}>
   <div class="app-main">
-    <header class="app-header" class:compact={layoutWidth < MIN_HEADER_BRAND_WIDTH}>
+    <header class="app-header">
       <div class="brand">
         <span class="brand-mark" aria-hidden="true"><span class="app-logo"></span></span><strong
           >Papyri</strong
@@ -1571,33 +1415,6 @@
       </div>
       <span class="header-spacer"></span>
       <div class="view-actions">
-        <button
-          class="icon-button"
-          class:enabled={editorVisible}
-          aria-label={editorVisible ? 'Show preview' : 'Edit source'}
-          title={editorVisible ? 'Show preview' : 'Edit source'}
-          disabled={!workspace.active ||
-            isPdf(workspace.active) ||
-            !workspace.source?.write ||
-            editorBusy}
-          onclick={() => {
-            if (editorVisible) editing = false;
-            else void openEditor();
-          }}><Code size={17} /></button
-        >
-        {#if editorVisible}<button
-            class="icon-button"
-            aria-label="Save source"
-            title={editorDirty ? 'Save source (Ctrl S)' : 'No unsaved changes'}
-            disabled={!editorDirty || editorBusy}
-            onclick={() => void saveEditor()}><Save size={17} /></button
-          ><button
-            class="icon-button"
-            aria-label="Reload source"
-            title="Reload source from disk"
-            disabled={editorBusy}
-            onclick={() => void reloadEditor()}><RefreshCw size={17} /></button
-          >{/if}
         <button
           class="icon-button"
           class:enabled={searchOpen}
@@ -1787,62 +1604,45 @@
               onclick={() => (workspace.error = '')}><X size={14} /></button
             >
           </div>{/if}
-        {#if editorError}<div class="error-banner" role="alert">
-            <span>{editorError}</span><button
-              class="icon-button small"
-              aria-label="Dismiss editor error"
-              onclick={() => (editorError = '')}><X size={14} /></button
-            >
-          </div>{/if}
         {#if workspace.activeTab?.error}<div class="error-banner" role="alert">
             {workspace.activeTab.error}
           </div>{/if}
         <div class="reading-layout">
           <div class="panes" class:split={!!workspace.secondary}>
             {#if workspace.activeTab && workspace.source}
-              {#if editorVisible && editorDraft && SourceEditor}
-                {#key editorDraft.path}<SourceEditor
-                    path={editorDraft.path}
-                    language={editorLanguage}
-                    initialText={editorDraft.text}
-                    onchange={updateEditor}
-                    onsave={() => void saveEditor()}
-                  />{/key}
-              {:else}
-                {#key workspace.active}<Preview
-                    bind:this={primaryPreview}
-                    tab={workspace.activeTab}
-                    source={workspace.source}
-                    {preferences}
-                    {trusted}
-                    {query}
-                    anchor={workspace.anchor}
-                    onanchorconsumed={(request) => workspace.consumeAnchor(request)}
-                    onlink={(href) => follow(href, workspace.activeTab!.path)}
-                    oncommand={viewCommand}
-                    onscroll={(path, y) => workspace.setScroll(path, y)}
-                    onrendererror={(path, error) => void workspace.showSource(path, error)}
-                    ondismiss={dismiss}
-                    onheadings={(value) => {
-                      headings = value;
-                      headingsPath = workspace.active;
-                    }}
-                    onselection={openSelectionMenu}
-                    onpagecontext={openPageContext}
-                    onselectionstats={(info) =>
-                      (selectionStats = info.words || info.characters ? info : null)}
-                    onselectioncopy={(info) =>
-                      void copyPreviewSelection(info.kind, info.text, info.source)}
-                    onpdfpage={(path, page, total) => {
-                      if (path === workspace.active) pdfPage = { path, page, total };
-                    }}
-                    onpdfscale={(value) => {
-                      const pdfZoom = clampZoom(value, MIN_PDF_ZOOM, MAX_PDF_ZOOM);
-                      if (pdfZoom !== preferences.pdfZoom)
-                        updatePreferences({ ...preferences, pdfZoom });
-                    }}
-                  />{/key}
-              {/if}
+              {#key workspace.active}<Preview
+                  bind:this={primaryPreview}
+                  tab={workspace.activeTab}
+                  source={workspace.source}
+                  {preferences}
+                  {trusted}
+                  {query}
+                  anchor={workspace.anchor}
+                  onanchorconsumed={(request) => workspace.consumeAnchor(request)}
+                  onlink={(href) => follow(href, workspace.activeTab!.path)}
+                  oncommand={viewCommand}
+                  onscroll={(path, y) => workspace.setScroll(path, y)}
+                  onrendererror={(path, error) => void workspace.showSource(path, error)}
+                  ondismiss={dismiss}
+                  onheadings={(value) => {
+                    headings = value;
+                    headingsPath = workspace.active;
+                  }}
+                  onselection={openSelectionMenu}
+                  onpagecontext={openPageContext}
+                  onselectionstats={(info) =>
+                    (selectionStats = info.words || info.characters ? info : null)}
+                  onselectioncopy={(info) =>
+                    void copyPreviewSelection(info.kind, info.text, info.source)}
+                  onpdfpage={(path, page, total) => {
+                    if (path === workspace.active) pdfPage = { path, page, total };
+                  }}
+                  onpdfscale={(value) => {
+                    const pdfZoom = clampZoom(value, MIN_PDF_ZOOM, MAX_PDF_ZOOM);
+                    if (pdfZoom !== preferences.pdfZoom)
+                      updatePreferences({ ...preferences, pdfZoom });
+                  }}
+                />{/key}
               {#if workspace.secondaryTab}<div class="secondary-pane">
                   <div class="secondary-heading">
                     {basename(workspace.secondaryTab.path)}<button

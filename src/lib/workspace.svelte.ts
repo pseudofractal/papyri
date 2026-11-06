@@ -40,11 +40,7 @@ export class Workspace {
     this.secondaryScroll[this.secondary] ?? this.secondaryTab?.scroll ?? 0,
   );
   private navigation = 0;
-  canClose?: (path: string) => boolean;
-  canChangeSource?: () => boolean;
   changeSource(source: Source) {
-    if (this.source && this.source !== source && this.canChangeSource && !this.canChangeSource())
-      return false;
     this.navigation++;
     this.source = source;
     this.tabs = [];
@@ -58,11 +54,10 @@ export class Workspace {
     this.error = '';
     this.busy = false;
     this.treeRevision++;
-    return true;
   }
   /** Select a source and its first document unless a newer source or navigation supersedes it. */
   async selectSource(source: Source) {
-    if (!this.changeSource(source)) return;
+    this.changeSource(source);
     const request = this.navigation;
     try {
       const entries = await listDirectory(source, source.root);
@@ -166,7 +161,6 @@ export class Workspace {
     if (this.anchor?.request === request) this.anchor = null;
   }
   close(path: string) {
-    if (this.canClose && !this.canClose(path)) return;
     const index = this.tabs.findIndex((tab) => tab.path === path);
     this.tabs = this.tabs.filter((tab) => tab.path !== path);
     if (this.active === path) {

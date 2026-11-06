@@ -1,7 +1,7 @@
 import { importedSource } from './sources';
 const welcome = `# Papyri
 
-**Papyri** is a Markdown, PDF, Typst, and LaTeX viewer with source editing. Open a file or folder to get started.
+**Papyri** is a read-only Markdown, PDF, Typst, and LaTeX viewer. Open a file or folder to get started.
 
 > Core rendering works locally. No telemetry.
 

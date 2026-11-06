@@ -77,38 +77,3 @@ it.each([
       compilationError: expect.stringContaining('requires the Linux app'),
     });
 });
-
-it('saves a granted source file and refuses an external edit during the write', async () => {
-  const { browserDirectory } = await import('../src/lib/sources');
-  let current = new File(['original'], 'paper.md', { lastModified: 100 });
-  let pending = '';
-  let changeDuringWrite = false;
-  const abort = vi.fn(async () => {});
-  vi.stubGlobal('window', {
-    showDirectoryPicker: async () => ({
-      name: 'Folder',
-      getFileHandle: async () => ({
-        getFile: async () => current,
-        createWritable: async () => ({
-          write: async (text: string) => {
-            pending = text;
-            if (changeDuringWrite)
-              current = new File(['external'], 'paper.md', { lastModified: 300 });
-          },
-          close: async () => {
-            current = new File([pending], 'paper.md', { lastModified: 200 });
-          },
-          abort,
-        }),
-      }),
-    }),
-  });
-  const source = await browserDirectory();
-  const original = await source.read('/paper.md');
-  const saved = await source.write!('/paper.md', 'updated κ', original);
-  expect(saved.text).toBe('updated κ');
-  changeDuringWrite = true;
-  await expect(source.write!('/paper.md', 'overwrite', saved)).rejects.toThrow('changed on disk');
-  expect((await source.read('/paper.md')).text).toBe('external');
-  expect(abort).toHaveBeenCalledOnce();
-});

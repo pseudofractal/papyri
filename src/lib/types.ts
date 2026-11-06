@@ -18,7 +18,6 @@ export interface Source {
   list(path: string): Promise<Entry[]>;
   read(path: string): Promise<FileData>;
   readSource?(path: string): Promise<FileData>;
-  write?(path: string, text: string, expected: FileData): Promise<FileData>;
   stamp?(path: string): Promise<string>;
   asset(path: string): Promise<Uint8Array>;
 }

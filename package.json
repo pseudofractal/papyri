@@ -1,7 +1,7 @@
 {
   "name": "papyri",
   "version": "0.1.0",
-  "description": "A Markdown, PDF, Typst, and LaTeX viewer and source editor with offline math and diagrams",
+  "description": "A read-only Markdown, PDF, Typst, and LaTeX viewer with offline math and diagrams",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -23,20 +23,9 @@
     "bench:startup": "node scripts/benchmark-startup.mjs"
   },
   "dependencies": {
-    "@codemirror/autocomplete": "6.20.4",
-    "@codemirror/commands": "6.11.1",
-    "@codemirror/lang-markdown": "6.5.2",
-    "@codemirror/language": "6.13.1",
-    "@codemirror/legacy-modes": "6.5.5",
-    "@codemirror/lsp-client": "6.3.0",
-    "@codemirror/state": "6.7.6",
-    "@codemirror/view": "6.43.15",
-    "@lezer/highlight": "1.2.5",
     "@lucide/svelte": "1.63.0",
     "@tauri-apps/api": "2.12.4",
     "@viz-js/viz": "3.31.0",
-    "codemirror": "6.0.2",
-    "codemirror-lang-typst": "0.6.0",
     "dompurify": "3.4.17",
     "github-slugger": "2.0.0",
     "highlight.js": "11.12.0",

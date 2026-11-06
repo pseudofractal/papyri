@@ -1614,166 +1614,13 @@ Inline math: \(e^{i\pi} + 1 = 0\) with text.
     .first()
     .evaluate((element) => {
       const style = getComputedStyle(element);
-      const content = element.querySelector('.math-content')!;
-      return {
-        background: style.backgroundColor,
-        radius: style.borderRadius,
-        contentSelection: getComputedStyle(content, '::selection').backgroundColor,
-      };
+      return { background: style.backgroundColor, radius: style.borderRadius };
     });
   expect(highlight.background).not.toBe('rgba(0, 0, 0, 0)');
   expect(highlight.radius).toBe('0px');
-  expect(highlight.contentSelection).toBe('rgba(0, 0, 0, 0)');
   expect(await formula.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
     'rgba(0, 0, 0, 0)',
   );
-  await frame.locator('body').evaluate(() => window.getSelection()!.removeAllRanges());
-  await expect(formula).not.toHaveClass(/selection-highlight/);
-  expect(
-    await frame.locator('.math').evaluate((element) => getComputedStyle(element).backgroundColor),
-  ).toBe('rgba(0, 0, 0, 0)');
-});
-
-test('preserves ordered-list numbering and leaves room for multi-digit markers', async ({
-  page,
-}) => {
-  await page.goto('/');
-  await page
-    .getByLabel('Import selected files')
-    .setInputFiles(
-      markdownFile(
-        [
-          '# List markers',
-          Array.from({ length: 12 }, (_, index) => `${index + 5}. Item ${index + 5}`).join('\n'),
-          '<ol start="9"><li>Nine<ol start="12"><li>Twelve</li><li>Thirteen</li></ol></li><li value="25">Twenty-five</li><li>Twenty-six</li></ol>',
-          '<ol reversed><li>Three</li><li>Two</li><li>One</li></ol>',
-          '<ol reversed start="12"><li>Twelve</li><li value="5">Five</li><li>Four</li></ol>',
-          '<ol start="0"><li>Zero</li><li value="-2">Negative two</li><li>Negative one</li></ol>',
-          '<ol reversed start="invalid"><li>Three</li><li value="invalid">Two</li><li>One</li></ol>',
-          '- Bullet\n  - Nested bullet\n- [ ] Task',
-        ].join('\n\n'),
-        'list-markers.md',
-      ),
-    );
-  const frame = page.frameLocator('iframe');
-  await expect(frame.getByRole('heading', { name: 'List markers' })).toBeVisible();
-  const markers = await frame.locator('ol > li').evaluateAll((items) =>
-    items.map((item) => {
-      const style = getComputedStyle(item, '::before');
-      const bounds = item.getBoundingClientRect();
-      const markerRight = bounds.right - parseFloat(style.right);
-      return {
-        label: style.content,
-        gap: bounds.left - markerRight,
-        left: markerRight - parseFloat(style.width),
-      };
-    }),
-  );
-  expect(markers.map(({ label }) => label)).toEqual(
-    [
-      ...Array.from({ length: 12 }, (_, index) => `${index + 5}.`),
-      '9.',
-      '12.',
-      '13.',
-      '25.',
-      '26.',
-      '3.',
-      '2.',
-      '1.',
-      '12.',
-      '5.',
-      '4.',
-      '0.',
-      '-2.',
-      '-1.',
-      '3.',
-      '2.',
-      '1.',
-    ].map((label) => `"${label}"`),
-  );
-  for (const marker of markers) {
-    expect(marker.gap).toBeGreaterThan(4);
-    expect(marker.left).toBeGreaterThanOrEqual(0);
-  }
-  expect(
-    await frame
-      .locator('ul > li')
-      .first()
-      .evaluate((item) => getComputedStyle(item, '::before').content),
-  ).toBe('"•"');
-  expect(
-    await frame
-      .locator('.task-list-item')
-      .evaluate((item) => getComputedStyle(item, '::before').content),
-  ).toBe('none');
-});
-
-test('keeps the selection cover outside wrapped and scrolling inline math', async ({ page }) => {
-  await page.goto('/');
-  const wideExpression = String.raw`\begin{bmatrix}${Array.from({ length: 60 }, (_, index) => `x_{${index}}`).join(' & ')}\end{bmatrix}`;
-  await page.getByLabel('Import selected files').setInputFiles(
-    markdownFile(
-      String.raw`# Wrapped math
-
-Text before \(e^{i\pi} + 1 = 0\) and after.
-
-Text before \(${wideExpression}\) and after.`,
-      'wrapped-math.md',
-    ),
-  );
-  const frame = page.frameLocator('iframe');
-  await expect(frame.getByRole('heading', { name: 'Wrapped math' })).toBeVisible();
-  // Constrain the reading column independently of the app's responsive panels.
-  await frame.locator('main').evaluate((element) => {
-    element.style.width = '220px';
-    window.dispatchEvent(new Event('resize'));
-  });
-  await expect(frame.locator('.math-content.scrollable')).toHaveCount(1);
-  for (const zoom of [100, 150]) {
-    if (zoom === 150) {
-      await frame.getByRole('heading', { name: 'Wrapped math' }).click();
-      for (let index = 0; index < 5; index++) await page.keyboard.press('Control+Shift+Equal');
-      await expect(page.getByRole('button', { name: /Reset document zoom/ })).toHaveText('150%');
-    }
-    for (const index of [0, 1]) {
-      const math = frame.locator('.math').nth(index);
-      await math.evaluate((element) => {
-        const range = document.createRange();
-        range.selectNodeContents(element.parentElement!);
-        const selection = window.getSelection()!;
-        selection.removeAllRanges();
-        selection.addRange(range);
-      });
-      await expect(math.locator('.katex')).toHaveClass(/selection-highlight/);
-      const cover = await math.evaluate((element) => {
-        const style = getComputedStyle(element);
-        const cap = getComputedStyle(element, '::before');
-        const textLine = element.parentElement!.getBoundingClientRect();
-        const mathBounds = element.getBoundingClientRect();
-        return {
-          overflow: style.overflow,
-          background: style.backgroundColor,
-          capBackground: cap.backgroundColor,
-          capHeight: parseFloat(cap.height),
-          capTop: parseFloat(cap.top),
-          leading: (parseFloat(style.lineHeight) - parseFloat(style.fontSize)) / 2,
-          wrapped: mathBounds.top > textLine.top,
-        };
-      });
-      expect(cover.wrapped).toBe(true);
-      expect(cover.overflow).toBe('visible');
-      expect(cover.capBackground).toBe(cover.background);
-      expect(cover.background).not.toBe('rgba(0, 0, 0, 0)');
-      expect(cover.capHeight).toBeCloseTo(cover.leading, 1);
-      expect(cover.capTop).toBeCloseTo(-cover.leading, 1);
-    }
-    await frame
-      .locator('.math-content.scrollable')
-      .evaluate((element) => (element.scrollLeft = 100));
-    expect(
-      await frame.locator('.math-content.scrollable').evaluate((element) => element.scrollLeft),
-    ).toBeGreaterThan(0);
-  }
 });
 
 test('shows selected word and character counts in the status bar', async ({ page }) => {
@@ -2130,7 +1977,7 @@ test('keeps fitted content inside the pane while wide blocks scroll locally', as
     .setInputFiles(markdownFile(source));
   const frame = page.frameLocator('iframe');
   await expect(frame.getByRole('heading', { name: 'Width regression' })).toBeVisible();
-  await expect(frame.locator('.math-content > .katex')).toHaveCount(1);
+  await expect(frame.locator('.math > .katex')).toHaveCount(1);
   await page.getByRole('button', { name: 'Fit document to width', exact: true }).click();
   await expect(frame.locator('html')).toHaveAttribute('data-fit-width', 'true');
   await frame.getByRole('button', { name: 'Render mermaid diagram' }).click();
@@ -2150,7 +1997,7 @@ test('keeps fitted content inside the pane while wide blocks scroll locally', as
   expect(await overflow()).toMatchObject({ page: (await overflow()).viewport, overflowing: [] });
   const diagram = frame.locator('.diagram-viewport');
   expect(await diagram.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
-  const inlineMath = frame.locator('.math-content');
+  const inlineMath = frame.locator('.math');
   expect(await inlineMath.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
   await inlineMath.evaluate((node) => (node.scrollLeft = 100));
   expect(await inlineMath.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
@@ -2210,7 +2057,7 @@ test('tracks the actual pane viewport as UI zoom, panels and window size change'
     ).toBeLessThanOrEqual(1);
     expect(
       await pane
-        .locator('.math-content')
+        .locator('.math')
         .evaluateAll((nodes) => nodes.every((node) => node.scrollWidth <= node.clientWidth + 1)),
     ).toBe(true);
     expect(await pane.locator('pre code').textContent()).toBe(originalCode);
@@ -2499,120 +2346,3 @@ test('uses readable syntax colors in both document themes', async ({ page }) => 
     if (theme === 'mocha') await toggleTheme(page);
   }
 });
-
-test('edits source, retains a draft across preview mode, and saves the captured version', async ({
-  page,
-}) => {
-  await page.route('**/', async (route) => {
-    const response = await route.fetch();
-    const body = (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce');
-    await route.fulfill({ response, body });
-  });
-  await page.addInitScript(() => {
-    const file = { text: '# Original', stamp: '1' };
-    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
-    Object.defineProperty(window, '__TAURI_INTERNALS__', {
-      value: {
-        invoke: async (command: string, args: Record<string, unknown>) => {
-          if (command === 'initial_path') return { path: '/paper.md', directory: false };
-          if (command === 'read_document') return { ...file };
-          if (command === 'document_stamp') return file.stamp;
-          if (command === 'list_directory') return [];
-          if (command === 'write_document') {
-            if (args.expectedText !== file.text || args.expectedStamp !== file.stamp)
-              throw new Error('Document changed on disk');
-            file.text = String(args.text);
-            file.stamp = '2';
-            return { ...file };
-          }
-          throw new Error(`Unavailable native command: ${command}`);
-        },
-      },
-    });
-  });
-  await page.goto('/');
-  await expect(
-    page.frameLocator('iframe').getByRole('heading', { name: 'Original' }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Edit source' }).click();
-  const editor = page.getByRole('textbox', { name: 'Source editor' });
-  await expect(editor).toHaveText('# Original');
-  await editor.click();
-  await page.keyboard.press('Control+A');
-  await page.keyboard.insertText('# Changed');
-  await expect(page.getByRole('button', { name: 'Save source' })).toBeEnabled();
-  page.once('dialog', (dialog) => void dialog.dismiss());
-  await page.getByRole('button', { name: 'Close paper.md' }).click();
-  await expect(editor).toHaveText('# Changed');
-  await page.getByRole('button', { name: 'Show preview' }).click();
-  await expect(
-    page.frameLocator('iframe').getByRole('heading', { name: 'Original' }),
-  ).toBeVisible();
-  await page.getByRole('button', { name: 'Edit source' }).click();
-  await expect(editor).toHaveText('# Changed');
-  await page.getByRole('button', { name: 'Save source' }).click();
-  await expect(page.getByRole('button', { name: 'Save source' })).toBeDisabled();
-  await page.getByRole('button', { name: 'Show preview' }).click();
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Changed' })).toBeVisible();
-  await page.getByRole('button', { name: 'Edit source' }).click();
-  await editor.fill('heading');
-  await editor.press('Control+Space');
-  await page.getByRole('option').filter({ hasText: 'heading' }).first().click();
-  await expect(editor).toContainText('## heading');
-  await page.keyboard.insertText('Research');
-  await expect(editor).toContainText('## Research');
-  page.once('dialog', (dialog) => void dialog.accept());
-  await page.getByRole('button', { name: 'Reload source' }).click();
-  await expect(editor).toHaveText('# Changed');
-});
-
-for (const [name, original, changed] of [
-  ['paper.typ', '= Original', '= Changed'],
-  ['paper.tex', String.raw`\section{Original}`, String.raw`\section{Changed}`],
-] as const) {
-  test(`edits and saves ${name} source when compilation is unavailable`, async ({ page }) => {
-    await page.route('**/', async (route) => {
-      const response = await route.fetch();
-      await route.fulfill({
-        response,
-        body: (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce'),
-      });
-    });
-    await page.addInitScript(
-      ({ name, original }) => {
-        const file = { text: original, stamp: '1' };
-        Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
-        Object.defineProperty(window, '__TAURI_INTERNALS__', {
-          value: {
-            invoke: async (command: string, args: Record<string, unknown>) => {
-              if (command === 'initial_path') return { path: '/' + name, directory: false };
-              if (command === 'read_document') return { ...file };
-              if (command === 'document_stamp') return file.stamp;
-              if (command === 'list_directory') return [];
-              if (command === 'write_document') {
-                if (args.expectedText !== file.text || args.expectedStamp !== file.stamp)
-                  throw new Error('Document changed on disk');
-                file.text = String(args.text);
-                file.stamp = '2';
-                return { ...file };
-              }
-              throw new Error(`Unavailable native command: ${command}`);
-            },
-          },
-        });
-      },
-      { name, original },
-    );
-    await page.goto('/');
-    await page.getByRole('button', { name: 'Edit source' }).click();
-    const editor = page.getByRole('textbox', { name: 'Source editor' });
-    await expect(editor).toContainText(original);
-    await expect(editor.locator('.cm-line span').first()).toBeVisible();
-    await editor.fill(changed);
-    await page.keyboard.press('Control+s');
-    await expect(page.getByRole('button', { name: 'Save source' })).toBeDisabled();
-    await page.getByRole('button', { name: 'Show preview' }).click();
-    await page.getByRole('button', { name: 'Edit source' }).click();
-    await expect(editor).toContainText(changed);
-  });
-}

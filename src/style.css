@@ -101,9 +101,6 @@ textarea:focus-visible {
   background: var(--color-base-200);
   border-bottom: 1px solid var(--line);
 }
-.app-header.compact .brand {
-  display: none;
-}
 .brand {
   display: flex;
   align-items: center;
@@ -2336,29 +2333,6 @@ textarea:focus-visible {
   }
 }
 @media (max-width: 760px) {
-  .app-shell {
-    position: relative;
-  }
-  .side-panel {
-    position: absolute;
-    z-index: 4;
-    top: 52px;
-    right: 0;
-    bottom: 0;
-    height: auto;
-    box-shadow: -12px 0 30px #0004;
-  }
-  .app-header .brand strong,
-  .app-header .header-spacer {
-    display: none;
-  }
-  .app-header .tabs-scroll {
-    flex: 1 1 0;
-    max-width: none;
-  }
-  .app-header .view-actions {
-    flex-shrink: 0;
-  }
   .copy-raw {
     display: none;
   }
