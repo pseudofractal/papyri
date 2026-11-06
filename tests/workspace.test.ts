@@ -372,3 +372,21 @@ it('opens PDF and Typst tabs, refreshes binary previews, and retains them on com
   expect(workspace.error).toContain('Markdown, PDF, Typst, or LaTeX');
   expect(workspace.active).toBe('/paper.typ');
 });
+
+it('honors guards before closing tabs or switching sources', async () => {
+  const first = memorySource().source;
+  const second = memorySource().source;
+  const workspace = new Workspace();
+  workspace.changeSource(first);
+  await workspace.open('/a.md');
+  workspace.canClose = () => false;
+  workspace.close('/a.md');
+  expect(workspace.active).toBe('/a.md');
+  workspace.canChangeSource = () => false;
+  await workspace.selectSource(second);
+  expect(workspace.source).toBe(first);
+  expect(workspace.active).toBe('/a.md');
+  workspace.canClose = () => true;
+  workspace.close('/a.md');
+  expect(workspace.active).toBe('');
+});

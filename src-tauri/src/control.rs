@@ -489,6 +489,11 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
         let _ = sender.send(response_line(request.id, reply));
       }
       "quit" => {
+        let readiness = dispatch(&app, "prepare-quit", json!({}));
+        if readiness.error.is_some() {
+          let _ = sender.send(response_line(request.id, readiness));
+          continue;
+        }
         let _ = sender.send(response_line(
           request.id,
           Reply::success(json!({ "quitting": true })),
@@ -609,6 +614,15 @@ fn dispatch(app: &AppHandle, method: &str, params: Value) -> Reply {
       )
     }
   }
+}
+
+pub fn request_window_close(app: AppHandle) {
+  thread::spawn(move || {
+    let reply = dispatch(&app, "prepare-window-close", json!({}));
+    if reply.error.is_none() {
+      app.exit(0);
+    }
+  });
 }
 
 #[tauri::command]

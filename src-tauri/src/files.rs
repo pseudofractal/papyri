@@ -1,7 +1,8 @@
 use serde::Serialize;
 use std::{
   fs,
-  io::Read,
+  io::{Read, Write},
+  os::unix::fs::MetadataExt,
   path::{Path, PathBuf},
   time::UNIX_EPOCH,
 };
@@ -112,6 +113,103 @@ pub fn read_document(path: String) -> Result<Document, String> {
     stamp: metadata_stamp(&metadata).map_err(|e| error(&path, e))?,
   })
 }
+
+/// Save a previously read source document, refusing a changed on-disk version.
+pub fn write_document(
+  path: String,
+  text: String,
+  expected_text: String,
+  expected_stamp: String,
+) -> Result<Document, String> {
+  if text.len() as u64 > DOCUMENT_LIMIT {
+    return Err(error(&path, "Document exceeds the 8 MiB limit"));
+  }
+  let original = read_document(path.clone())?;
+  if original.text != expected_text || original.stamp != expected_stamp {
+    return Err(error(
+      &path,
+      "Document changed on disk; reload before saving",
+    ));
+  }
+  let target = fs::canonicalize(&path).map_err(|e| error(&path, e))?;
+  let metadata = fs::metadata(&target).map_err(|e| error(&path, e))?;
+  if metadata.nlink() > 1 {
+    return Err(error(
+      &path,
+      "Cannot safely replace a file with multiple hard links",
+    ));
+  }
+  #[cfg(target_os = "linux")]
+  {
+    use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    let name = CString::new(target.as_os_str().as_bytes()).map_err(|e| error(&path, e))?;
+    let attribute_bytes = unsafe { libc::listxattr(name.as_ptr(), std::ptr::null_mut(), 0) };
+    if attribute_bytes < 0 {
+      return Err(error(
+        &path,
+        format!(
+          "Cannot inspect extended attributes: {}",
+          std::io::Error::last_os_error()
+        ),
+      ));
+    }
+    if attribute_bytes > 0 {
+      return Err(error(
+        &path,
+        "Cannot safely replace a file with extended attributes or ACLs",
+      ));
+    }
+  }
+  // Check file write permission before creating a replacement in its directory.
+  fs::OpenOptions::new()
+    .write(true)
+    .open(&target)
+    .map_err(|e| error(&path, e))?;
+  let parent = target
+    .parent()
+    .ok_or_else(|| error(&path, "Missing parent directory"))?;
+  let mut random = [0u8; 16];
+  getrandom::fill(&mut random).map_err(|e| error(&path, e))?;
+  let suffix: String = random.iter().map(|byte| format!("{byte:02x}")).collect();
+  let temporary = parent.join(format!(".papyri-save-{suffix}"));
+  let mut created = false;
+  let result = (|| {
+    let mut file = fs::OpenOptions::new()
+      .write(true)
+      .create_new(true)
+      .open(&temporary)
+      .map_err(|e| error(&path, e))?;
+    created = true;
+    let replacement_metadata = file.metadata().map_err(|e| error(&path, e))?;
+    if replacement_metadata.uid() != metadata.uid() || replacement_metadata.gid() != metadata.gid()
+    {
+      return Err(error(&path, "Cannot preserve source file ownership"));
+    }
+    file
+      .set_permissions(metadata.permissions())
+      .map_err(|e| error(&path, e))?;
+    file
+      .write_all(text.as_bytes())
+      .map_err(|e| error(&path, e))?;
+    file.sync_all().map_err(|e| error(&path, e))?;
+    let latest = read_document(path.clone())?;
+    if latest.text != expected_text
+      || latest.stamp != expected_stamp
+      || fs::canonicalize(&path).map_err(|e| error(&path, e))? != target
+    {
+      return Err(error(
+        &path,
+        "Document changed on disk; reload before saving",
+      ));
+    }
+    fs::rename(&temporary, &target).map_err(|e| error(&path, e))?;
+    read_document(path.clone())
+  })();
+  if created && temporary.exists() {
+    let _ = fs::remove_file(&temporary);
+  }
+  result
+}
 pub fn document_stamp(path: String) -> Result<String, String> {
   let metadata = fs::metadata(&path).map_err(|e| error(&path, e))?;
   metadata_stamp(&metadata).map_err(|e| error(&path, e))
@@ -148,6 +246,75 @@ pub fn read_asset(path: String) -> Result<Vec<u8>, String> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  #[test]
+  fn saves_source_and_rejects_external_changes() {
+    let directory = std::env::temp_dir().join(format!("papyri-save-test-{}", std::process::id()));
+    fs::create_dir_all(&directory).unwrap();
+    for extension in ["md", "typ", "tex"] {
+      let file = directory.join(format!("paper.{extension}"));
+      fs::write(&file, "original").unwrap();
+      let path = file.to_string_lossy().into_owned();
+      let original = read_document(path.clone()).unwrap();
+      let saved =
+        write_document(path.clone(), "数学".into(), original.text, original.stamp).unwrap();
+      assert_eq!(saved.text, "数学");
+      fs::write(&file, "external edit").unwrap();
+      assert!(write_document(path, "overwrite".into(), saved.text, saved.stamp).is_err());
+      assert_eq!(fs::read_to_string(&file).unwrap(), "external edit");
+      fs::remove_file(file).unwrap();
+    }
+    assert!(fs::read_dir(&directory).unwrap().next().is_none());
+    fs::remove_dir(directory).unwrap();
+  }
+  #[test]
+  fn refuses_to_break_hard_links_when_saving() {
+    let directory =
+      std::env::temp_dir().join(format!("papyri-hardlink-test-{}", std::process::id()));
+    fs::create_dir_all(&directory).unwrap();
+    let original = directory.join("original.md");
+    let linked = directory.join("linked.md");
+    fs::write(&original, "original").unwrap();
+    fs::hard_link(&original, &linked).unwrap();
+    let path = original.to_string_lossy().into_owned();
+    let loaded = read_document(path.clone()).unwrap();
+    let error = write_document(path, "changed".into(), loaded.text, loaded.stamp)
+      .err()
+      .unwrap();
+    assert!(error.contains("hard links"));
+    assert_eq!(fs::read_to_string(&original).unwrap(), "original");
+    assert_eq!(fs::read_to_string(&linked).unwrap(), "original");
+    fs::remove_file(original).unwrap();
+    fs::remove_file(linked).unwrap();
+    fs::remove_dir(directory).unwrap();
+  }
+  #[cfg(target_os = "linux")]
+  #[test]
+  fn refuses_to_discard_extended_attributes() {
+    use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    let file = std::env::temp_dir().join(format!("papyri-xattr-test-{}.md", std::process::id()));
+    fs::write(&file, "original").unwrap();
+    let name = CString::new(file.as_os_str().as_bytes()).unwrap();
+    let attribute = CString::new("user.papyri-test").unwrap();
+    let value = b"keep";
+    let result = unsafe {
+      libc::setxattr(
+        name.as_ptr(),
+        attribute.as_ptr(),
+        value.as_ptr().cast(),
+        value.len(),
+        0,
+      )
+    };
+    assert_eq!(result, 0, "{}", std::io::Error::last_os_error());
+    let path = file.to_string_lossy().into_owned();
+    let loaded = read_document(path.clone()).unwrap();
+    let error = write_document(path, "changed".into(), loaded.text, loaded.stamp)
+      .err()
+      .unwrap();
+    assert!(error.contains("extended attributes"));
+    assert_eq!(fs::read_to_string(&file).unwrap(), "original");
+    fs::remove_file(file).unwrap();
+  }
   #[test]
   fn bounded_reads_and_directory_navigation() {
     let directory = std::env::temp_dir().join(format!("papyri-test-{}", std::process::id()));

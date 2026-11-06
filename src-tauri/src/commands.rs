@@ -45,6 +45,15 @@ pub async fn read_document(path: String) -> Result<files::Document, String> {
   blocking(move || files::read_document(path)).await
 }
 #[tauri::command]
+pub async fn write_document(
+  path: String,
+  text: String,
+  expected_text: String,
+  expected_stamp: String,
+) -> Result<files::Document, String> {
+  blocking(move || files::write_document(path, text, expected_text, expected_stamp)).await
+}
+#[tauri::command]
 pub fn latex_engines() -> Vec<latex::Engine> {
   latex::discover_engines()
 }

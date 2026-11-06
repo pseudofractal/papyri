@@ -1,5 +1,5 @@
 {
-  description = "Papyri — a read-only Markdown, PDF, Typst, and LaTeX viewer";
+  description = "Papyri — a Markdown, PDF, Typst, and LaTeX viewer with source editing";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   outputs = { self, nixpkgs }:
     let
@@ -49,7 +49,7 @@
             version = manifest.version;
             src = webSource;
             nodejs = pkgs.nodejs_24;
-            npmDepsHash = "sha256-MFaTQNi0o8y8kwvOXpkP2ucoTASqdDKAPPHHa+tnIfA=";
+            npmDepsHash = "sha256-Da5Px2iEgSOr8aGd7HRHgOz/7wYBixnNWLAF/sYhCP8=";
             npmFlags = [ "--ignore-scripts" ];
             installPhase = ''
               runHook preInstall

@@ -8,6 +8,8 @@ mod executables;
 mod files;
 mod latex;
 mod logging;
+mod lsp;
+mod lsp_protocol;
 mod security;
 mod typst;
 use tauri::Manager;
@@ -32,6 +34,7 @@ pub fn run() {
       commands::startup_trace,
       commands::list_directory,
       commands::read_document,
+      commands::write_document,
       commands::read_pdf,
       commands::latex_engines,
       commands::typst_binary,
@@ -40,6 +43,9 @@ pub fn run() {
       commands::pick_path,
       commands::save_diagram,
       commands::open_external,
+      lsp::lsp_start,
+      lsp::lsp_send,
+      lsp::lsp_stop,
       browser::browser_show,
       browser::browser_select,
       browser::browser_quote,
@@ -60,9 +66,18 @@ pub fn run() {
   trace_native_startup("builder");
   tauri::Builder::default()
     .manage(control::ControlState::default())
+    .manage(lsp::ServerState::default())
     .append_invoke_initialization_script(security::initialization(&token))
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
+    .on_window_event(|window, event| {
+      if window.label() == "main" {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+          api.prevent_close();
+          control::request_window_close(window.app_handle().clone());
+        }
+      }
+    })
     .setup(|app| {
       trace_native_startup("setup");
       let window = app
