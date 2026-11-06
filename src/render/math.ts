@@ -25,7 +25,7 @@ export function configureMath(markdown: InstanceType<typeof MarkdownIt>, pairs: 
         name,
         tag: pair.left,
         rex: new RegExp(pattern, 'gy'),
-        tmpl: '<span class="math"><span class="math-content">$1</span></span>',
+        tmpl: '<span class="math">$1</span>',
         displayMode: pair.display,
       })),
     block: rules

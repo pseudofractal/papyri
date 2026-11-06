@@ -27,14 +27,6 @@ The final x86_64 Linux flake checks passed, including three Rust tests and the n
 
 A separate X11 desktop check launched the installed `.desktop` entry through GIO with a filename containing spaces, confirmed the `papyri` window class, and inspected GTK's actual icon pixmap: the selected bracketed M at 512 × 512, with neutral grayscale pixels. GTK exposes that icon through legacy `WM_HINTS` in this environment; inspecting only `_NET_WM_ICON` can report a generic startup fallback or no property. Native startup explicitly reapplies the configured icon after webview creation. Desktop-entry validation also runs during Nix installation, and the package includes both scalable icons and all five raster sizes.
 
-## Math and list selection
-
-The 6 November 2026 review fixes preserve ordered-list `start`, per-item `value`, and `reversed` numbering, including nested lists, multi-digit markers, zero and negative values, and invalid-attribute defaults. Markers align by their right edge to retain a gap before the item text. Inline math uses an outer selection cover and an inner scroll container; the cover follows the surrounding line leading and remains visible when a formula wraps or scrolls. Overflow measurements are collected before classes change, with a named one-pixel rounding tolerance.
-
-Browser regressions check marker text and spacing, task-list bullets, selection clearing, transparent native selection inside math, narrow wrapped formulas, local horizontal scrolling, and selection leading at 100% and 150% document zoom. The packaged WebKit smoke test also checks list markers and actual pixels above and below short and wide formulas at both sizes. It compares the leading bands with the cover present, hidden, and restored; cropping those bands through canvas excludes unrelated animated scrollbars without adding an image-processing dependency.
-
-Verification passed 119 unit tests, Svelte/TypeScript checks, ESLint/Prettier, x86_64 Linux flake checks, and the complete native smoke suite against the final rebuilt package. The full production-browser run recorded 147 passes, two intentional mobile skips, and three mobile layout failures, including all 76 desktop scenarios passing. All six focused math/list browser cases also passed after the final selection-tint change. The three failures concern floating-panel bounds, toolbar overlap during pane resizing, and context-panel overlap during tab navigation; each reproduces on the untouched previous commit, `f2ed548`. No aarch64 execution was performed.
-
 ## Regression checks
 
 - Theme, document zoom and fit-width changes retain the preview DOM. Appearance updates do not create another parsing worker or reload the frame.

@@ -35,32 +35,29 @@ body {
 .katex.selection-highlight {
   background: var(--selection);
 }
-.math:has(.katex.selection-highlight) {
-  /* Cover WebKit's line-box seams using half the surrounding text leading. */
-  --math-selection-leading: calc((1lh - 1em) / 2);
+.math:has(> .katex.selection-highlight) {
   position: relative;
   background: var(--selection);
 }
-.math:has(.katex.selection-highlight)::before,
-.math:has(.katex.selection-highlight)::after {
+.math:has(> .katex.selection-highlight)::before,
+.math:has(> .katex.selection-highlight)::after {
   content: '';
   position: absolute;
   right: 0;
   left: 0;
-  height: var(--math-selection-leading);
+  height: 0.4em;
   background: var(--selection);
 }
-.math:has(.katex.selection-highlight)::before {
-  top: calc(-1 * var(--math-selection-leading));
+.math:has(> .katex.selection-highlight)::before {
+  top: -0.4em;
 }
-.math:has(.katex.selection-highlight)::after {
-  bottom: calc(-1 * var(--math-selection-leading));
+.math:has(> .katex.selection-highlight)::after {
+  bottom: -0.4em;
 }
-.math:has(.katex.selection-highlight)::selection,
-.math:has(.katex.selection-highlight) ::selection {
+.math:has(> .katex.selection-highlight)::selection {
   background: transparent;
 }
-.math .katex.selection-highlight {
+.math > .katex.selection-highlight {
   background: transparent;
 }
 .katex.selection-highlight::selection,
@@ -276,24 +273,27 @@ mark {
 }
 ul,
 ol {
-  /* Pseudo-elements avoid WebKit selection seams around native markers. */
   list-style: none;
 }
 li {
   position: relative;
 }
+ol {
+  counter-reset: list-item;
+}
+ol > li {
+  counter-increment: list-item;
+}
 ul > li::before,
 ol > li::before {
   position: absolute;
-  right: calc(100% + 0.4em);
-  text-align: right;
-  white-space: nowrap;
+  left: -1.15em;
 }
 ul > li::before {
   content: '•';
 }
 ol > li::before {
-  content: attr(data-list-marker);
+  content: counter(list-item) '.';
 }
 .task-list-item::before {
   content: none;
@@ -328,17 +328,12 @@ input[type='checkbox'] {
   scroll-margin-top: 24px;
 }
 .math {
-  display: inline-block;
-  max-width: 100%;
-}
-.math-content {
   box-sizing: border-box;
   padding-inline: 0.125em;
   display: inline-block;
   max-width: 100%;
 }
-.math-content.scrollable {
-  /* Scroll inside the selection cover so its leading remains unclipped. */
+.math.scrollable {
   overflow-x: auto;
 }
 .math-block {
