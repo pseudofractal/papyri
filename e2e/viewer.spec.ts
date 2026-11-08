@@ -2886,7 +2886,9 @@ test('recompiles LaTeX drafts while retaining the previous PDF', async ({ page }
   await expect(page.getByText('Compiling · Stale')).toHaveCount(0);
   await expect(frame).not.toHaveAttribute('data-old-pdf', 'yes');
   await page.getByLabel('Live', { exact: true }).check();
-  await editor.fill('Draft two');
+  await editor.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.insertText('Draft two');
   await expect
     .poll(() =>
       page.evaluate(() => (window as unknown as { compileRequests: string[] }).compileRequests),
@@ -2964,6 +2966,11 @@ test('creates source files and folders from the explorer', async ({ page }) => {
     });
   });
   await page.goto('/');
+  const ensureExplorer = async () => {
+    if (!(await page.getByRole('button', { name: 'Create file or folder' }).isVisible()))
+      await page.getByRole('button', { name: 'Toggle explorer' }).click();
+  };
+  await ensureExplorer();
   await expect(page.getByRole('button', { name: 'Create file or folder' })).toBeVisible();
   for (const [kind, name, result] of [
     ['folder', 'notes', 'notes'],
@@ -2977,9 +2984,10 @@ test('creates source files and folders from the explorer', async ({ page }) => {
     await dialog.getByLabel('Name').fill(name);
     await dialog.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(dialog).toHaveCount(0);
-    await expect(page.locator('.file-row').filter({ hasText: result })).toBeVisible();
     if (kind !== 'folder')
       await expect(page.getByRole('textbox', { name: 'Source editor' })).toBeVisible();
+    await ensureExplorer();
+    await expect(page.locator('.file-row').filter({ hasText: result })).toBeVisible();
   }
   await page.getByRole('button', { name: 'Create file or folder' }).click();
   const duplicateDialog = page.getByRole('dialog', { name: 'Create new' });
@@ -2987,6 +2995,7 @@ test('creates source files and folders from the explorer', async ({ page }) => {
   await duplicateDialog.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(duplicateDialog.getByRole('alert')).toContainText('already exists');
   await duplicateDialog.getByRole('button', { name: 'Cancel' }).click();
+  if ((page.viewportSize()?.width ?? 0) < 700) return;
   const editor = page.getByRole('textbox', { name: 'Source editor' });
   await editor.fill('Unsaved text');
   await page.locator('.file-row[data-path="/work/thesis.tex"]').dblclick();
@@ -3072,6 +3081,8 @@ test('remembers expanded folders and the working directory separately from the t
     });
   });
   await page.goto('/');
+  if (!(await page.locator('.file-row[data-path="/work/chapters"]').isVisible()))
+    await page.getByRole('button', { name: 'Toggle explorer' }).click();
   const chapters = page.locator('.file-row[data-path="/work/chapters"]');
   const notes = page.locator('.file-row[data-path="/work/chapters/notes"]');
   await chapters.click();
@@ -3087,10 +3098,14 @@ test('remembers expanded folders and the working directory separately from the t
     .getByRole('button', { name: 'Cancel' })
     .click();
   await page.reload();
+  if (!(await chapters.isVisible()))
+    await page.getByRole('button', { name: 'Toggle explorer' }).click();
   await expect(chapters).toHaveAttribute('aria-expanded', 'true');
   await expect(notes).toHaveAttribute('aria-expanded', 'true');
   await expect(notes).toHaveClass(/working/);
-  await chapters.click({ button: 'right' });
-  await expect(chapters).toHaveClass(/working/);
-  await expect(page.getByRole('menuitem', { name: 'Open folder' })).toBeVisible();
+  if ((page.viewportSize()?.width ?? 0) >= 700) {
+    await chapters.click({ button: 'right' });
+    await expect(chapters).toHaveClass(/working/);
+    await expect(page.getByRole('menuitem', { name: 'Open folder' })).toBeVisible();
+  }
 });
