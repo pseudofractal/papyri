@@ -34,6 +34,24 @@ function memorySource(): { source: Source; files: Map<string, FileData> } {
   };
 }
 describe('workspace navigation and live updates', () => {
+  it('tracks a pending document until it finishes or navigation changes', async () => {
+    const { source } = memorySource();
+    const read = source.read;
+    let finish!: (file: FileData) => void;
+    source.read = (path) =>
+      path === '/slow.typ' ? new Promise((resolve) => (finish = resolve)) : read(path);
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    const pending = workspace.open('/slow.typ');
+    expect(workspace.busy).toBe(true);
+    expect(workspace.openingPath).toBe('/slow.typ');
+    await workspace.open('/a.md');
+    expect(workspace.busy).toBe(false);
+    finish({ text: 'late', stamp: '1' });
+    await pending;
+    expect(workspace.active).toBe('/a.md');
+    expect(workspace.busy).toBe(false);
+  });
   it('keeps recently opened files in order and clears them when the source changes', async () => {
     const workspace = new Workspace();
     workspace.changeSource(memorySource().source);

@@ -16,6 +16,14 @@ export interface Source {
   root: string;
   live: boolean;
   list(path: string): Promise<Entry[]>;
+  create?(
+    directory: string,
+    name: string,
+    kind: 'folder' | 'markdown' | 'typst' | 'latex',
+  ): Promise<string>;
+  rename?(path: string, name: string): Promise<string>;
+  readText?(path: string): Promise<string>;
+  deleteFile?(path: string): Promise<void>;
   read(path: string): Promise<FileData>;
   readSource?(path: string): Promise<FileData>;
   write?(path: string, text: string, expected: FileData): Promise<FileData>;
@@ -28,6 +36,7 @@ export interface Delimiter {
   display: boolean;
 }
 export interface Preferences {
+  languageServerPaths: Record<'markdown' | 'typst' | 'latex', string>;
   typstPath: string;
   latexEngine: LatexEngine;
   latexPaths: Record<LatexEngine, string>;

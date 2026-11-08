@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { onMount, untrack } from 'svelte';
+  import { onMount, tick, untrack } from 'svelte';
   import { openDialog } from '../lib/dialog';
+  import { displayPath, displayPathMessage, expandHomePath } from '../lib/paths';
   import { X, ShieldCheck, Braces } from '@lucide/svelte';
   import ZoomControls from './ZoomControls.svelte';
   import {
@@ -53,6 +54,16 @@
   let discoveryError = $state('');
   let typstBinary = $state<string | null>(null);
   let typstDiscoveryError = $state('');
+  type Language = keyof Preferences['languageServerPaths'];
+  type ManagedTool = 'marksman' | 'tinymist' | 'texlab' | 'typst';
+  const languageServers: { language: Language; name: ManagedTool; label: string }[] = [
+    { language: 'markdown', name: 'marksman', label: 'Markdown · Marksman' },
+    { language: 'typst', name: 'tinymist', label: 'Typst · Tinymist' },
+    { language: 'latex', name: 'texlab', label: 'LaTeX · Texlab' },
+  ];
+  let toolBusy = $state(false);
+  let toolMessage = $state('');
+  let toolError = $state('');
   onMount(() => {
     if (native)
       void invokeHost<typeof engines>('latex_engines')
@@ -73,6 +84,65 @@
   });
   function setPreference<K extends keyof Preferences>(key: K, value: Preferences[K]) {
     onchange({ ...preferences, [key]: value });
+  }
+  function setServerPath(language: Language, path: string) {
+    setPreference('languageServerPaths', { ...preferences.languageServerPaths, [language]: path });
+  }
+  async function chooseExecutable(setPath: (path: string) => void) {
+    toolError = '';
+    try {
+      const path = await invokeHost<string | null>('pick_executable');
+      if (path) setPath(path);
+    } catch (reason) {
+      toolError = String(reason);
+    }
+  }
+  async function downloadTools(names: ManagedTool[]) {
+    toolBusy = true;
+    toolError = '';
+    const installed: string[] = [];
+    const errors: string[] = [];
+    try {
+      for (const name of names) {
+        toolMessage = `Downloading ${name}…`;
+        try {
+          const result = await invokeHost<{ path: string; version: string }>('install_tool', {
+            name,
+          });
+          const server = languageServers.find((item) => item.name === name);
+          if (server) setServerPath(server.language, result.path);
+          else setPreference('typstPath', result.path);
+          await tick();
+          installed.push(`${name} ${result.version}`);
+        } catch (reason) {
+          errors.push(`${name}: ${String(reason)}`);
+        }
+      }
+      toolMessage = installed.length
+        ? `Installed ${installed.join(', ')}. Reopen the source editor or refresh the preview to use updates.`
+        : '';
+      toolError = errors.join('\n');
+    } finally {
+      toolBusy = false;
+    }
+  }
+  async function manageTexLive(action: 'install' | 'update') {
+    toolBusy = true;
+    toolError = '';
+    toolMessage =
+      action === 'install'
+        ? 'Installing TeX Live. This can take a long time; keep Papyri open.'
+        : 'Updating the Papyri-managed TeX Live installation…';
+    try {
+      const paths = await invokeHost<Preferences['latexPaths']>('manage_texlive', { action });
+      setPreference('latexPaths', paths);
+      toolMessage = 'TeX Live is ready. Refresh the preview to use the updated engines.';
+    } catch (reason) {
+      toolMessage = '';
+      toolError = String(reason);
+    } finally {
+      toolBusy = false;
+    }
   }
   function updateFont(key: FontPreference, value: string) {
     try {
@@ -408,7 +478,7 @@
           Longest opening wins. Duplicate openings are rejected. Single dollars may conflict with
           currency. Invalid TeX stays visible in red.
         </p>
-        {#if error}<p class="error" role="alert">{error}</p>{/if}
+        {#if error}<p class="error" role="alert">{displayPathMessage(error)}</p>{/if}
       </div>
 
       <div
@@ -417,6 +487,44 @@
         aria-labelledby="settings-tab-compilers"
         hidden={activeTab !== 'compilers'}
       >
+        <h3>Language servers</h3>
+        <p class="hint">
+          Choose an executable, or download a managed copy from its official release. Downloads
+          become the selected executable without changing system tools. Empty paths use PATH.
+          Changes reconnect the current editor.
+        </p>
+        {#each languageServers as server (server.language)}
+          <div class="tool-setting">
+            <label for="server-{server.language}">{server.label}</label>
+            <div class="tool-controls">
+              <input
+                id="server-{server.language}"
+                class="input input-sm"
+                aria-label="{server.label} executable path"
+                placeholder="Use PATH"
+                value={displayPath(preferences.languageServerPaths[server.language])}
+                onchange={(event) =>
+                  setServerPath(server.language, expandHomePath(event.currentTarget.value.trim()))}
+              />
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                aria-label="Browse {server.label} executable"
+                disabled={!native || toolBusy}
+                onclick={() =>
+                  void chooseExecutable((path) => setServerPath(server.language, path))}
+                >Browse</button
+              >
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                aria-label="Download or update {server.label}"
+                disabled={!native || toolBusy}
+                onclick={() => void downloadTools([server.name])}>Download / update</button
+              >
+            </div>
+          </div>
+        {/each}
         <h3>Typst compiler</h3>
         <label class="setting-row"
           ><span
@@ -428,10 +536,26 @@
             class="input input-sm"
             aria-label="Typst executable path"
             placeholder="Use PATH"
-            value={preferences.typstPath}
-            onchange={(event) => setPreference('typstPath', event.currentTarget.value.trim())}
+            value={displayPath(preferences.typstPath)}
+            onchange={(event) =>
+              setPreference('typstPath', expandHomePath(event.currentTarget.value.trim()))}
           />
         </label>
+        <div class="tool-actions">
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            disabled={!native || toolBusy}
+            onclick={() => void chooseExecutable((path) => setPreference('typstPath', path))}
+            >Browse Typst</button
+          >
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            disabled={!native || toolBusy}
+            onclick={() => void downloadTools(['typst'])}>Download / update Typst</button
+          >
+        </div>
         <p class="hint">Leave the path empty to use Typst from PATH or the bundled compiler.</p>
         {#if typstDiscoveryError}<p class="error">
             Could not discover Typst: {typstDiscoveryError}
@@ -463,18 +587,71 @@
               class="input input-sm"
               aria-label="{engine} executable path"
               placeholder="Use PATH"
-              value={preferences.latexPaths[name]}
+              value={displayPath(preferences.latexPaths[name])}
               onchange={(event) =>
                 setPreference('latexPaths', {
                   ...preferences.latexPaths,
-                  [name]: event.currentTarget.value.trim(),
+                  [name]: expandHomePath(event.currentTarget.value.trim()),
                 })}
             />
           </label>
+          <div class="tool-actions">
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              disabled={!native || toolBusy}
+              onclick={() =>
+                void chooseExecutable((path) =>
+                  setPreference('latexPaths', { ...preferences.latexPaths, [name]: path }),
+                )}>Browse {engine}</button
+            >
+          </div>
         {/each}
         <p class="hint">
-          Leave paths empty to use commands found on PATH. LaTeX compilation requires the Linux app.
+          Leave paths empty to use commands found on PATH, or choose an existing TeX distribution.
+          The optional managed TeX Live installation is separate from system tools and can require
+          several gigabytes and substantial download time. Each install creates a new copy; older
+          managed copies remain available on disk.
         </p>
+        <div class="tool-actions">
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            disabled={!native || toolBusy}
+            onclick={() => void manageTexLive('install')}>Install managed TeX Live</button
+          >
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            disabled={!native || toolBusy}
+            onclick={() => void manageTexLive('update')}>Update managed TeX Live</button
+          >
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            disabled={!native || toolBusy}
+            onclick={() =>
+              void invokeHost('open_external', {
+                url: 'https://tug.org/texlive/acquire-netinstall.html',
+              }).catch((reason) => (toolError = String(reason)))}>TeX Live download page</button
+          >
+        </div>
+        <div class="tool-actions">
+          <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            disabled={!native || toolBusy}
+            onclick={() => void downloadTools(['marksman', 'tinymist', 'texlab', 'typst'])}
+            >Download / update standalone tools</button
+          >
+        </div>
+        {#if !native}<p class="hint">
+            Tool downloads and executable selection are available in the Linux app.
+          </p>{/if}
+        {#if toolMessage}<p class="hint" role="status">{toolMessage}</p>{/if}
+        {#if toolError}<p class="error" role="alert" style="white-space: pre-wrap">
+            {toolError}
+          </p>{/if}
         {#if discoveryError}<p class="error">
             Could not discover LaTeX engines: {discoveryError}
           </p>{/if}
@@ -512,3 +689,28 @@
   </div>
   <button class="modal-backdrop" aria-label="Dismiss settings" onclick={onclose}></button>
 </dialog>
+
+<style>
+  .tool-setting {
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .tool-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+  }
+  .tool-controls input {
+    flex: 1 1 180px;
+    min-width: 0;
+  }
+  .tool-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+</style>

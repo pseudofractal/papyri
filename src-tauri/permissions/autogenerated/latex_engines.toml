@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-latex-engines"
+description = "Enables the latex_engines command without any pre-configured scope."
+commands.allow = ["latex_engines"]
+
+[[permission]]
+identifier = "deny-latex-engines"
+description = "Denies the latex_engines command without any pre-configured scope."
+commands.deny = ["latex_engines"]

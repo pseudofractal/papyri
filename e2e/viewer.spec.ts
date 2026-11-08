@@ -826,6 +826,8 @@ test('persists Typst and LaTeX compiler settings', async ({ page }) => {
   await openSettingsTab(page, 'Compilers');
   await page.getByLabel('Typst executable path').fill('/opt/typst/bin/typst');
   await page.getByLabel('Typst executable path').blur();
+  await page.getByLabel('Markdown · Marksman executable path').fill('/opt/marksman');
+  await page.getByLabel('Markdown · Marksman executable path').blur();
   await page.getByRole('combobox', { name: 'Engine' }).selectOption('xelatex');
   await page.getByLabel('xelatex executable path').fill('/opt/tex/bin/xelatex');
   await page.getByLabel('xelatex executable path').blur();
@@ -833,8 +835,51 @@ test('persists Typst and LaTeX compiler settings', async ({ page }) => {
   await page.reload();
   await openSettingsTab(page, 'Compilers');
   await expect(page.getByLabel('Typst executable path')).toHaveValue('/opt/typst/bin/typst');
+  await expect(page.getByLabel('Markdown · Marksman executable path')).toHaveValue('/opt/marksman');
   await expect(page.getByRole('combobox', { name: 'Engine' })).toHaveValue('xelatex');
   await expect(page.getByLabel('xelatex executable path')).toHaveValue('/opt/tex/bin/xelatex');
+});
+
+test('downloads managed tools and selects their paths', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string, args: Record<string, unknown>) => {
+          if (command === 'initial_path') return { path: '/project', directory: true };
+          if (command === 'list_directory') return [];
+          if (command === 'latex_engines') return [];
+          if (command === 'typst_binary') return null;
+          if (command === 'install_tool') return { path: `/managed/${args.name}`, version: 'v1' };
+          if (command === 'manage_texlive')
+            return {
+              lualatex: '/managed/tex/lualatex',
+              pdflatex: '/managed/tex/pdflatex',
+              xelatex: '/managed/tex/xelatex',
+            };
+          throw new Error(`Unavailable native command: ${command}`);
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await openSettingsTab(page, 'Compilers');
+  await page.getByRole('button', { name: 'Download / update standalone tools' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Installed marksman v1' })).toBeVisible();
+  await expect(page.getByLabel('Markdown · Marksman executable path')).toHaveValue(
+    '/managed/marksman',
+  );
+  await expect(page.getByLabel('Typst · Tinymist executable path')).toHaveValue(
+    '/managed/tinymist',
+  );
+  await expect(page.getByLabel('LaTeX · Texlab executable path')).toHaveValue('/managed/texlab');
+  await expect(page.getByLabel('Typst executable path')).toHaveValue('/managed/typst');
+  await page.getByRole('button', { name: 'Install managed TeX Live' }).click();
+  await expect(page.getByLabel('lualatex executable path')).toHaveValue('/managed/tex/lualatex');
+  await expect(page.getByLabel('pdflatex executable path')).toHaveValue('/managed/tex/pdflatex');
+  await expect(page.getByLabel('xelatex executable path')).toHaveValue('/managed/tex/xelatex');
+  await page.getByRole('button', { name: 'Update managed TeX Live' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'TeX Live is ready' })).toBeVisible();
 });
 
 test('validates and persists math preferences', async ({ page }) => {
@@ -2532,29 +2577,152 @@ test('edits source, retains a draft across preview mode, and saves the captured 
   });
   await page.goto('/');
   await expect(
-    page.frameLocator('iframe').getByRole('heading', { name: 'Original' }),
+    page.frameLocator('iframe:not(.pending)').getByRole('heading', { name: 'Original' }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Edit source' }).click();
   const editor = page.getByRole('textbox', { name: 'Source editor' });
   await expect(editor).toHaveText('# Original');
+  await page.getByRole('button', { name: 'Zoom in live preview' }).click();
+  await expect(page.getByRole('button', { name: 'Reset live preview zoom: 110%' })).toBeVisible();
+  await page.getByRole('button', { name: 'Fit live preview to width' }).click();
+  await expect(page.getByRole('button', { name: 'Reset live preview zoom: 100%' })).toBeVisible();
   await editor.click();
   await page.keyboard.press('Control+A');
   await page.keyboard.insertText('# Changed');
+  await expect(
+    page.frameLocator('iframe:not(.pending)').getByRole('heading', { name: 'Changed' }),
+  ).toBeVisible();
+  await editor.fill('# Changed\n\nSecond paragraph');
+  await page.frameLocator('iframe:not(.pending)').getByText('Second paragraph').click();
+  await expect
+    .poll(() => page.evaluate(() => window.getSelection()?.anchorNode?.parentElement?.textContent))
+    .toBe('Second paragraph');
+  await editor.fill(
+    `# Changed\n\n${Array.from({ length: 100 }, (_, i) => `Paragraph ${i}`).join('\n\n')}`,
+  );
+  const activePreview = page.locator('iframe:not(.pending)');
+  await expect(activePreview.contentFrame().getByText('Paragraph 99')).toBeAttached();
+  await activePreview.evaluate((frame) => frame.setAttribute('data-scroll-test', 'original'));
+  await activePreview
+    .contentFrame()
+    .locator('html')
+    .evaluate(() => window.scrollTo(0, 600));
+  await expect
+    .poll(() =>
+      activePreview
+        .contentFrame()
+        .locator('html')
+        .evaluate(() => window.scrollY),
+    )
+    .toBeGreaterThan(400);
+  await page.waitForTimeout(400);
+  await expect(activePreview).toHaveAttribute('data-scroll-test', 'original');
+  await expect(page.locator('iframe.pending')).toHaveCount(0);
+  await editor.fill('# Changed');
   await expect(page.getByRole('button', { name: 'Save source' })).toBeEnabled();
   page.once('dialog', (dialog) => void dialog.dismiss());
   await page.getByRole('button', { name: 'Close paper.md' }).click();
   await expect(editor).toHaveText('# Changed');
   await page.getByRole('button', { name: 'Show preview' }).click();
   await expect(
-    page.frameLocator('iframe').getByRole('heading', { name: 'Original' }),
+    page.frameLocator('iframe:not(.pending)').getByRole('heading', { name: 'Original' }),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Edit source' }).click();
   await expect(editor).toHaveText('# Changed');
   await page.getByRole('button', { name: 'Save source' }).click();
   await expect(page.getByRole('button', { name: 'Save source' })).toBeDisabled();
   await page.getByRole('button', { name: 'Show preview' }).click();
-  await expect(page.frameLocator('iframe').getByRole('heading', { name: 'Changed' })).toBeVisible();
+  await expect(
+    page.frameLocator('iframe:not(.pending)').getByRole('heading', { name: 'Changed' }),
+  ).toBeVisible();
   await page.getByRole('button', { name: 'Edit source' }).click();
+  for (const theme of ['mocha', 'latte']) {
+    if (theme === 'latte') await toggleTheme(page);
+    await editor.fill('');
+    await editor.press('Control+Space');
+    const menu = page.locator('.cm-tooltip-autocomplete');
+    await expect(menu.getByRole('option')).toHaveCount(3);
+    await expect(menu.locator('.codicon-symbol-snippet')).toHaveCount(3);
+    await expect.poll(() => page.evaluate(() => document.fonts.check('16px codicon'))).toBe(true);
+    const selected = menu.locator('[aria-selected="true"]');
+    const selectedLabel = selected.locator('.cm-completionLabel');
+    const firstSuggestion = await selectedLabel.textContent();
+    // CodeMirror ignores completion keys briefly while the menu appears.
+    await page.waitForTimeout(100);
+    await editor.press('ArrowDown');
+    await expect(selectedLabel).not.toHaveText(firstSuggestion!);
+    await editor.press('ArrowUp');
+    await expect(selectedLabel).toHaveText(firstSuggestion!);
+    const alignment = await menu.evaluate((element) => {
+      const popup = element.getBoundingClientRect();
+      const pane = element.closest('.cm-editor')!.getBoundingClientRect();
+      const rows = [...element.querySelectorAll('li')].map((row) => {
+        const bounds = row.getBoundingClientRect();
+        const icon = row.querySelector('.completion-kind')!.getBoundingClientRect();
+        const label = row.querySelector('.cm-completionLabel')!.getBoundingClientRect();
+        return {
+          left: bounds.left,
+          right: bounds.right,
+          iconLeft: icon.left,
+          labelLeft: label.left,
+          centerDifference: Math.abs((icon.top + icon.bottom - label.top - label.bottom) / 2),
+        };
+      });
+      return {
+        popupLeft: popup.left,
+        popupRight: popup.right,
+        paneLeft: pane.left,
+        paneRight: pane.right,
+        rows,
+      };
+    });
+    expect(alignment.popupLeft).toBeGreaterThanOrEqual(alignment.paneLeft - 1);
+    expect(alignment.popupRight).toBeLessThanOrEqual(alignment.paneRight + 1);
+    for (const row of alignment.rows) {
+      expect(Math.abs(row.iconLeft - alignment.rows[0].iconLeft)).toBeLessThan(1);
+      expect(Math.abs(row.labelLeft - alignment.rows[0].labelLeft)).toBeLessThan(1);
+      expect(row.centerDifference).toBeLessThan(2);
+      expect(row.left).toBeCloseTo(alignment.rows[0].left, 0);
+      expect(row.right).toBeCloseTo(alignment.rows[0].right, 0);
+    }
+    const contrast = await menu.evaluate((element) => {
+      const context = document.createElement('canvas').getContext('2d')!;
+      function luminance(color: string) {
+        context.fillStyle = color;
+        context.fillRect(0, 0, 1, 1);
+        const channels = [...context.getImageData(0, 0, 1, 1).data].slice(0, 3).map((value) => {
+          const channel = value / 255;
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+        });
+        return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+      }
+      const background = getComputedStyle(element).backgroundColor;
+      return [...element.querySelectorAll('li')].flatMap((option) => {
+        const optionBackground = option.hasAttribute('aria-selected')
+          ? getComputedStyle(option).backgroundColor
+          : background;
+        const surface = luminance(optionBackground);
+        return [...option.querySelectorAll('.cm-completionLabel, .cm-completionDetail')].map(
+          (text) => {
+            const foreground = luminance(getComputedStyle(text).color);
+            return {
+              selected: option.hasAttribute('aria-selected'),
+              part: text.className,
+              ratio:
+                (Math.max(surface, foreground) + 0.05) / (Math.min(surface, foreground) + 0.05),
+            };
+          },
+        );
+      });
+    });
+    expect(contrast.length).toBeGreaterThan(3);
+    expect(
+      contrast.filter(({ ratio }) => ratio < 4.5),
+      theme,
+    ).toEqual([]);
+    await page.keyboard.press('Escape');
+  }
+  await toggleTheme(page);
   await editor.fill('heading');
   await editor.press('Control+Space');
   await page.getByRole('option').filter({ hasText: 'heading' }).first().click();
@@ -2616,3 +2784,313 @@ for (const [name, original, changed] of [
     await expect(editor).toContainText(changed);
   });
 }
+
+test('recompiles LaTeX drafts while retaining the previous PDF', async ({ page }) => {
+  const pdf = (await readFile('e2e/fixtures/paged.pdf')).toString('base64');
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce'),
+    });
+  });
+  await page.addInitScript((encoded) => {
+    const file = {
+      text: '\\documentclass{article}\n\\begin{document}\nOriginal\n\\end{document}',
+      stamp: '1',
+    };
+    const pdfBytes = () =>
+      Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0)).buffer;
+    (window as unknown as { compileRequests: string[] }).compileRequests = [];
+    (window as unknown as { syncRequests: Record<string, unknown>[] }).syncRequests = [];
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string, args: Record<string, unknown>) => {
+          if (command === 'initial_path') return { path: '/paper.tex', directory: false };
+          if (command === 'read_document') return { ...file };
+          if (command === 'document_stamp') return file.stamp;
+          if (command === 'list_directory') return [];
+          if (command === 'read_pdf') return pdfBytes();
+          if (command === 'compile_latex_draft') {
+            (window as unknown as { compileRequests: string[] }).compileRequests.push(
+              String(args.text),
+            );
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            const pdf = new Uint8Array(pdfBytes());
+            const result = new Uint8Array(32 + pdf.length);
+            result.set(new TextEncoder().encode('0123456789abcdef0123456789abcdef'));
+            result.set(pdf, 32);
+            return result.buffer;
+          }
+          if (command === 'latex_sync') {
+            (window as unknown as { syncRequests: Record<string, unknown>[] }).syncRequests.push(
+              args,
+            );
+            return 'SyncTeX result begin\nInput:/paper.tex\nLine:3\nColumn:-1\nPage:1\nx:80\ny:80\nSyncTeX result end';
+          }
+          if (command === 'latex_sync_release') return;
+          throw new Error(`Unavailable native command: ${command}`);
+        },
+      },
+    });
+  }, pdf);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Edit source' }).click();
+  const editor = page.getByRole('textbox', { name: 'Source editor' });
+  const frame = page.locator('iframe:not(.pending)');
+  await expect(frame.contentFrame().locator('.page canvas').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Recompile' })).toBeEnabled();
+  await expect(page.getByText('Compiling · Stale')).toHaveCount(0);
+  await frame
+    .contentFrame()
+    .locator('.page')
+    .first()
+    .click({ position: { x: 20, y: 20 } });
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { syncRequests: Record<string, unknown>[] }).syncRequests.some(
+          (item) => item.page === 1,
+        ),
+      ),
+    )
+    .toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.getSelection()?.anchorNode?.parentElement?.textContent))
+    .toBe('Original');
+  await editor.click();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        (window as unknown as { syncRequests: Record<string, unknown>[] }).syncRequests.some(
+          (item) => item.source === '/paper.tex',
+        ),
+      ),
+    )
+    .toBe(true);
+  await page.evaluate(
+    () => ((window as unknown as { compileRequests: string[] }).compileRequests = []),
+  );
+  await frame.evaluate((element) => element.setAttribute('data-old-pdf', 'yes'));
+  await editor.fill('Draft one');
+  await expect(page.getByText('Stale', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Recompile' }).click();
+  await expect(page.getByText('Compiling · Stale')).toBeVisible();
+  await expect(frame).toHaveAttribute('data-old-pdf', 'yes');
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as unknown as { compileRequests: string[] }).compileRequests),
+    )
+    .toEqual(['Draft one']);
+  await expect(page.getByText('Compiling · Stale')).toHaveCount(0);
+  await expect(frame).not.toHaveAttribute('data-old-pdf', 'yes');
+  await page.getByLabel('Live', { exact: true }).check();
+  await editor.fill('Draft two');
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as unknown as { compileRequests: string[] }).compileRequests),
+    )
+    .toEqual(['Draft one', 'Draft two']);
+});
+
+test('creates source files and folders from the explorer', async ({ page }) => {
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce'),
+    });
+  });
+  await page.addInitScript(() => {
+    const files = new Map<string, string>([['/work/existing.md', '# Existing']]);
+    const folders = new Set(['/work']);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: async (text: string) => {
+          (window as unknown as { clipboardText: string }).clipboardText = text;
+        },
+      },
+    });
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string, args: Record<string, unknown>) => {
+          if (command === 'initial_path') return { path: '/work', directory: true };
+          if (command === 'list_directory')
+            return [...folders, ...files.keys()]
+              .filter((path) => path.startsWith('/work/') && !path.slice(6).includes('/'))
+              .map((path) => ({
+                name: path.slice(6),
+                path,
+                directory: folders.has(path),
+                symlink: false,
+              }));
+          if (command === 'read_document')
+            return { text: files.get(String(args.path)) ?? '', stamp: '1' };
+          if (command === 'read_text_file') return files.get(String(args.path)) ?? '';
+          if (command === 'delete_file') {
+            files.delete(String(args.path));
+            return;
+          }
+          if (command === 'document_stamp') return '1';
+          if (command === 'read_pdf') throw new Error('Compiler unavailable');
+          if (command === 'create_entry') {
+            const path = `${args.directory}/${args.name}`;
+            if (files.has(path) || folders.has(path)) throw new Error('Entry already exists');
+            if (args.kind === 'folder') folders.add(path);
+            else
+              files.set(
+                path,
+                args.kind === 'latex'
+                  ? '\\documentclass{article}\\begin{document}\\end{document}'
+                  : '',
+              );
+            return path;
+          }
+          if (command === 'rename_file') {
+            const path = String(args.path);
+            const next = `${path.slice(0, path.lastIndexOf('/'))}/${args.name}`;
+            if (files.has(next) || folders.has(next)) throw new Error('Entry already exists');
+            const content = files.get(path);
+            if (content === undefined) throw new Error('File not found');
+            files.delete(path);
+            files.set(next, content);
+            return next;
+          }
+          throw new Error(`Unavailable native command: ${command}`);
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Create file or folder' })).toBeVisible();
+  for (const [kind, name, result] of [
+    ['folder', 'notes', 'notes'],
+    ['markdown', 'draft', 'draft.md'],
+    ['typst', 'paper.typ', 'paper.typ'],
+    ['latex', 'thesis', 'thesis.tex'],
+  ]) {
+    await page.getByRole('button', { name: 'Create file or folder' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create new' });
+    await dialog.locator(`input[name="entry-type"][value="${kind}"]`).check();
+    await dialog.getByLabel('Name').fill(name);
+    await dialog.getByRole('button', { name: 'Create', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator('.file-row').filter({ hasText: result })).toBeVisible();
+    if (kind !== 'folder')
+      await expect(page.getByRole('textbox', { name: 'Source editor' })).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Create file or folder' }).click();
+  const duplicateDialog = page.getByRole('dialog', { name: 'Create new' });
+  await duplicateDialog.getByLabel('Name').fill('draft');
+  await duplicateDialog.getByRole('button', { name: 'Create', exact: true }).click();
+  await expect(duplicateDialog.getByRole('alert')).toContainText('already exists');
+  await duplicateDialog.getByRole('button', { name: 'Cancel' }).click();
+  const editor = page.getByRole('textbox', { name: 'Source editor' });
+  await editor.fill('Unsaved text');
+  await page.locator('.file-row[data-path="/work/thesis.tex"]').dblclick();
+  const rename = page.getByRole('textbox', { name: 'Rename file' });
+  await rename.fill('renamed.tex');
+  await rename.press('Enter');
+  await expect(page.locator('.file-row[data-path="/work/renamed.tex"]')).toBeVisible();
+  await expect(editor).toHaveText('Unsaved text');
+  await expect(page.getByRole('button', { name: 'Save source' })).toBeEnabled();
+  await page.locator('.file-row[data-path="/work/renamed.tex"]').click({ button: 'right' });
+  await expect(page.getByRole('menuitem', { name: 'Rename' })).toBeVisible();
+  await page.getByRole('menuitem', { name: 'Rename' }).click();
+  await expect(page.getByRole('textbox', { name: 'Rename file' })).toHaveValue('renamed.tex');
+  await page.getByRole('textbox', { name: 'Rename file' }).press('Escape');
+  await page.locator('.file-row[data-path="/work/renamed.tex"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Copy file contents' }).click();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { clipboardText: string }).clipboardText))
+    .toBe('Unsaved text');
+  await page.locator('.file-row[data-path="/work/renamed.tex"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Copy relative path' }).click();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { clipboardText: string }).clipboardText))
+    .toBe('renamed.tex');
+  await page.locator('.file-row[data-path="/work/renamed.tex"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Copy full path' }).click();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { clipboardText: string }).clipboardText))
+    .toBe('/work/renamed.tex');
+  await page.locator('.file-row[data-path="/work/renamed.tex"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Delete file…' }).click();
+  await expect(page.getByRole('alert').filter({ hasText: 'unsaved changes' })).toBeVisible();
+  await expect(editor).toHaveText('Unsaved text');
+  await page.locator('.file-row[data-path="/work/notes"]').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'New folder…' }).click();
+  await expect(page.getByRole('dialog', { name: 'Create new' })).toContainText('/work/notes');
+  await expect(page.getByRole('radio', { name: /Folder/ })).toBeChecked();
+  await page
+    .getByRole('dialog', { name: 'Create new' })
+    .getByRole('button', { name: 'Cancel' })
+    .click();
+  await page.locator('.file-row[data-path="/work/existing.md"]').click({ button: 'right' });
+  page.once('dialog', (dialog) => void dialog.dismiss());
+  await page.getByRole('menuitem', { name: 'Delete file…' }).click();
+  await expect(page.locator('.file-row[data-path="/work/existing.md"]')).toBeVisible();
+  await page.locator('.file-row[data-path="/work/existing.md"]').click({ button: 'right' });
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('menuitem', { name: 'Delete file…' }).click();
+  await expect(page.locator('.file-row[data-path="/work/existing.md"]')).toHaveCount(0);
+});
+
+test('remembers expanded folders and the working directory separately from the tree root', async ({
+  page,
+}) => {
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce'),
+    });
+  });
+  await page.addInitScript(() => {
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string, args: Record<string, unknown>) => {
+          if (command === 'initial_path') return { path: '/work', directory: true };
+          if (command === 'list_directory') {
+            if (args.path === '/work')
+              return [
+                { name: 'chapters', path: '/work/chapters', directory: true, symlink: false },
+              ];
+            if (args.path === '/work/chapters')
+              return [
+                { name: 'notes', path: '/work/chapters/notes', directory: true, symlink: false },
+              ];
+            return [];
+          }
+          if (command === 'create_entry') return `${args.directory}/${args.name}`;
+          throw new Error(`Unavailable native command: ${command}`);
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  const chapters = page.locator('.file-row[data-path="/work/chapters"]');
+  const notes = page.locator('.file-row[data-path="/work/chapters/notes"]');
+  await chapters.click();
+  await notes.click();
+  await expect(notes).toHaveClass(/working/);
+  await expect(page.getByLabel('Directory path')).toHaveValue('/work');
+  await page.getByRole('button', { name: 'Create file or folder' }).click();
+  await expect(page.getByRole('dialog', { name: 'Create new' })).toContainText(
+    '/work/chapters/notes',
+  );
+  await page
+    .getByRole('dialog', { name: 'Create new' })
+    .getByRole('button', { name: 'Cancel' })
+    .click();
+  await page.reload();
+  await expect(chapters).toHaveAttribute('aria-expanded', 'true');
+  await expect(notes).toHaveAttribute('aria-expanded', 'true');
+  await expect(notes).toHaveClass(/working/);
+  await chapters.click({ button: 'right' });
+  await expect(chapters).toHaveClass(/working/);
+  await expect(page.getByRole('menuitem', { name: 'Open folder' })).toBeVisible();
+});

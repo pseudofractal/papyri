@@ -7,6 +7,9 @@ pub fn authorized(body: &InvokeBody, token: &str) -> bool {
   }
 }
 pub fn initialization(token: &str) -> String {
+  let home = serde_json::to_string(&std::env::var("HOME").unwrap_or_default())
+    .unwrap_or_else(|_| "\"\"".into())
+    .replace('<', "\\u003c");
   let trace = std::env::var_os("PAPYRI_STARTUP_TRACE").is_some_and(|value| value == "1");
   let decorationless = std::env::var_os("PAPYRI_DECORATIONLESS").is_some_and(|value| value == "1");
   let initial_argument =
@@ -24,7 +27,7 @@ pub fn initialization(token: &str) -> String {
         })
   });
   format!(
-    r#"if (window.top === window.self && (location.protocol === 'tauri:' || ['http://tauri.localhost', 'https://tauri.localhost', 'http://localhost:1420', 'http://127.0.0.1:1420'].includes(location.origin))) {{ Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', {{ value: '{token}', writable: false, configurable: false }}); Object.defineProperty(window, '__PAPYRI_STARTUP_TRACE__', {{ value: {trace}, writable: false, configurable: false }}); Object.defineProperty(window, '__PAPYRI_PREWARM_MARKDOWN__', {{ value: {prewarm_markdown}, writable: false, configurable: false }}); Object.defineProperty(window, '__PAPYRI_DECORATIONLESS__', {{ value: {decorationless}, writable: false, configurable: false }}); }}"#
+    r#"if (window.top === window.self && (location.protocol === 'tauri:' || ['http://tauri.localhost', 'https://tauri.localhost', 'http://localhost:1420', 'http://127.0.0.1:1420'].includes(location.origin))) {{ Object.defineProperty(window, '__PAPYRI_HOME__', {{ value: {home}, writable: false, configurable: false }}); Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', {{ value: '{token}', writable: false, configurable: false }}); Object.defineProperty(window, '__PAPYRI_STARTUP_TRACE__', {{ value: {trace}, writable: false, configurable: false }}); Object.defineProperty(window, '__PAPYRI_PREWARM_MARKDOWN__', {{ value: {prewarm_markdown}, writable: false, configurable: false }}); Object.defineProperty(window, '__PAPYRI_DECORATIONLESS__', {{ value: {decorationless}, writable: false, configurable: false }}); }}"#
   )
 }
 #[cfg(test)]

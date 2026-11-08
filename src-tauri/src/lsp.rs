@@ -50,14 +50,29 @@ fn server_command(language: &str) -> Result<(&'static str, &'static [&'static st
   }
 }
 
+fn server_executable<'a>(program: &'a str, configured: &'a str) -> Result<&'a Path, String> {
+  if configured.is_empty() {
+    return Ok(Path::new(program));
+  }
+  let path = Path::new(configured);
+  if !path.is_absolute() || !crate::executables::is_executable(path) {
+    return Err(format!(
+      "Configured {program} path is not an absolute executable file: {configured}"
+    ));
+  }
+  Ok(path)
+}
+
 #[tauri::command]
 pub fn lsp_start(
   state: tauri::State<'_, ServerState>,
   language: String,
   directory: String,
+  server_path: String,
   events: Channel<ServerEvent>,
 ) -> Result<u64, String> {
   let (program, args) = server_command(&language)?;
+  let executable = server_executable(program, &server_path)?;
   let directory = Path::new(&directory)
     .canonicalize()
     .map_err(|error| format!("Language server directory: {error}"))?;
@@ -71,7 +86,7 @@ pub fn lsp_start(
   if servers.len() >= MAX_SERVERS {
     return Err("Too many language servers are running".into());
   }
-  let mut child = Command::new(program)
+  let mut child = Command::new(executable)
     .args(args)
     .current_dir(directory)
     .stdin(Stdio::piped())
@@ -165,5 +180,14 @@ mod tests {
     assert_eq!(server_command("typst").unwrap().0, "tinymist");
     assert_eq!(server_command("latex").unwrap().0, "texlab");
     assert!(server_command("../../bin/sh").is_err());
+  }
+  #[test]
+  fn validates_configured_server_paths() {
+    assert_eq!(
+      server_executable("marksman", "").unwrap(),
+      Path::new("marksman")
+    );
+    assert!(server_executable("marksman", "relative/path").is_err());
+    assert!(server_executable("marksman", "/does-not-exist").is_err());
   }
 }

@@ -71,6 +71,28 @@ const viewer = new PDFViewer({
 });
 linkService.setViewer(viewer);
 let loaded = false;
+let sourceNavigation = false;
+container.addEventListener('click', (event) => {
+  if (
+    !sourceNavigation ||
+    !(event.target instanceof Element) ||
+    event.target.closest('a,button,input') ||
+    !window.getSelection()?.isCollapsed
+  )
+    return;
+  const pageElement = event.target.closest<HTMLElement>('.page[data-page-number]');
+  if (!pageElement) return;
+  const page = Number(pageElement.dataset.pageNumber);
+  const view = viewer.getPageView(page - 1);
+  if (!view?.viewport) return;
+  const rect = pageElement.getBoundingClientRect();
+  const [pdfX, pdfY] = view.viewport.convertToPdfPoint(
+    event.clientX - rect.left,
+    event.clientY - rect.top,
+  );
+  const box = view.viewport.viewBox;
+  send({ type: 'pdf-source-jump', page, x: pdfX - box[0], y: box[3] - pdfY });
+});
 let opened = false;
 let passwordCallback: ((password: string) => void) | undefined;
 let pendingAnchor = '';
@@ -230,6 +252,29 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('message', (event) => {
   if (event.source !== parent || !event.data) return;
   const data = event.data;
+  if (data.type === 'pdf-source-navigation') {
+    sourceNavigation = data.enabled === true;
+    return;
+  }
+  if (
+    data.type === 'pdf-source-reveal' &&
+    loaded &&
+    Number.isSafeInteger(data.page) &&
+    Number.isFinite(data.x) &&
+    Number.isFinite(data.y)
+  ) {
+    const view = viewer.getPageView(data.page - 1);
+    if (!view?.viewport) return;
+    const box = view.viewport.viewBox;
+    const [x, y] = view.viewport.convertToViewportPoint(box[0] + data.x, box[3] - data.y);
+    viewer.currentPageNumber = data.page;
+    container.scrollTo({
+      top: view.div.offsetTop + y - container.clientHeight / 2,
+      left: view.div.offsetLeft + x - container.clientWidth / 2,
+      behavior: 'smooth',
+    });
+    return;
+  }
   if (data.type === 'scroll' && Number.isSafeInteger(data.request)) {
     const request = data.request;
     const top = Number.isFinite(data.y)

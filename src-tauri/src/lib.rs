@@ -11,6 +11,8 @@ mod logging;
 mod lsp;
 mod lsp_protocol;
 mod security;
+mod texlive;
+mod tools;
 mod typst;
 use tauri::Manager;
 
@@ -33,9 +35,16 @@ pub fn run() {
       commands::initial_path,
       commands::startup_trace,
       commands::list_directory,
+      commands::create_entry,
+      commands::rename_file,
       commands::read_document,
+      commands::read_text_file,
+      commands::delete_file,
       commands::write_document,
       commands::read_pdf,
+      commands::compile_latex_draft,
+      commands::latex_sync,
+      commands::latex_sync_release,
       commands::latex_engines,
       commands::typst_binary,
       commands::read_asset,
@@ -46,6 +55,9 @@ pub fn run() {
       lsp::lsp_start,
       lsp::lsp_send,
       lsp::lsp_stop,
+      tools::install_tool,
+      tools::pick_executable,
+      texlive::manage_texlive,
       browser::browser_show,
       browser::browser_select,
       browser::browser_quote,
@@ -83,6 +95,21 @@ pub fn run() {
       let window = app
         .get_webview_window("main")
         .ok_or("Main window is unavailable")?;
+      window.with_webview(|webview| {
+        use webkit2gtk::{
+          UserContentInjectedFrames, UserContentManagerExt, UserScript, UserScriptInjectionTime,
+          WebViewExt,
+        };
+        if let Some(manager) = webview.inner().user_content_manager() {
+          manager.add_script(&UserScript::new(
+            include_str!("preview_zoom.js"),
+            UserContentInjectedFrames::AllFrames,
+            UserScriptInjectionTime::Start,
+            &[],
+            &[],
+          ));
+        }
+      })?;
       let icon = app
         .default_window_icon()
         .ok_or("Application icon is unavailable")?;

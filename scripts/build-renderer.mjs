@@ -9,6 +9,19 @@ await mkdir(licenseDirectory, { recursive: true });
 await mkdir(resourceDirectory, { recursive: true });
 await mkdir(dictionaryDirectory, { recursive: true });
 await copyFile('node_modules/pdfjs-dist/LICENSE', `${licenseDirectory}/PDFJS.txt`);
+await mkdir('public/vendor-licenses', { recursive: true });
+await copyFile(
+  'src/assets/catppuccin-icons/LICENSE',
+  'public/vendor-licenses/catppuccin-icons-MIT.txt',
+);
+await copyFile(
+  'node_modules/@vscode/codicons/LICENSE',
+  'public/vendor-licenses/codicons-CC-BY-4.0.txt',
+);
+await copyFile(
+  'node_modules/@vscode/codicons/LICENSE-CODE',
+  'public/vendor-licenses/codicons-MIT.txt',
+);
 for (const [source, destination] of [
   ['node_modules/dictionary-en/index.aff', 'en.aff'],
   ['node_modules/dictionary-en/index.dic', 'en.dic'],

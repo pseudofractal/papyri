@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-typst-binary"
+description = "Enables the typst_binary command without any pre-configured scope."
+commands.allow = ["typst_binary"]
+
+[[permission]]
+identifier = "deny-typst-binary"
+description = "Denies the typst_binary command without any pre-configured scope."
+commands.deny = ["typst_binary"]

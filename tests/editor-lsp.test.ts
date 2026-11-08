@@ -28,7 +28,21 @@ it('stops a server before waiting for a blocked write', async () => {
     __PAPYRI_HOST_TOKEN__: 'test',
     __TAURI_INTERNALS__: { invoke, transformCallback: () => 1 },
   });
-  const connection = await connectEditorLanguageServer('markdown', '/project', () => {});
+  const connection = await connectEditorLanguageServer(
+    'markdown',
+    '/project',
+    '/opt/marksman',
+    () => {},
+  );
+  expect(invoke).toHaveBeenCalledWith(
+    'lsp_start',
+    expect.objectContaining({
+      language: 'markdown',
+      directory: '/project',
+      serverPath: '/opt/marksman',
+    }),
+    undefined,
+  );
   await vi.waitFor(() =>
     expect(invoke.mock.calls.some(([command]) => command === 'lsp_send')).toBe(true),
   );

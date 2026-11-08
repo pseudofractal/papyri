@@ -1,5 +1,18 @@
 import { Channel } from '@tauri-apps/api/core';
-import { LSPClient, languageServerExtensions, type Transport } from '@codemirror/lsp-client';
+import {
+  LSPClient,
+  findReferencesKeymap,
+  formatKeymap,
+  hoverTooltips,
+  jumpToDefinitionKeymap,
+  renameKeymap,
+  serverDiagnostics,
+  signatureHelp,
+  type Transport,
+} from '@codemirror/lsp-client';
+import { keymap } from '@codemirror/view';
+import type { CompletionSource } from '@codemirror/autocomplete';
+import { completionSource } from './completion-details';
 import DOMPurify from 'dompurify';
 import { invokeHost } from './native';
 
@@ -16,8 +29,10 @@ export function fileUri(path: string): string {
 export async function connectEditorLanguageServer(
   language: EditorLanguage,
   directory: string,
+  serverPath: string,
   onError: (message: string) => void,
-): Promise<{ client: LSPClient; close: () => Promise<void> }> {
+  onPreviewJump?: (location: unknown) => void,
+): Promise<{ client: LSPClient; completions: CompletionSource; close: () => Promise<void> }> {
   const handlers = new Set<(message: string) => void>();
   let closed = false;
   let closeReason = '';
@@ -25,9 +40,32 @@ export async function connectEditorLanguageServer(
   let queue = Promise.resolve();
   const client = new LSPClient({
     rootUri: fileUri(directory),
-    extensions: languageServerExtensions(),
+    ...(onPreviewJump
+      ? {
+          initializationOptions: { customizedShowDocument: true },
+          timeout: 30000,
+          notificationHandlers: {
+            'tinymist/preview/scrollSource': (_client: LSPClient, value: unknown) => {
+              onPreviewJump(value);
+              return true;
+            },
+          },
+        }
+      : {}),
+    extensions: [
+      hoverTooltips(),
+      keymap.of([
+        ...formatKeymap,
+        ...renameKeymap,
+        ...jumpToDefinitionKeymap,
+        ...findReferencesKeymap,
+      ]),
+      signatureHelp(),
+      serverDiagnostics(),
+    ],
     sanitizeHTML: (html) => DOMPurify.sanitize(html),
   });
+  const completions = completionSource(client, language);
   const events = new Channel<ServerEvent>((event) => {
     if (closed) return;
     if (event.type === 'message') {
@@ -43,7 +81,7 @@ export async function connectEditorLanguageServer(
         );
     }
   });
-  const id = await invokeHost<number>('lsp_start', { language, directory, events });
+  const id = await invokeHost<number>('lsp_start', { language, directory, serverPath, events });
   server.id = id;
   if (closed) {
     await invokeHost('lsp_stop', { id });
@@ -75,6 +113,7 @@ export async function connectEditorLanguageServer(
   client.connect(transport);
   return {
     client,
+    completions,
     async close() {
       closed = true;
       client.disconnect();

@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { renderMarkdown } from '../src/render/markdown';
 import { validateDelimiters } from '../src/lib/preferences';
-import { resolveLink, sortEntries } from '../src/lib/paths';
+import {
+  displayPath,
+  expandHomePath,
+  relativeProjectPath,
+  resolveLink,
+  sortEntries,
+} from '../src/lib/paths';
 import { framePolicy } from '../src/render/sandbox';
 import { renderSource } from '../src/render/source';
 it.each([
@@ -66,6 +72,24 @@ describe('Markdown and mathematics', () => {
     expect(() => renderMarkdown('x'.repeat(8 * 1024 * 1024 + 1))).toThrow('8 MiB'));
 });
 describe('path resolution and security policy', () => {
+  it('abbreviates only the current home directory and expands entered paths', () => {
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { __PAPYRI_HOME__: '/home/alice' },
+    });
+    expect(displayPath('/home/alice/project')).toBe('~/project');
+    expect(displayPath('/home/alice')).toBe('~');
+    expect(displayPath('/home/alice2/file')).toBe('/home/alice2/file');
+    expect(expandHomePath('~/project')).toBe('/home/alice/project');
+    expect(expandHomePath('~other/project')).toBe('~other/project');
+    Reflect.deleteProperty(globalThis, 'window');
+  });
+  it('copies relative paths only inside the project root', () => {
+    expect(relativeProjectPath('/work', '/work/chapters/a.md')).toBe('chapters/a.md');
+    expect(relativeProjectPath('/', '/work/a.md')).toBe('work/a.md');
+    expect(relativeProjectPath('/work', '/work')).toBe('.');
+    expect(relativeProjectPath('/work', '/workspace/a.md')).toBe('/workspace/a.md');
+  });
   it('resolves parent, absolute, encoded links and anchors', () => {
     expect(resolveLink('/notes/one/readme.md', '../two.md#A%20B')).toEqual({
       kind: 'local',

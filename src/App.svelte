@@ -25,9 +25,19 @@
     Type as TypeIcon,
     TextQuote,
     Save,
+    Plus,
+    FolderPlus,
+    FilePlus2,
+    FolderSearch,
+    Clipboard,
+    Link2,
+    Pencil,
+    Trash2,
+    ExternalLink,
   } from '@lucide/svelte';
   import ZoomControls from './components/ZoomControls.svelte';
   import SidebarResize from './components/SidebarResize.svelte';
+  import EditorSplitHandle from './components/EditorSplitHandle.svelte';
   import SidePanel from './components/SidePanel.svelte';
   import SiteIcon from './components/SiteIcon.svelte';
   import {
@@ -47,8 +57,12 @@
     type ViewCommand,
   } from './lib/view';
   import Explorer from './components/Explorer.svelte';
+  import CreateEntry from './components/CreateEntry.svelte';
+  import { readExplorerState, writeExplorerState, type ExplorerState } from './lib/explorer-state';
   import Preview from './components/Preview.svelte';
+  import LatexLivePreview from './components/LatexLivePreview.svelte';
   import { EditorDraft } from './lib/editor-draft';
+  import type { PreviewLocation } from './lib/typst-live-preview';
   import Settings from './components/Settings.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { invokeHost } from './lib/native';
@@ -90,6 +104,10 @@
     isTypst,
     isLatex,
     normalize,
+    displayPath,
+    displayPathMessage,
+    expandHomePath,
+    relativeProjectPath,
     resolveLink,
   } from './lib/paths';
   import type { Heading, LatexEngine, Preferences, Source } from './lib/types';
@@ -110,6 +128,100 @@
   let rightTab = $state<RightTab>('outline');
   let browser = $state<BrowserState>({ ...emptyBrowserState, url: '' });
   let recentOpen = $state(false);
+  let createTarget = $state.raw<{
+    source: Source;
+    directory: string;
+    initialKind?: 'folder' | 'markdown';
+  } | null>(null);
+  let explorerState = $state.raw<ExplorerState>({ workingDirectory: '/', expanded: [] });
+  let renamePath = $state('');
+  let renameBusy = $state(false);
+  let explorerSelection = $state('');
+  $effect(() => {
+    const root = workspace.directory;
+    const source = workspace.source;
+    explorerState =
+      native && source?.create
+        ? readExplorerState(root, localStorage)
+        : { workingDirectory: root, expanded: [] };
+    explorerSelection = '';
+  });
+  function updateExplorerState(state: ExplorerState) {
+    explorerState = state;
+    if (native && workspace.source?.create) {
+      try {
+        writeExplorerState(workspace.directory, state, localStorage);
+      } catch {
+        workspace.error = 'Explorer navigation could not be saved.';
+      }
+    }
+  }
+  function toggleExplorerFolder(path: string) {
+    const expanded = explorerState.expanded.includes(path)
+      ? explorerState.expanded.filter((item) => item !== path)
+      : [...explorerState.expanded, path];
+    updateExplorerState({ workingDirectory: path, expanded });
+  }
+  async function renameExplorerFile(path: string, name: string) {
+    const source = workspace.source;
+    if (!source?.rename || renameBusy) return;
+    if (editorBusy || workspace.busy) {
+      workspace.error = 'Wait for the current document operation before renaming.';
+      return;
+    }
+    renameBusy = true;
+    try {
+      const next = await source.rename(path, name);
+      if (workspace.source !== source) return;
+      if (next === path) {
+        renamePath = '';
+        return;
+      }
+      const sourceDrafts = drafts.get(source);
+      const previousDraft = sourceDrafts?.get(path);
+      if (previousDraft && next !== path) {
+        const replacement = new EditorDraft(
+          next,
+          previousDraft.expectedText,
+          previousDraft.expectedStamp,
+        );
+        replacement.text = previousDraft.text;
+        sourceDrafts!.delete(path);
+        sourceDrafts!.set(next, replacement);
+        if (editorDraft === previousDraft) editorDraft = replacement;
+      }
+      for (const tab of workspace.tabs) if (tab.path === path) tab.path = next;
+      if (workspace.active === path) workspace.active = next;
+      if (workspace.secondary === path) workspace.secondary = next;
+      workspace.recentFiles = workspace.recentFiles.map((item) => (item === path ? next : item));
+      recentFolders = recentFolders.map((folder) =>
+        folder.lastFile === path ? { ...folder, lastFile: next } : folder,
+      );
+      persistRecentFolders(recentFolders);
+      if (headingsPath === path) headingsPath = next;
+      if (explorerSelection === path) explorerSelection = next;
+      if (path in workspace.secondaryScroll) {
+        workspace.secondaryScroll[next] = workspace.secondaryScroll[path];
+        delete workspace.secondaryScroll[path];
+      }
+      const session = typstPreviewSessions.get(path);
+      if (session) {
+        typstPreviewSessions.delete(path);
+        typstPreviewSessions.set(next, session);
+      }
+      for (const paths of typstPreviewSessions.values()) if (paths.delete(path)) paths.add(next);
+      if (typstPreviewRoot === path) typstPreviewRoot = next;
+      if (latexPreviewRoot === path) latexPreviewRoot = next;
+      if (trustedPath === path) trustedPath = '';
+      workspace.treeRevision++;
+      editorRevision++;
+      renamePath = '';
+    } catch (error) {
+      workspace.error = `Could not rename file: ${String(error)}`;
+    } finally {
+      renameBusy = false;
+    }
+  }
   let copyState = $state<'idle' | 'copied' | 'error'>('idle');
   let copyTimer: ReturnType<typeof setTimeout> | undefined;
   let settings = $state(false);
@@ -118,7 +230,7 @@
   let paletteOpen = $state(false);
   let decorationless = $state(startsDecorationless);
   let query = $state('');
-  let pathInput = $derived(workspace.directory);
+  let pathInput = $derived(displayPath(workspace.directory));
   let headings = $state<Heading[]>([]);
   let headingsPath = $state('');
   let recentCommands = $state<string[]>([]);
@@ -161,19 +273,61 @@
   const drafts = new Map<Source, Map<string, EditorDraft>>();
   let editorDraft = $state.raw<EditorDraft | null>(null);
   let SourceEditor = $state.raw<typeof import('./components/SourceEditor.svelte').default>();
+  let TypstLivePreview =
+    $state.raw<typeof import('./components/TypstLivePreview.svelte').default>();
+  let sourceEditor = $state<{ reveal: (line: number, character: number) => void }>();
+  let typstPreview = $state<{
+    updateDocument: (path: string, text: string) => void;
+    reveal: (path: string, line: number, character: number) => void;
+  }>();
+  let typstPreviewRoot = $state('');
+  let latexPreviewRoot = $state('');
+  let latexPreview = $state<{ reveal: (path: string, line: number) => void }>();
+  let markdownPreview = $state<{ revealSource: (line: number) => void }>();
+  let markdownPreviewText = $state('');
+  let markdownPreviewScroll = $state(0);
+  let markdownUpdateTimer: ReturnType<typeof setTimeout> | undefined;
+  let typstLiveVisible = $state(true);
+  let typstSourceShare = $state(50);
+  const typstPreviewSessions = new Map<string, Set<string>>();
+  let typstPreviewPaths = new Set<string>();
+  let previewJumpRequest = 0;
   let editorSource = $state.raw<Source | null>(null);
   let editing = $state(false);
   let editorBusy = $state(false);
   let editorRevision = $state(0);
+  let editorInstanceRevision = $state(0);
   let editorError = $state('');
   workspace.canClose = (path) => {
     const source = workspace.source;
-    const draft = source && drafts.get(source)?.get(path);
-    if (draft && editorBusy && editorDraft === draft) return false;
-    if (draft?.dirty && !window.confirm(`Discard unsaved changes to ${basename(path)}?`))
+    const sourceDrafts = source && drafts.get(source);
+    const session = typstPreviewSessions.get(path);
+    const paths = session ? [...session] : [path];
+    if (editorBusy && editorDraft && paths.includes(editorDraft.path)) return false;
+    if (
+      paths.some((item) => sourceDrafts?.get(item)?.dirty) &&
+      !window.confirm(`Discard unsaved changes associated with ${basename(path)}?`)
+    )
       return false;
-    if (source) drafts.get(source)?.delete(path);
-    if (editorDraft === draft) {
+    typstPreviewSessions.delete(path);
+    for (const item of paths) {
+      const usedByAnotherSession = [...typstPreviewSessions.values()].some((other) =>
+        other.has(item),
+      );
+      const openInAnotherTab = item !== path && workspace.tabs.some((tab) => tab.path === item);
+      if (!usedByAnotherSession && !openInAnotherTab) sourceDrafts?.delete(item);
+    }
+    if (path === typstPreviewRoot) {
+      typstPreviewRoot = '';
+      typstPreviewPaths = new Set();
+      previewJumpRequest++;
+    }
+    if (path === latexPreviewRoot) latexPreviewRoot = '';
+    if (
+      editorDraft &&
+      (editorDraft.path === path ||
+        (session && editorSource === source && workspace.active === path))
+    ) {
       editorDraft = null;
       editorSource = null;
       editing = false;
@@ -191,11 +345,34 @@
     editorDraft = null;
     editorSource = null;
     editing = false;
+    typstPreviewRoot = '';
+    latexPreviewRoot = '';
+    typstPreviewSessions.clear();
+    typstPreviewPaths = new Set();
+    previewJumpRequest++;
     return true;
   };
   const editorVisible = $derived(
-    editing && editorSource === workspace.source && editorDraft?.path === workspace.active,
+    editing &&
+      editorSource === workspace.source &&
+      (editorDraft?.path === workspace.active ||
+        ((typstPreviewRoot === workspace.active || latexPreviewRoot === workspace.active) &&
+          !!editorDraft)),
   );
+  const editorText = $derived.by(() => {
+    void editorRevision;
+    return editorDraft?.text ?? '';
+  });
+  const latexOverlays = $derived.by(() => {
+    void editorRevision;
+    const sourceDrafts = editorSource && drafts.get(editorSource);
+    return [...typstPreviewPaths].flatMap((path) => {
+      const draft = sourceDrafts?.get(path);
+      return draft && draft.dirty && path !== latexPreviewRoot
+        ? [[path, draft.text] as [string, string]]
+        : [];
+    });
+  });
   const editorDirty = $derived.by(() => {
     void editorRevision;
     return editorDraft?.dirty ?? false;
@@ -212,6 +389,8 @@
     editorError = '';
     try {
       SourceEditor ??= (await import('./components/SourceEditor.svelte')).default;
+      if (native && isTypst(path))
+        TypstLivePreview ??= (await import('./components/TypstLivePreview.svelte')).default;
       if (workspace.source !== source || workspace.active !== path) return;
       let sourceDrafts = drafts.get(source);
       if (!sourceDrafts) {
@@ -227,6 +406,22 @@
       }
       editorSource = source;
       editorDraft = draft;
+      clearTimeout(markdownUpdateTimer);
+      markdownPreviewText = draft.text;
+      markdownPreviewScroll = 0;
+      if (native && isTypst(path)) {
+        typstPreviewPaths = typstPreviewSessions.get(path) ?? new Set([path]);
+        typstPreviewSessions.set(path, typstPreviewPaths);
+        typstPreviewRoot = path;
+      } else {
+        typstPreviewRoot = '';
+        typstPreviewPaths = new Set();
+      }
+      latexPreviewRoot = native && isLatex(path) ? path : '';
+      if (latexPreviewRoot) {
+        typstPreviewPaths = typstPreviewSessions.get(path) ?? new Set([path]);
+        typstPreviewSessions.set(path, typstPreviewPaths);
+      }
       editorRevision++;
       editing = true;
     } catch (error) {
@@ -239,19 +434,77 @@
   function updateEditor(text: string) {
     if (!editorDraft) return;
     editorDraft.text = text;
+    typstPreview?.updateDocument(editorDraft.path, text);
+    if (editorLanguage === 'markdown') {
+      clearTimeout(markdownUpdateTimer);
+      markdownUpdateTimer = setTimeout(() => (markdownPreviewText = text), 250);
+    }
     editorRevision++;
+  }
+
+  function typstDocuments() {
+    const sourceDrafts = editorSource && drafts.get(editorSource);
+    return [...typstPreviewPaths].flatMap((path) => {
+      const draft = sourceDrafts?.get(path);
+      return draft ? [{ path, text: draft.text }] : [];
+    });
+  }
+
+  async function openPreviewSource(location: PreviewLocation) {
+    const source = editorSource;
+    const root = typstPreviewRoot || latexPreviewRoot;
+    if (!source || !root || workspace.active !== root || !editing) return;
+    const request = ++previewJumpRequest;
+    try {
+      let sourceDrafts = drafts.get(source);
+      if (!sourceDrafts) {
+        sourceDrafts = new Map();
+        drafts.set(source, sourceDrafts);
+      }
+      let draft = sourceDrafts.get(location.path);
+      if (!draft) {
+        const file = await (source.readSource ?? source.read)(location.path);
+        if (request !== previewJumpRequest || workspace.active !== root || editorSource !== source)
+          return;
+        draft = new EditorDraft(location.path, file.text, file.stamp);
+        sourceDrafts.set(location.path, draft);
+      }
+      typstPreviewPaths.add(location.path);
+      editorDraft = draft;
+      editorRevision++;
+      typstPreview?.updateDocument(location.path, draft.text);
+      await tick();
+      if (request === previewJumpRequest && editorDraft === draft)
+        sourceEditor?.reveal(location.line, location.character);
+    } catch (error) {
+      if (request === previewJumpRequest) editorError = `Could not open source: ${String(error)}`;
+    }
   }
 
   async function reloadEditor() {
     if (!editorDraft || !editorSource || editorBusy) return;
     if (editorDraft.dirty && !window.confirm('Discard unsaved changes and reload the source?'))
       return;
-    drafts.get(editorSource)?.delete(editorDraft.path);
-    editing = false;
-    editorDraft = null;
-    await openEditor();
+    const source = editorSource;
+    const path = editorDraft.path;
+    editorBusy = true;
+    try {
+      const file = await (source.readSource ?? source.read)(path);
+      if (editorSource !== source || editorDraft?.path !== path) return;
+      const draft = new EditorDraft(path, file.text, file.stamp);
+      drafts.get(source)?.set(path, draft);
+      clearTimeout(markdownUpdateTimer);
+      markdownPreviewText = draft.text;
+      editorDraft = draft;
+      editorInstanceRevision++;
+      editorRevision++;
+      typstPreview?.updateDocument(path, draft.text);
+    } catch (error) {
+      editorError = String(error);
+    } finally {
+      editorBusy = false;
+    }
   }
-
   async function saveEditor() {
     const draft = editorDraft;
     const source = editorSource;
@@ -481,6 +734,18 @@
   async function openDocument(path: string) {
     await workspace.open(path);
     if (window.innerWidth < NARROW_VIEWPORT) sidebar = false;
+  }
+  async function entryCreated(
+    source: Source,
+    path: string,
+    kind: 'folder' | 'markdown' | 'typst' | 'latex',
+  ) {
+    createTarget = null;
+    if (workspace.source !== source) return;
+    workspace.treeRevision++;
+    if (kind === 'folder') return;
+    await openDocument(path);
+    if (workspace.source === source && workspace.active === path) await openEditor();
   }
   async function follow(href: string, documentPath = workspace.active) {
     const target = resolveLink(documentPath, href);
@@ -744,6 +1009,52 @@
   async function copyPath(path: string) {
     const copied = await writeClipboard(path);
     if (!copied) workspace.error = 'Could not copy the path.';
+  }
+  async function copyExplorerContents(path: string) {
+    const source = workspace.source;
+    if (!source) return;
+    try {
+      const draft = drafts.get(source)?.get(path);
+      const content = draft
+        ? draft.text
+        : source.readText
+          ? await source.readText(path)
+          : (await (source.readSource ?? source.read)(path)).text;
+      if (!(await writeClipboard(content))) throw new Error('Clipboard is unavailable.');
+    } catch (error) {
+      workspace.error = `Could not copy file contents: ${String(error)}`;
+    }
+  }
+  async function deleteExplorerFile(path: string) {
+    const source = workspace.source;
+    if (!source?.deleteFile || editorBusy) return;
+    const sourceDrafts = drafts.get(source);
+    if (sourceDrafts?.get(path)?.dirty) {
+      workspace.error = `Save or discard the unsaved changes in ${basename(path)} before deleting it.`;
+      return;
+    }
+    if (!window.confirm(`Permanently delete ${basename(path)}? This cannot be undone.`)) return;
+    editorBusy = true;
+    try {
+      await source.deleteFile(path);
+      if (workspace.source !== source) return;
+      const related = typstPreviewSessions.get(path);
+      const hasUnsaved =
+        sourceDrafts?.get(path)?.dirty ||
+        [...(related ?? [])].some((item) => sourceDrafts?.get(item)?.dirty);
+      if (!hasUnsaved && workspace.tabs.some((tab) => tab.path === path)) {
+        editorBusy = false;
+        workspace.close(path);
+      } else if (hasUnsaved || editorDraft?.path === path) {
+        workspace.error = 'The file was deleted; its open editor has been retained.';
+      }
+      workspace.treeRevision++;
+      if (explorerSelection === path) explorerSelection = '';
+    } catch (error) {
+      workspace.error = `Could not delete file: ${String(error)}`;
+    } finally {
+      editorBusy = false;
+    }
   }
   async function copySelection(kind: 'source' | 'text' | 'quote') {
     const menu = selectionMenu;
@@ -1121,6 +1432,37 @@
     if (menu.target.kind === 'document') return 'Document';
     return 'Application';
   });
+  const contextIcons: Record<string, typeof Copy> = {
+    Open: ExternalLink,
+    'Open folder': FolderOpen,
+    'Open file…': FileText,
+    'Open folder…': FolderOpen,
+    'New file…': FilePlus2,
+    'New folder…': FolderPlus,
+    Rename: Pencil,
+    'Show in explorer': FolderSearch,
+    'Copy file contents': Clipboard,
+    'Copy relative path': Link2,
+    'Copy full path': Copy,
+    'Copy path': Copy,
+    'Delete file…': Trash2,
+    'Refresh files': RefreshCw,
+    'Split to the right': Columns2,
+    'Close tab': X,
+    'Close other tabs': X,
+    'Close all tabs': X,
+    'Copy raw source': Code,
+    'Find in document…': Search,
+    'Toggle outline': PanelRight,
+    'Toggle split view': Columns2,
+    'Fit to width': Maximize2,
+    'Reset document zoom': RefreshCw,
+    'Command palette…': Search,
+    'Toggle explorer': PanelLeft,
+    'Toggle right panel': PanelRight,
+    'Settings…': SettingsIcon,
+    'Keyboard shortcuts': CircleHelp,
+  };
   const contextMenuItems = $derived.by(() => {
     const menu = contextMenu;
     const entries: ContextMenuEntry[] = [];
@@ -1159,6 +1501,7 @@
       });
     } else if (menu.target.kind === 'file') {
       const path = menu.target.path;
+      const directory = menu.target.directory ? path : dirname(path);
       if (menu.target.directory)
         add('Open folder', () => {
           workspace.directory = path;
@@ -1166,17 +1509,39 @@
           showExplorer();
         });
       else if (menu.target.document) add('Open', () => void openDocument(path));
+      if (workspace.source?.create) {
+        const source = workspace.source;
+        add('New file…', () => (createTarget = { source, directory, initialKind: 'markdown' }));
+        add('New folder…', () => (createTarget = { source, directory, initialKind: 'folder' }));
+      }
+      separator();
+      if (!menu.target.directory && workspace.source?.rename)
+        add('Rename', () => (renamePath = path), 'F2');
       if (!menu.target.directory)
         add('Show in explorer', () => {
           workspace.directory = dirname(path);
           workspace.treeRevision++;
           showExplorer();
         });
-      add('Copy path', () => void copyPath(path));
+      if (
+        !menu.target.directory &&
+        !isPdf(path) &&
+        (workspace.source?.readText || menu.target.document)
+      )
+        add('Copy file contents', () => void copyExplorerContents(path));
+      add(
+        'Copy relative path',
+        () => void copyPath(relativeProjectPath(workspace.directory, path)),
+      );
+      add('Copy full path', () => void copyPath(path));
       separator();
       add('Refresh files', () => {
         workspace.treeRevision++;
       });
+      if (!menu.target.directory && workspace.source?.deleteFile) {
+        separator();
+        add('Delete file…', () => void deleteExplorerFile(path));
+      }
     } else if (menu.target.kind === 'document') {
       if (canCopyRaw) add('Copy raw source', () => void copyRawDocument());
       add('Find in document…', openSearch, 'Ctrl F');
@@ -1434,6 +1799,9 @@
       }
       const row = target?.closest('.file-row[data-path]') as HTMLElement | null;
       if (row?.dataset.path) {
+        explorerSelection = row.dataset.path;
+        if (row.dataset.directory === 'true')
+          updateExplorerState({ ...explorerState, workingDirectory: row.dataset.path });
         openContextMenu(
           {
             kind: 'file',
@@ -1547,7 +1915,7 @@
             <button
               aria-pressed={workspace.active === tab.path}
               class="tab-select"
-              title={tab.path}
+              title={displayPath(tab.path)}
               onclick={() => workspace.open(tab.path)}
               ><FileText size={14} /><span>{basename(tab.path)}</span></button
             >{#if workspace.active === tab.path && isMarkdown(tab.path)}<button
@@ -1655,7 +2023,7 @@
               class="path-form"
               onsubmit={(event) => {
                 event.preventDefault();
-                useFolder(normalize(pathInput), false);
+                useFolder(normalize(expandHomePath(pathInput)), false);
               }}
             >
               <input aria-label="Directory path" bind:value={pathInput} spellcheck="false" /><button
@@ -1676,14 +2044,33 @@
             >
           </div>
           <div class="explorer-tools">
-            <span>FILES</span>
+            <span>EXPLORER</span>
             <div>
+              {#if workspace.source?.create}<button
+                  class="icon-button small"
+                  aria-label="Create file or folder"
+                  title="Create in {displayPath(explorerState.workingDirectory)}"
+                  onclick={() => {
+                    if (workspace.source)
+                      createTarget = {
+                        source: workspace.source,
+                        directory: explorerState.workingDirectory,
+                      };
+                  }}><Plus size={15} /></button
+                >{/if}
               <button class="icon-button small" aria-label="Open documents" onclick={chooseFile}
                 ><FileText size={15} /></button
               ><button class="icon-button small" aria-label="Refresh files" onclick={refresh}
                 ><RefreshCw size={14} /></button
               >
             </div>
+          </div>
+          <div class="explorer-breadcrumb" title={displayPath(explorerState.workingDirectory)}>
+            <FolderOpen size={14} />
+            <span>{basename(workspace.directory)}</span>
+            {#if explorerState.workingDirectory !== workspace.directory}
+              <ChevronRight size={12} /><strong>{basename(explorerState.workingDirectory)}</strong>
+            {/if}
           </div>
           <div class="explorer-scroll">
             {#if workspace.source}<Explorer
@@ -1692,6 +2079,16 @@
                 revision={workspace.treeRevision}
                 active={workspace.active}
                 onopen={openDocument}
+                expanded={explorerState.expanded}
+                workingDirectory={explorerState.workingDirectory}
+                ontoggle={toggleExplorerFolder}
+                selected={explorerSelection}
+                onselect={(path) => (explorerSelection = path)}
+                {renamePath}
+                {renameBusy}
+                onrename={(path, name) => void renameExplorerFile(path, name)}
+                oncancelrename={() => (renamePath = '')}
+                onbeginrename={(path) => (renamePath = path)}
               />{/if}
           </div>
           <div class="explorer-actions">
@@ -1732,7 +2129,7 @@
                         >
                           <FolderOpen size={16} />
                           <span class="recent-dialog-copy">
-                            <strong>{folder.path}</strong>
+                            <strong>{displayPath(folder.path)}</strong>
                             {#if folder.lastFile}<small>{basename(folder.lastFile)}</small>{/if}
                           </span>
                           <ChevronRight size={14} />
@@ -1781,33 +2178,165 @@
             >
           </div>{/if}
         {#if workspace.error}<div class="error-banner" role="alert">
-            <span>{workspace.error}</span><button
+            <span>{displayPathMessage(workspace.error)}</span><button
               class="icon-button small"
               aria-label="Dismiss error"
               onclick={() => (workspace.error = '')}><X size={14} /></button
             >
           </div>{/if}
         {#if editorError}<div class="error-banner" role="alert">
-            <span>{editorError}</span><button
+            <span>{displayPathMessage(editorError)}</span><button
               class="icon-button small"
               aria-label="Dismiss editor error"
               onclick={() => (editorError = '')}><X size={14} /></button
             >
           </div>{/if}
-        {#if workspace.activeTab?.error}<div class="error-banner" role="alert">
-            {workspace.activeTab.error}
+        {#if workspace.activeTab?.error && !editorVisible}<div class="error-banner" role="alert">
+            {displayPathMessage(workspace.activeTab.error)}
           </div>{/if}
         <div class="reading-layout">
           <div class="panes" class:split={!!workspace.secondary}>
             {#if workspace.activeTab && workspace.source}
               {#if editorVisible && editorDraft && SourceEditor}
-                {#key editorDraft.path}<SourceEditor
-                    path={editorDraft.path}
-                    language={editorLanguage}
-                    initialText={editorDraft.text}
-                    onchange={updateEditor}
-                    onsave={() => void saveEditor()}
-                  />{/key}
+                <div
+                  class="typst-editor-layout"
+                  class:live={(!!typstPreviewRoot ||
+                    editorLanguage === 'markdown' ||
+                    editorLanguage === 'latex') &&
+                    typstLiveVisible}
+                  style={`--typst-source-share: ${typstSourceShare}%`}
+                >
+                  <div class="typst-editor-source">
+                    {#if typstPreviewRoot || editorLanguage === 'markdown' || editorLanguage === 'latex'}
+                      <div class="typst-editor-heading">
+                        <span title={displayPath(editorDraft.path)}
+                          >Editing {basename(editorDraft.path)}</span
+                        >
+                        {#if (typstPreviewRoot || latexPreviewRoot) && editorDraft.path !== (typstPreviewRoot || latexPreviewRoot)}
+                          <button
+                            class="btn btn-ghost btn-xs"
+                            onclick={() =>
+                              void openPreviewSource({
+                                path: typstPreviewRoot || latexPreviewRoot,
+                                line: 0,
+                                character: 0,
+                              })}>Main document</button
+                          >
+                        {/if}
+                        <button
+                          class="btn btn-ghost btn-xs"
+                          onclick={() => (typstLiveVisible = !typstLiveVisible)}
+                          >{editorLanguage === 'latex'
+                            ? typstLiveVisible
+                              ? 'Hide PDF preview'
+                              : 'Show PDF preview'
+                            : typstLiveVisible
+                              ? 'Hide live preview'
+                              : 'Show live preview'}</button
+                        >
+                      </div>
+                    {/if}
+                    {#key `${editorDraft.path}\0${preferences.languageServerPaths[editorLanguage]}\0${editorInstanceRevision}`}<SourceEditor
+                        bind:this={sourceEditor}
+                        path={editorDraft.path}
+                        language={editorLanguage}
+                        serverPath={preferences.languageServerPaths[editorLanguage]}
+                        initialText={editorDraft.text}
+                        onchange={updateEditor}
+                        onsave={() => void saveEditor()}
+                        onposition={(line, character) => {
+                          if (editorLanguage === 'markdown') markdownPreview?.revealSource(line);
+                          else if (editorLanguage === 'latex')
+                            latexPreview?.reveal(editorDraft!.path, line);
+                          else typstPreview?.reveal(editorDraft!.path, line, character);
+                        }}
+                      />{/key}
+                  </div>
+                  {#if typstPreviewRoot && typstLiveVisible && TypstLivePreview}
+                    <EditorSplitHandle
+                      value={typstSourceShare}
+                      onresize={(value) => (typstSourceShare = value)}
+                    />
+                    {#key `${typstPreviewRoot}\0${preferences.languageServerPaths.typst}`}<TypstLivePreview
+                        bind:this={typstPreview}
+                        path={typstPreviewRoot}
+                        serverPath={preferences.languageServerPaths.typst}
+                        getDocuments={typstDocuments}
+                        onjump={(location) => void openPreviewSource(location)}
+                      />{/key}
+                  {/if}
+                  {#if editorLanguage === 'markdown' && typstLiveVisible}
+                    <EditorSplitHandle
+                      value={typstSourceShare}
+                      onresize={(value) => (typstSourceShare = value)}
+                    />
+                    <div class="markdown-live-preview">
+                      <div class="typst-editor-heading">
+                        <span>Live preview</span>
+                        <ZoomControls
+                          label="live preview"
+                          value={preferences.documentZoom}
+                          onchange={(action) => zoom({ target: 'document', action })}
+                        />
+                        <button
+                          class="icon-button small"
+                          aria-label="Fit live preview to width"
+                          title="Fit to width"
+                          onclick={() =>
+                            updatePreferences({
+                              ...preferences,
+                              documentZoom: 100,
+                              fitWidth: true,
+                            })}><Maximize2 size={14} /></button
+                        >
+                      </div>
+                      <Preview
+                        bind:this={markdownPreview}
+                        tab={{
+                          ...workspace.activeTab,
+                          text: markdownPreviewText,
+                          bytes: undefined,
+                        }}
+                        scrollPosition={markdownPreviewScroll}
+                        source={workspace.source}
+                        {preferences}
+                        trusted={false}
+                        query=""
+                        anchor={null}
+                        onlink={(href) => follow(href, workspace.activeTab!.path)}
+                        onheadings={() => {}}
+                        onscroll={(_path, y) => (markdownPreviewScroll = y)}
+                        oncommand={viewCommand}
+                        onsourcejump={(line) => sourceEditor?.reveal(line, 0)}
+                      />
+                    </div>
+                  {/if}
+                  {#if editorLanguage === 'latex' && typstLiveVisible}
+                    <EditorSplitHandle
+                      value={typstSourceShare}
+                      onresize={(value) => (typstSourceShare = value)}
+                    />
+                    {#key latexPreviewRoot}
+                      <LatexLivePreview
+                        bind:this={latexPreview}
+                        path={latexPreviewRoot || editorDraft.path}
+                        text={editorDraft.path === latexPreviewRoot
+                          ? editorText
+                          : (drafts.get(editorSource!)?.get(latexPreviewRoot)?.text ?? editorText)}
+                        savedText={editorDraft.path === latexPreviewRoot
+                          ? editorDraft.expectedText
+                          : (drafts.get(editorSource!)?.get(latexPreviewRoot)?.expectedText ?? '')}
+                        initialTab={workspace.activeTab}
+                        source={workspace.source}
+                        {preferences}
+                        onpreferences={updatePreferences}
+                        oncommand={viewCommand}
+                        onjump={(location) => void openPreviewSource(location)}
+                        overlays={latexOverlays}
+                      />
+                    {/key}
+                  {/if}
+                </div>
               {:else}
                 {#key workspace.active}<Preview
                     bind:this={primaryPreview}
@@ -1852,7 +2381,7 @@
                     >
                   </div>
                   {#if workspace.secondaryTab.error}<div class="error-banner" role="alert">
-                      {workspace.secondaryTab.error}
+                      {displayPathMessage(workspace.secondaryTab.error)}
                     </div>{/if}
                   <Preview
                     bind:this={secondaryPreview}
@@ -1883,6 +2412,13 @@
                 ><button class="btn btn-ghost btn-sm" onclick={chooseFolder}>Browse a folder</button
                 >
               </div>{/if}
+            {#if workspace.busy && (isTypst(workspace.openingPath) || isLatex(workspace.openingPath))}
+              <div class="compile-loading" role="status" aria-live="polite">
+                <div class="compile-papyrus" aria-hidden="true"><span></span></div>
+                <strong>Preparing your document</strong>
+                <span>Compiling {basename(workspace.openingPath)}…</span>
+              </div>
+            {/if}
           </div>
         </div>
       </main>
@@ -2111,11 +2647,18 @@
       onkeydown={contextMenuKeydown}
     >
       {#if contextMenuTitle}<div class="context-menu-title">{contextMenuTitle}</div>{/if}
-      {#each contextMenuItems as item ('separator' in item ? 'separator' : item.label)}
+      {#each contextMenuItems as item, index (index)}
         {#if 'separator' in item}
           <div class="context-menu-separator"></div>
         {:else}
-          <button type="button" role="menuitem" onclick={() => runContextMenuEntry(item)}>
+          {@const Icon = contextIcons[item.label] ?? FileText}
+          <button
+            type="button"
+            role="menuitem"
+            class:context-destructive={item.label === 'Delete file…'}
+            onclick={() => runContextMenuEntry(item)}
+          >
+            <Icon size={15} aria-hidden="true" />
             <span>{item.label}</span>
             {#if item.shortcut}<span class="context-shortcut">{item.shortcut}</span>{/if}
           </button>
@@ -2168,6 +2711,15 @@
       void openDocument(path);
     }}
     onpage={(page) => workspace.navigateAnchor(`page=${page}`)}
+  />{/if}
+{#if createTarget}<CreateEntry
+    source={createTarget.source}
+    directory={createTarget.directory}
+    initialKind={createTarget.initialKind}
+    onclose={() => (createTarget = null)}
+    oncreated={(path, kind) => {
+      if (createTarget) void entryCreated(createTarget.source, path, kind);
+    }}
   />{/if}
 {#if trustDialog}<dialog
     use:openDialog

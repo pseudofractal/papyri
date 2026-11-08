@@ -95,6 +95,11 @@ export async function desktopSource(getPreferences: () => Preferences): Promise<
           : stamp;
       },
       list: (path) => invokeHost<Entry[]>('list_directory', { path }),
+      create: (directory, name, kind) =>
+        invokeHost<string>('create_entry', { directory, name, kind }),
+      rename: (path, name) => invokeHost<string>('rename_file', { path, name }),
+      readText: (path) => invokeHost<string>('read_text_file', { path }),
+      deleteFile: (path) => invokeHost<void>('delete_file', { path }),
       readSource: (path) => invokeHost<FileData>('read_document', { path }),
       write: (path, text, expected) =>
         invokeHost<FileData>('write_document', {

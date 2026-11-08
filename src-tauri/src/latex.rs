@@ -25,6 +25,21 @@ const COMPILER_TIMEOUT: Duration = Duration::from_secs(30);
 static COMPILER: Mutex<()> = Mutex::new(());
 static DEPENDENCIES: LazyLock<Mutex<HashMap<PathBuf, Vec<PathBuf>>>> =
   LazyLock::new(|| Mutex::new(HashMap::new()));
+static SYNC_ARTIFACTS: LazyLock<Mutex<HashMap<String, SyncArtifact>>> =
+  LazyLock::new(|| Mutex::new(HashMap::new()));
+pub fn release_sync(id: &str) -> Result<(), String> {
+  SYNC_ARTIFACTS
+    .lock()
+    .map_err(|error| error.to_string())?
+    .remove(id);
+  Ok(())
+}
+struct SyncArtifact {
+  output: OutputDirectory,
+  project: PathBuf,
+  job_name: String,
+  compiler: PathBuf,
+}
 
 #[derive(Serialize)]
 pub struct Engine {
@@ -45,6 +60,15 @@ fn bind_tex_distribution(command: &mut Command, executable: &Path) {
   let home = std::env::var_os("HOME").map(PathBuf::from);
   if let Some(root) = tex_distribution_root(executable, home.as_deref()) {
     command.arg("--ro-bind").arg(root).arg(root);
+  }
+}
+
+fn sandbox_executable(executable: &Path, name: &str) -> PathBuf {
+  let home = std::env::var_os("HOME").map(PathBuf::from);
+  if tex_distribution_root(executable, home.as_deref()).is_some() {
+    executable.to_path_buf()
+  } else {
+    Path::new("/compiler").join(name)
   }
 }
 
@@ -217,7 +241,7 @@ fn sandbox_command(project: &Path, output: &Path, binary: &Path, name: &str) -> 
     "C.UTF-8",
     "--setenv",
     "PATH",
-    "/usr/bin:/bin",
+    "/compiler:/usr/bin:/bin",
   ]);
   command
 }
@@ -234,8 +258,8 @@ fn run_bibtex(project: &Path, output: &Path, binary: &Path, job_name: &str) -> R
     "--chdir",
     "/output",
     "--",
-    "/compiler/bibtex",
   ]);
+  command.arg(sandbox_executable(binary, "bibtex"));
   command.arg(job_name);
   let mut child = command
     .stdin(Stdio::null())
@@ -274,6 +298,37 @@ fn run_bibtex(project: &Path, output: &Path, binary: &Path, job_name: &str) -> R
 
 /// Compile a LaTeX entry point to an isolated temporary PDF.
 pub fn compile(path: String, engine: String, configured_path: String) -> Result<Vec<u8>, String> {
+  compile_snapshot(path, engine, configured_path, None)
+}
+
+/// Compile an optional unsaved entry-point snapshot without modifying the project.
+pub fn compile_snapshot(
+  path: String,
+  engine: String,
+  configured_path: String,
+  draft: Option<String>,
+) -> Result<Vec<u8>, String> {
+  compile_internal(path, engine, configured_path, draft, Vec::new(), false)
+}
+
+pub fn compile_preview(
+  path: String,
+  engine: String,
+  configured_path: String,
+  draft: String,
+  overlays: Vec<(String, String)>,
+) -> Result<Vec<u8>, String> {
+  compile_internal(path, engine, configured_path, Some(draft), overlays, true)
+}
+
+fn compile_internal(
+  path: String,
+  engine: String,
+  configured_path: String,
+  draft: Option<String>,
+  overlays: Vec<(String, String)>,
+  retain_sync: bool,
+) -> Result<Vec<u8>, String> {
   if !is_latex(&path) {
     return Err("Expected a .tex document".into());
   }
@@ -297,12 +352,55 @@ pub fn compile(path: String, engine: String, configured_path: String) -> Result<
     .ok_or("Expected a UTF-8 document filename")?;
   files::bounded_read(&path, files::DOCUMENT_LIMIT)?;
   let output = OutputDirectory::create()?;
+  let draft_path = if let Some(text) = draft {
+    if text.len() as u64 > files::DOCUMENT_LIMIT {
+      return Err("This document exceeds the source size limit.".into());
+    }
+    let draft_path = output.0.join("draft.tex");
+    fs::write(&draft_path, text).map_err(|error| format!("Cannot prepare LaTeX draft: {error}"))?;
+    Some(draft_path)
+  } else {
+    None
+  };
+  if overlays.len() > 100 {
+    return Err("Too many unsaved LaTeX files".into());
+  }
+  let mut overlay_paths = Vec::new();
+  let mut overlay_bytes = 0u64;
+  for (index, (name, text)) in overlays.into_iter().enumerate() {
+    let source = fs::canonicalize(&name).map_err(|error| format!("{name}: {error}"))?;
+    let relative = source
+      .strip_prefix(project)
+      .map_err(|_| "Draft is outside the document folder")?;
+    if source == canonical {
+      continue;
+    }
+    if !is_latex(&name) {
+      return Err("Expected a .tex draft".into());
+    }
+    overlay_bytes = overlay_bytes.saturating_add(text.len() as u64);
+    if overlay_bytes > files::DOCUMENT_LIMIT {
+      return Err("LaTeX drafts exceed the source size limit".into());
+    }
+    let temporary = output.0.join(format!("draft-{index}.tex"));
+    fs::write(&temporary, text).map_err(|error| format!("Cannot prepare LaTeX draft: {error}"))?;
+    overlay_paths.push((temporary, Path::new("/project").join(relative)));
+  }
   let mut bibliography = Vec::new();
   let mut needs_bibtex = false;
   let mut passes = 2;
   let mut pass = 0;
   while pass < passes {
     let mut command = sandbox_command(project, &output.0, &compiler, &engine);
+    if let Some(draft_path) = &draft_path {
+      command
+        .arg("--ro-bind")
+        .arg(draft_path)
+        .arg(Path::new("/project").join(filename));
+    }
+    for (draft, target) in &overlay_paths {
+      command.arg("--ro-bind").arg(draft).arg(target);
+    }
     if engine == "xelatex" {
       let driver = compiler.with_file_name("xdvipdfmx");
       if executable(&driver) {
@@ -313,13 +411,14 @@ pub fn compile(path: String, engine: String, configured_path: String) -> Result<
       }
     }
     command.args(["--chdir", "/project", "--"]);
-    command.arg(format!("/compiler/{engine}"));
+    command.arg(sandbox_executable(&compiler, &engine));
     command.args([
       "-no-shell-escape",
       "-interaction=nonstopmode",
       "-halt-on-error",
       "-file-line-error",
       "-recorder",
+      "-synctex=1",
       "-output-directory=/output",
     ]);
     command.arg(format!("-jobname={job_name}"));
@@ -448,8 +547,142 @@ pub fn compile(path: String, engine: String, configured_path: String) -> Result<
   if dependencies.len() >= 32 {
     dependencies.clear();
   }
-  dependencies.insert(canonical, paths);
-  Ok(pdf)
+  dependencies.insert(canonical.clone(), paths);
+  if retain_sync {
+    read_output(
+      &output.0,
+      &format!("{job_name}.synctex.gz"),
+      files::PDF_LIMIT,
+    )?;
+    let id = output
+      .0
+      .file_name()
+      .and_then(OsStr::to_str)
+      .and_then(|name| name.strip_prefix("papyri-latex-"))
+      .ok_or("Invalid preview identifier")?
+      .to_owned();
+    let mut artifacts = SYNC_ARTIFACTS.lock().map_err(|error| error.to_string())?;
+    if artifacts.len() >= 16 {
+      artifacts.clear();
+    }
+    artifacts.insert(
+      id.clone(),
+      SyncArtifact {
+        output,
+        project: project.to_path_buf(),
+        job_name: job_name.to_owned(),
+        compiler,
+      },
+    );
+    let mut response = id.into_bytes();
+    response.extend(pdf);
+    Ok(response)
+  } else {
+    Ok(pdf)
+  }
+}
+
+/// Query the SyncTeX data belonging to one retained preview.
+pub fn sync_query(
+  id: String,
+  source: Option<String>,
+  line: Option<u32>,
+  page: Option<u32>,
+  x: Option<f64>,
+  y: Option<f64>,
+) -> Result<String, String> {
+  let artifacts = SYNC_ARTIFACTS.lock().map_err(|error| error.to_string())?;
+  let artifact = artifacts
+    .get(&id)
+    .ok_or("The preview synchronization data has expired. Recompile the document.")?;
+  let path = std::env::var_os("PATH").unwrap_or_default();
+  let executable = bibliography_tool(&artifact.compiler, &path, "synctex")?;
+  let pdf = format!("/output/{}.pdf", artifact.job_name);
+  let mut command = sandbox_command(
+    &artifact.project,
+    &artifact.output.0,
+    &executable,
+    "synctex",
+  );
+  command.args(["--chdir", "/project", "--"]);
+  command.arg(sandbox_executable(&executable, "synctex"));
+  if let (Some(source), Some(line)) = (source, line) {
+    let canonical = fs::canonicalize(&source).map_err(|error| format!("{source}: {error}"))?;
+    let relative = canonical
+      .strip_prefix(&artifact.project)
+      .map_err(|_| "Source is outside the document folder")?;
+    if line == 0 {
+      return Err("Invalid source line".into());
+    }
+    command
+      .arg("view")
+      .arg("-i")
+      .arg(format!("{line}:0:/project/{}", relative.display()))
+      .arg("-o")
+      .arg(pdf);
+  } else if let (Some(page), Some(x), Some(y)) = (page, x, y) {
+    if page == 0 || !x.is_finite() || !y.is_finite() || x < 0.0 || y < 0.0 {
+      return Err("Invalid PDF position".into());
+    }
+    command
+      .arg("edit")
+      .arg("-o")
+      .arg(format!("{page}:{x}:{y}:{pdf}"));
+  } else {
+    return Err("Invalid synchronization request".into());
+  }
+  let mut child = command
+    .stdin(Stdio::null())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()
+    .map_err(|error| format!("Cannot run SyncTeX: {error}"))?;
+  let stdout = child
+    .stdout
+    .take()
+    .ok_or("SyncTeX output pipe unavailable")?;
+  let stderr = child
+    .stderr
+    .take()
+    .ok_or("SyncTeX diagnostic pipe unavailable")?;
+  let out = thread::spawn(move || diagnostic_tail(stdout));
+  let err = thread::spawn(move || diagnostic_tail(stderr));
+  let status = typst::wait_with_timeout(&mut child, COMPILER_TIMEOUT);
+  let stdout = out.join().map_err(|_| "SyncTeX output thread failed")??;
+  let stderr = err
+    .join()
+    .map_err(|_| "SyncTeX diagnostic thread failed")??;
+  let status = status?.ok_or("SyncTeX search timed out")?;
+  if !status.success() {
+    return Err(format!(
+      "SyncTeX failed: {}",
+      String::from_utf8_lossy(&stderr)
+    ));
+  }
+  let result = String::from_utf8(stdout).map_err(|error| error.to_string())?;
+  let mut mapped = String::new();
+  for line in result.lines() {
+    if let Some(input) = line.strip_prefix("Input:") {
+      let input = Path::new(input);
+      let relative = if input.is_absolute() {
+        input
+          .strip_prefix("/project")
+          .map_err(|_| "SyncTeX source is outside the document folder")?
+      } else {
+        input
+      };
+      let resolved = fs::canonicalize(artifact.project.join(relative))
+        .map_err(|error| format!("Cannot resolve SyncTeX source: {error}"))?;
+      if !resolved.starts_with(&artifact.project) {
+        return Err("SyncTeX source is outside the document folder".into());
+      }
+      mapped.push_str(&format!("Input:{}\n", resolved.display()));
+    } else {
+      mapped.push_str(line);
+      mapped.push('\n');
+    }
+  }
+  Ok(mapped)
 }
 
 #[cfg(test)]
@@ -487,6 +720,18 @@ mod tests {
   }
 
   #[test]
+  fn keeps_distribution_executables_at_their_original_path_in_the_sandbox() {
+    let distribution = OutputDirectory::create().unwrap();
+    fs::create_dir(distribution.0.join("texmf-dist")).unwrap();
+    let executable = distribution.0.join("bin/x86_64-linux/lualatex");
+    assert_eq!(sandbox_executable(&executable, "lualatex"), executable);
+    assert_eq!(
+      sandbox_executable(Path::new("/opt/lualatex"), "lualatex"),
+      Path::new("/compiler/lualatex")
+    );
+  }
+
+  #[test]
   #[ignore = "Requires user namespaces and PAPYRI_TEST_TEX_BIN containing the three engines"]
   fn sandboxed_engines_compile_and_report_errors() {
     let binaries = PathBuf::from(std::env::var_os("PAPYRI_TEST_TEX_BIN").unwrap());
@@ -500,6 +745,90 @@ mod tests {
     .unwrap();
     fs::write(&imported, "Hello from an imported file.").unwrap();
     let name = document.to_string_lossy().into_owned();
+    let original = fs::read_to_string(&document).unwrap();
+    let snapshot = "\\documentclass{article}\n\\begin{document}\nUnsaved draft\n\\end{document}\n";
+    let pdf = compile_snapshot(
+      name.clone(),
+      "pdflatex".into(),
+      binaries.join("pdflatex").to_string_lossy().into_owned(),
+      Some(snapshot.into()),
+    )
+    .unwrap();
+    assert!(pdf.starts_with(b"%PDF-"));
+    assert_eq!(fs::read_to_string(&document).unwrap(), original);
+    let artifact = compile_preview(
+      name.clone(),
+      "pdflatex".into(),
+      binaries.join("pdflatex").to_string_lossy().into_owned(),
+      snapshot.into(),
+      Vec::new(),
+    )
+    .unwrap();
+    let id = String::from_utf8(artifact[..32].to_vec()).unwrap();
+    let forward = sync_query(id.clone(), Some(name.clone()), Some(3), None, None, None).unwrap();
+    assert!(forward.contains("Page:1"), "{forward}");
+    let number = |key: &str| {
+      forward
+        .lines()
+        .find_map(|line| line.strip_prefix(key))
+        .unwrap()
+        .parse::<f64>()
+        .unwrap()
+    };
+    let inverse = sync_query(
+      id,
+      None,
+      None,
+      Some(1),
+      Some(number("x:")),
+      Some(number("y:")),
+    )
+    .unwrap();
+    assert!(inverse.contains(&format!("Input:{name}")), "{inverse}");
+    let included_snapshot =
+      "\\documentclass{article}\n\\begin{document}\n\\input{part}\n\\end{document}\n";
+    let included = imported.to_string_lossy().into_owned();
+    let artifact = compile_preview(
+      name.clone(),
+      "pdflatex".into(),
+      binaries.join("pdflatex").to_string_lossy().into_owned(),
+      included_snapshot.into(),
+      vec![(included.clone(), "Unsaved included text.".into())],
+    )
+    .unwrap();
+    let included_id = String::from_utf8(artifact[..32].to_vec()).unwrap();
+    let forward = sync_query(
+      included_id.clone(),
+      Some(included.clone()),
+      Some(1),
+      None,
+      None,
+      None,
+    )
+    .unwrap();
+    assert!(forward.contains("Page:1"), "{forward}");
+    let number = |key: &str| {
+      forward
+        .lines()
+        .find_map(|line| line.strip_prefix(key))
+        .unwrap()
+        .parse::<f64>()
+        .unwrap()
+    };
+    let inverse = sync_query(
+      included_id,
+      None,
+      None,
+      Some(1),
+      Some(number("x:")),
+      Some(number("y:")),
+    )
+    .unwrap();
+    assert!(inverse.contains(&format!("Input:{included}")), "{inverse}");
+    assert_eq!(
+      fs::read_to_string(&imported).unwrap(),
+      "Hello from an imported file."
+    );
     for engine in ENGINES {
       let binary = binaries.join(engine).to_string_lossy().into_owned();
       let pdf = compile(name.clone(), engine.into(), binary.clone()).unwrap();

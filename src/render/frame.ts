@@ -56,38 +56,13 @@ export function sanitize(html: string) {
     ALLOW_DATA_ATTR: true,
   });
 }
-
-/** Preserve HTML numbering when drawing markers outside WebKit's selection boxes. */
-function installOrderedListMarkers() {
-  for (const list of root.querySelectorAll<HTMLOListElement>('ol')) {
-    const items = [...list.children].filter(
-      (element): element is HTMLLIElement => element instanceof HTMLLIElement,
-    );
-    const start = Number.parseInt(list.getAttribute('start') ?? '', 10);
-    let number = Number.isNaN(start) ? (list.reversed ? items.length : 1) : list.start;
-    const step = list.reversed ? -1 : 1;
-    for (const item of items) {
-      const value = Number.parseInt(item.getAttribute('value') ?? '', 10);
-      if (!Number.isNaN(value)) number = item.value;
-      item.dataset.listMarker = `${number}.`;
-      number += step;
-    }
-  }
-}
-
 let mathOverflowFrame = 0;
-const MATH_OVERFLOW_TOLERANCE_PX = 1;
 
 /** Keep overflow only on inline math wider than the reading column. */
 function updateMathOverflow() {
   mathOverflowFrame = 0;
-  // Read all widths before changing overflow, which can invalidate layout.
-  const measurements = [...root.querySelectorAll<HTMLElement>('.math-content')].map((element) => ({
-    element,
-    overflowing: element.scrollWidth > element.clientWidth + MATH_OVERFLOW_TOLERANCE_PX,
-  }));
-  for (const { element, overflowing } of measurements) {
-    element.classList.toggle('scrollable', overflowing);
+  for (const element of root.querySelectorAll<HTMLElement>('.math')) {
+    element.classList.toggle('scrollable', element.scrollWidth > element.clientWidth + 1);
   }
 }
 
@@ -145,7 +120,6 @@ function applyPresentation(presentation: Record<string, unknown>) {
 applyPresentation(payload);
 root.innerHTML = payload.trusted ? payload.html : sanitize(payload.html);
 resolveReferenceTargets(root);
-installOrderedListMarkers();
 updateMathOverflow();
 document.fonts?.ready.then(updateMathOverflow);
 
@@ -339,6 +313,14 @@ function nearestSourceBlock(node: Node): Element | null {
   }
   return null;
 }
+
+let sourceNavigation = false;
+document.addEventListener('click', (event) => {
+  if (!sourceNavigation || !(event.target instanceof Element)) return;
+  if (event.target.closest('a, button, input') || !window.getSelection()?.isCollapsed) return;
+  const block = nearestSourceBlock(event.target) as HTMLElement | null;
+  if (block) notifyHost({ type: 'source-jump', line: Number(block.dataset.sourceStart) });
+});
 
 function sourceSlice(markdown: string, start: number, end: number): string {
   const lines = markdown.split(/\r?\n/);
@@ -576,6 +558,22 @@ function scrollFromWheel(
 }
 window.addEventListener('message', (event) => {
   if (event.source !== parent) return;
+  if (event.data?.type === 'source-navigation') {
+    sourceNavigation = event.data.enabled === true;
+    return;
+  }
+  if (event.data?.type === 'source-reveal' && Number.isSafeInteger(event.data.line)) {
+    const line = event.data.line;
+    const blocks = [...root.querySelectorAll<HTMLElement>('[data-source-start][data-source-end]')];
+    const match = blocks
+      .filter(
+        (block) =>
+          Number(block.dataset.sourceStart) <= line && line < Number(block.dataset.sourceEnd),
+      )
+      .at(-1);
+    match?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return;
+  }
   if (event.data?.type === 'scroll' && Number.isSafeInteger(event.data.request)) {
     const request = event.data.request;
     const y = finiteNumber(event.data.y)

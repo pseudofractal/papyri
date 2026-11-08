@@ -32,6 +32,7 @@ export class Workspace {
   recentFiles = $state<string[]>([]);
   error = $state('');
   busy = $state(false);
+  openingPath = $state('');
   treeRevision = $state(0);
   anchor = $state<AnchorTarget | null>(null);
   activeTab = $derived(this.tabs.find((tab) => tab.path === this.active));
@@ -92,6 +93,7 @@ export class Workspace {
     const source = this.source;
     if (!source) return;
     this.busy = true;
+    this.openingPath = path;
     try {
       const file = await source.read(path);
       if (request !== this.navigation || source !== this.source) return;

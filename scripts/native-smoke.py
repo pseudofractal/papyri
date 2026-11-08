@@ -276,6 +276,19 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         expected_background = "rgb(239, 241, 245)" if original_theme == "mocha" else "rgb(30, 30, 46)"
         until(lambda: execute("return getComputedStyle(document.querySelector('.settings-panel')).backgroundColor") == expected_background, "native themed settings")
         assert execute("return getComputedStyle(document.querySelector('.settings-panel')).color") == expected_color
+        discovery = asynchronous("""
+          const done=arguments[arguments.length-1],token=window.__PAPYRI_HOST_TOKEN__;
+          Promise.all(['typst_binary','latex_engines'].map(command=>window.__TAURI_INTERNALS__.invoke(command,{hostToken:token})))
+            .then(([typst,engines])=>done({typst,engines})).catch(error=>done({error:String(error)}));
+        """)
+        assert "error" not in discovery and len(discovery["engines"]) == 3, discovery
+        tool_permissions = asynchronous("""
+          const done=arguments[arguments.length-1],token=window.__PAPYRI_HOST_TOKEN__;
+          Promise.all([['install_tool',{name:'unsupported'}],['manage_texlive',{action:'unsupported'}]].map(([command,args])=>
+            window.__TAURI_INTERNALS__.invoke(command,{...args,hostToken:token}).then(()=>'',error=>String(error))))
+            .then(done);
+        """)
+        assert "Unsupported managed tool" in tool_permissions[0] and "Unsupported TeX Live action" in tool_permissions[1], tool_permissions
         execute("document.querySelector('#settings-tab-reading').click()")
         until(lambda: execute("return !document.querySelector('#settings-panel-reading').hidden"), "native settings reading tab")
         execute("const values=[['Markdown text font','serif'],['Math font','STIX Two Math, serif']];for(const [label,value] of values){const input=document.querySelector(`[aria-label=\"${label}\"]`);input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}))}")

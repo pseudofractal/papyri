@@ -11,7 +11,7 @@
   } from '../render/sandbox';
   import type { Preferences, Source, Heading } from '../lib/types';
   import type { AnchorTarget, Tab } from '../lib/workspace.svelte';
-  import { isTypst, isLatex } from '../lib/paths';
+  import { displayPath, displayPathMessage, isTypst, isLatex } from '../lib/paths';
   import { exportDiagram } from '../lib/diagram-export';
   import { traceStartup, traceStartupPaint } from '../lib/startup-trace';
   import { native } from '../lib/sources';
@@ -41,6 +41,11 @@
     onpdfpage,
     onrendererror,
     ondismiss,
+    onsourcejump,
+    retainDuringUpdate = false,
+    onrendered,
+    showRenderInfo = true,
+    onpdfsourcejump,
   }: {
     tab: Tab;
     scrollPosition?: number;
@@ -68,10 +73,23 @@
     onpdfpage?: (path: string, page: number, total: number) => void;
     onrendererror?: (path: string, error: string) => void;
     ondismiss?: () => void;
+    onsourcejump?: (line: number) => void;
+    retainDuringUpdate?: boolean;
+    onrendered?: () => void;
+    showRenderInfo?: boolean;
+    onpdfsourcejump?: (location: { page: number; x: number; y: number }) => void;
   } = $props();
   let frame = $state<HTMLIFrameElement>();
-  let srcdoc = $state('');
-  let frameGeneration = $state(0);
+  let frames = $state<
+    { channel: string; document: string; trusted: boolean; bytes?: Uint8Array }[]
+  >([]);
+  const frameElements = new Map<string, HTMLIFrameElement>();
+  let pendingChannel = '';
+  function registerFrame(element: HTMLIFrameElement, channel: string) {
+    frameElements.set(channel, element);
+    if (channel === activeChannel) frame = element;
+    return { destroy: () => frameElements.delete(channel) };
+  }
   let error = $state('');
   let loading = $state(true);
   let elapsed = $state(0);
@@ -98,6 +116,13 @@
   }
   export function documentPath() {
     return tab.path;
+  }
+  export function revealSource(line: number) {
+    if (frameReady) frame?.contentWindow?.postMessage({ type: 'source-reveal', line }, '*');
+  }
+  export function revealPdf(location: { page: number; x: number; y: number }) {
+    if (frameReady)
+      frame?.contentWindow?.postMessage({ type: 'pdf-source-reveal', ...location }, '*');
   }
   function requestScroll(payload: { y?: number; dy?: number }): Promise<number> {
     if (!frame || !frameReady) return Promise.reject(new PreviewNotReadyError());
@@ -133,7 +158,7 @@
     }),
   );
   const delimiterKey = $derived(JSON.stringify(preferences.delimiters));
-  let activeChannel = '';
+  let activeChannel = $state('');
   let allowsMessages = false;
   $effect(() => {
     const text = tab.text;
@@ -151,12 +176,18 @@
     const controller = new AbortController();
     const channelEntropyWords = 4;
     const channel = crypto.getRandomValues(new Uint32Array(channelEntropyWords)).join('-');
-    frameReady = false;
     expanded = false;
     expandedKind = null;
-    allowsMessages = false;
-    activeChannel = '';
-    loading = true;
+    const keepVisible = (!!onsourcejump || retainDuringUpdate) && untrack(() => frameReady);
+    if (!keepVisible) {
+      frameReady = false;
+      allowsMessages = false;
+      activeChannel = '';
+    } else {
+      pendingChannel = '';
+      frames = untrack(() => frames.filter((item) => item.channel === activeChannel));
+    }
+    loading = !keepVisible;
     error = '';
     cancelScrolls('The preview changed.');
     (async () => {
@@ -195,12 +226,18 @@
         }
         if (controller.signal.aborted) return;
         traceStartup('frame-built');
-        activeChannel = channel;
-        allowsMessages = !trust;
-        srcdoc = document;
-        // Recreate the iframe so a load already in flight for an older
-        // document cannot win over this render and leave the host waiting.
-        frameGeneration++;
+        if (keepVisible) {
+          pendingChannel = channel;
+          frames = [
+            ...frames.filter((item) => item.channel === activeChannel),
+            { channel, document, trusted: trust, bytes },
+          ];
+        } else {
+          pendingChannel = '';
+          activeChannel = channel;
+          allowsMessages = !trust;
+          frames = [{ channel, document, trusted: trust, bytes }];
+        }
         onheadings(headings);
         loading = false;
       } catch (reason) {
@@ -228,6 +265,74 @@
       frame?.contentWindow?.postMessage({ type: 'presentation', ...presentation }, '*');
   });
   function message(event: MessageEvent) {
+    const pending = frames.find((item) => item.channel === pendingChannel);
+    const pendingFrame = pending && frameElements.get(pending.channel)?.contentWindow;
+    if (
+      pending &&
+      event.source === pendingFrame &&
+      event.data?.channel === pending.channel &&
+      pending.bytes
+    ) {
+      if (event.data.type === 'pdf-request') {
+        const bytes = pending.bytes.slice();
+        pendingFrame?.postMessage({ type: 'pdf-data', bytes }, '*', [bytes.buffer]);
+        return;
+      }
+      if (
+        event.data.type === 'pdf-resource-request' &&
+        typeof event.data.name === 'string' &&
+        event.data.name.length <= 128 &&
+        Number.isSafeInteger(event.data.request) &&
+        event.data.request > 0
+      ) {
+        const request = event.data.request;
+        void loadPdfResource(event.data.name)
+          .then((bytes) => {
+            if (pendingChannel === pending.channel)
+              pendingFrame?.postMessage({ type: 'pdf-resource-result', request, bytes }, '*', [
+                bytes.buffer as ArrayBuffer,
+              ]);
+          })
+          .catch((reason: unknown) => {
+            if (pendingChannel === pending.channel)
+              pendingFrame?.postMessage(
+                { type: 'pdf-resource-result', request, error: String(reason) },
+                '*',
+              );
+          });
+        return;
+      }
+      if (event.data.type === 'pdf-error') {
+        error =
+          typeof event.data.error === 'string'
+            ? event.data.error.slice(0, 8192)
+            : 'Could not render PDF.';
+        pendingChannel = '';
+        frames = frames.filter((item) => item.channel === activeChannel);
+        onrendererror?.(tab.path, error);
+        return;
+      }
+    }
+    if (
+      pending &&
+      event.source === frameElements.get(pending.channel)?.contentWindow &&
+      event.data?.channel === pending.channel &&
+      event.data?.type === (pending.bytes ? 'pdf-rendered' : 'ready')
+    ) {
+      frame = frameElements.get(pending.channel);
+      activeChannel = pending.channel;
+      allowsMessages = !pending.trusted;
+      pendingChannel = '';
+      frames = [pending];
+      frameReady = true;
+      if (onsourcejump)
+        frame?.contentWindow?.postMessage({ type: 'source-navigation', enabled: true }, '*');
+      if (onpdfsourcejump)
+        frame?.contentWindow?.postMessage({ type: 'pdf-source-navigation', enabled: true }, '*');
+      if (!tab.bytes) traceStartupPaint('document');
+      onrendered?.();
+      return;
+    }
     if (
       event.source !== frame?.contentWindow ||
       !event.data ||
@@ -236,6 +341,29 @@
     )
       return;
     const data = event.data;
+    if (
+      data.type === 'pdf-source-jump' &&
+      allowsMessages &&
+      tab.bytes &&
+      Number.isSafeInteger(data.page) &&
+      data.page > 0 &&
+      Number.isFinite(data.x) &&
+      Number.isFinite(data.y) &&
+      data.x >= 0 &&
+      data.y >= 0
+    ) {
+      onpdfsourcejump?.({ page: data.page, x: data.x, y: data.y });
+      return;
+    }
+    if (
+      data.type === 'source-jump' &&
+      allowsMessages &&
+      Number.isSafeInteger(data.line) &&
+      data.line >= 0
+    ) {
+      onsourcejump?.(data.line);
+      return;
+    }
     if (data.type === 'dismiss') {
       ondismiss?.();
       return;
@@ -384,11 +512,16 @@
     }
     if (data.type === 'ready') {
       frameReady = true;
+      if (onsourcejump)
+        frame?.contentWindow?.postMessage({ type: 'source-navigation', enabled: true }, '*');
+      if (onpdfsourcejump)
+        frame?.contentWindow?.postMessage({ type: 'pdf-source-navigation', enabled: true }, '*');
       if (!tab.bytes) traceStartupPaint('document');
       return;
     }
     if (data.type === 'pdf-rendered' && tab.bytes) {
       traceStartupPaint('pdf-page');
+      onrendered?.();
       return;
     }
     if (
@@ -502,26 +635,27 @@
       <span class="loading loading-spinner loading-sm"></span> Loading document…
     </div>{/if}
   {#if error}<div class="preview-status error" role="alert">
-      <span>{error}</span>
+      <span>{displayPathMessage(error)}</span>
       <button class="btn btn-ghost btn-sm" onclick={() => retryRequest++}>Retry preview</button>
     </div>{/if}
-  {#if srcdoc}{#key frameGeneration}<iframe
-        bind:this={frame}
-        class:pending={!frameReady}
-        title="{tab.bytes
-          ? 'PDF'
-          : isTypst(tab.path) || isLatex(tab.path)
-            ? 'Source'
-            : 'Markdown'} preview: {tab.path}"
-        sandbox="allow-scripts"
-        referrerpolicy="no-referrer"
-        {srcdoc}
-      ></iframe>{/key}{/if}
-  <span class="render-time"
-    >{tab.bytes
-      ? 'PDF.js · Read-only'
-      : isTypst(tab.path) || isLatex(tab.path)
-        ? 'Source · Read-only'
-        : `${elapsed} ms parse · ${trusted ? 'Scripts enabled' : 'Isolated preview'}`}</span
-  >
+  {#each frames as item (item.channel)}<iframe
+      use:registerFrame={item.channel}
+      class:pending={item.channel !== activeChannel || !frameReady}
+      class:buffered={item.channel !== activeChannel && frameReady}
+      title="{tab.bytes
+        ? 'PDF'
+        : isTypst(tab.path) || isLatex(tab.path)
+          ? 'Source'
+          : 'Markdown'} preview: {displayPath(tab.path)}"
+      sandbox="allow-scripts"
+      referrerpolicy="no-referrer"
+      srcdoc={item.document}
+    ></iframe>{/each}
+  {#if showRenderInfo}<span class="render-time"
+      >{tab.bytes
+        ? 'PDF.js · Read-only'
+        : isTypst(tab.path) || isLatex(tab.path)
+          ? 'Source · Read-only'
+          : `${elapsed} ms parse · ${trusted ? 'Scripts enabled' : 'Isolated preview'}`}</span
+    >{/if}
 </div>

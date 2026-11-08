@@ -49,7 +49,7 @@
             version = manifest.version;
             src = webSource;
             nodejs = pkgs.nodejs_24;
-            npmDepsHash = "sha256-Da5Px2iEgSOr8aGd7HRHgOz/7wYBixnNWLAF/sYhCP8=";
+            npmDepsHash = "sha256-LpszxHwMdbBBLn2JR7sbASXvQ3mc59io8+XaK93cvsk=";
             npmFlags = [ "--ignore-scripts" ];
             installPhase = ''
               runHook preInstall
@@ -58,7 +58,7 @@
               runHook postInstall
             '';
           };
-          nativeLibraries = with pkgs; [ glib glib-networking gtk3 gdk-pixbuf cairo pango atk dbus webkitgtk_4_1 libsoup_3 openssl librsvg cacert stdenv.cc.cc.lib ];
+          nativeLibraries = with pkgs; [ glib glib-networking gtk3 gdk-pixbuf cairo pango atk dbus webkitgtk_4_1 libsoup_3 openssl librsvg cacert xz stdenv.cc.cc.lib ];
           desktop = pkgs.rustPlatform.buildRustPackage {
             pname = "papyri";
             version = manifest.version;
@@ -68,7 +68,7 @@
             };
             cargoLock.lockFile = ./src-tauri/Cargo.lock;
             buildFeatures = [ "custom-protocol" ];
-            nativeBuildInputs = with pkgs; [ pkg-config wrapGAppsHook3 rustfmt desktop-file-utils ];
+            nativeBuildInputs = with pkgs; [ pkg-config cmake wrapGAppsHook3 rustfmt desktop-file-utils ];
             buildInputs = nativeLibraries;
             PAPYRI_TYPST_BINARY = "${pkgs.typst}/bin/typst";
             PAPYRI_BWRAP_BINARY = "${pkgs.bubblewrap}/bin/bwrap";
@@ -79,6 +79,7 @@
             preFixup = ''
               gappsWrapperArgs+=(--set GIO_EXTRA_MODULES "${pkgs.glib-networking}/lib/gio/modules")
               gappsWrapperArgs+=(--set SSL_CERT_FILE "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt")
+              gappsWrapperArgs+=(--suffix PATH : "${lib.makeBinPath (with pkgs; [ perl curl wget gnutar gzip xz gnupg coreutils ])}")
             '';
             preCheck = "cargo fmt --all --check";
             postInstall = ''
@@ -101,7 +102,7 @@
               grep -Fqx "Icon=$out/share/icons/hicolor/512x512/apps/papyri.png" $out/share/applications/papyri.desktop
               desktop-file-validate $out/share/applications/papyri.desktop
             '';
-            meta = { description = "Read-only Markdown, PDF, Typst, and LaTeX viewer"; homepage = "https://github.com/pseudofractal/papyri"; license = lib.licenses.mit; platforms = systems; mainProgram = "papyri"; };
+            meta = { description = "Markdown, PDF, Typst, and LaTeX viewer with source editing"; homepage = "https://github.com/pseudofractal/papyri"; license = with lib.licenses; [ mit cc-by-40 ]; platforms = systems; mainProgram = "papyri"; };
           };
           quality = web.overrideAttrs (old: {
             pname = "papyri-quality";
@@ -144,7 +145,7 @@
       apps = eachSystem (system: { default = { type = "app"; meta.description = "Open Markdown, PDF, Typst, LaTeX, or a directory"; program = "${self.packages.${system}.default}/bin/papyri"; }; });
       checks = eachSystem (system: let p = forSystem system; in { inherit (p) web quality packaging; linux = p.desktop; });
       devShells = eachSystem (system: let p = forSystem system; in { default = p.pkgs.mkShell {
-        packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst bubblewrap util-linux xdotool p.tauriDriver ];
+        packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config cmake chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst tinymist marksman texlab texliveMedium bubblewrap util-linux xdotool p.tauriDriver ];
         PAPYRI_TYPST_BINARY = "${p.pkgs.typst}/bin/typst";
         PAPYRI_BWRAP_BINARY = "${p.pkgs.bubblewrap}/bin/bwrap";
         PAPYRI_PRLIMIT_BINARY = "${p.pkgs.util-linux}/bin/prlimit";
