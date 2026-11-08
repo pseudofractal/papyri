@@ -87,7 +87,11 @@
   import { Workspace } from './lib/workspace.svelte';
   import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
   import { demoSource } from './lib/demo';
-  import { loadPreferences } from './lib/preferences';
+  import {
+    loadPreferences,
+    mergePreferences,
+    withoutConfiguredPreferences,
+  } from './lib/preferences';
   import {
     loadRecentFolders,
     persistRecentFolders,
@@ -122,7 +126,9 @@
   const startsDecorationless =
     (window as unknown as { __PAPYRI_DECORATIONLESS__?: boolean }).__PAPYRI_DECORATIONLESS__ ===
     true;
-  let preferences = $state(loadPreferences());
+  let savedPreferences = loadPreferences();
+  let preferences = $state(structuredClone(savedPreferences));
+  let configuredPreferences: Record<string, unknown> = {};
   let sidebar = $state(window.innerWidth >= NARROW_VIEWPORT);
   let outline = $state(window.innerWidth >= 1100);
   let rightTab = $state<RightTab>('outline');
@@ -670,7 +676,15 @@
   function updatePreferences(value: Preferences) {
     preferences = value;
     try {
-      localStorage.setItem('papyri.preferences', JSON.stringify({ ...value, version: 2 }));
+      savedPreferences = withoutConfiguredPreferences(
+        value,
+        savedPreferences,
+        configuredPreferences,
+      );
+      localStorage.setItem(
+        'papyri.preferences',
+        JSON.stringify({ ...savedPreferences, version: 2 }),
+      );
     } catch {
       workspace.error = 'Preferences could not be persisted; browser storage is unavailable.';
     }
@@ -1831,6 +1845,17 @@
     }
     (async () => {
       if (native) {
+        try {
+          const configured = await invokeHost<Record<string, unknown> | null>(
+            'declarative_preferences',
+          );
+          if (configured && !disposed) {
+            preferences = mergePreferences($state.snapshot(preferences), configured);
+            configuredPreferences = configured;
+          }
+        } catch (error) {
+          workspace.error = `Could not load configuration: ${String(error)}`;
+        }
         try {
           uninstallControl = await installControl(executeControl);
           if (disposed) {

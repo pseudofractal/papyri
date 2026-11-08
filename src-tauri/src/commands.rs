@@ -14,6 +14,41 @@ pub fn initial_path() -> Result<files::InitialPath, String> {
   files::initial_path()
 }
 #[tauri::command]
+pub fn declarative_preferences(app: tauri::AppHandle) -> Result<Option<serde_json::Value>, String> {
+  use tauri::Manager;
+  let user = app
+    .path()
+    .config_dir()
+    .map_err(|error| error.to_string())?
+    .join("papyri/config.json");
+  let mut paths = vec![user];
+  let system_dirs = std::env::var_os("XDG_CONFIG_DIRS").unwrap_or_else(|| "/etc/xdg".into());
+  paths.extend(std::env::split_paths(&system_dirs).map(|path| path.join("papyri/config.json")));
+  for path in paths {
+    match std::fs::read_to_string(&path) {
+      Ok(contents) => {
+        let value: serde_json::Value = serde_json::from_str(&contents)
+          .map_err(|error| format!("Invalid configuration {}: {error}", path.display()))?;
+        if !value.is_object() {
+          return Err(format!(
+            "Configuration {} must be a JSON object",
+            path.display()
+          ));
+        }
+        return Ok(Some(value));
+      }
+      Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+      Err(error) => {
+        return Err(format!(
+          "Unable to read configuration {}: {error}",
+          path.display()
+        ))
+      }
+    }
+  }
+  Ok(None)
+}
+#[tauri::command]
 pub fn startup_trace(stage: String, navigation_ms: f64) {
   if std::env::var_os("PAPYRI_STARTUP_TRACE").is_some_and(|value| value == "1")
     && matches!(

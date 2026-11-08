@@ -160,9 +160,7 @@
           echo "native smoke: PAPYRI_BINARY=... ./scripts/native-smoke.sh"
         '';
       }; });
-      nixosModules.default = { config, lib, pkgs, ... }: {
-        options.programs.papyri.enable = lib.mkEnableOption "the papyri document viewer";
-        config = lib.mkIf config.programs.papyri.enable { environment.systemPackages = [ self.packages.${pkgs.stdenv.hostPlatform.system}.default ]; };
-      };
+      nixosModules.default = (import ./nix/modules.nix { inherit self; }).nixos;
+      homeManagerModules.default = (import ./nix/modules.nix { inherit self; }).homeManager;
     };
 }

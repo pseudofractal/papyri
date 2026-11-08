@@ -5,6 +5,7 @@
   "permissions": [
     "core:event:default",
     "allow-initial-path",
+    "allow-declarative-preferences",
     "allow-startup-trace",
     "allow-list-directory",
     "allow-create-entry",

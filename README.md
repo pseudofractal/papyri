@@ -15,3 +15,5 @@ The Linux editor connects to `marksman`, `tinymist`, and `texlab` language serve
 The managed TeX Live installer uses Perl and TeX Live's standard download, archive, and signature-verification utilities. Papyri's Nix package supplies these utilities; other Linux installations need them on `PATH`. A failed installation is left in the application data directory with its log so it can be inspected or removed.
 
 Completion symbols use [Codicons](https://github.com/microsoft/vscode-codicons) by Microsoft and contributors, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (icon artwork) and the MIT license (code). License texts are included with the application in `vendor-licenses/`.
+
+For declarative settings, Home Manager, NixOS, and standalone Nix configuration, see [Nix and configuration](docs/nix.md).
