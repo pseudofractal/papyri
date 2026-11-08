@@ -1,0 +1,928 @@
+{
+  "server": "marksman",
+  "serverInfo": null,
+  "completionProvider": {
+    "triggerCharacters": ["[", "#", "("]
+  },
+  "cases": [
+    {
+      "input": "## Research topic 00\n\n## Research topic 01\n\n## Research topic 02\n\n## Research topic 03\n\n## Research topic 04\n\n## Research topic 05\n\n## Research topic 06\n\n## Research topic 07\n\n## Research topic 08\n\n## Research topic 09\n\n## Research topic 10\n\n## Research topic 11\n\n## Research topic 12\n\n## Research topic 13\n\n## Research topic 14\n\n## Research topic 15\n\n## Research topic 16\n\n## Research topic 17\n\n## Research topic 18\n\n## Research topic 19\n\n## Research topic 20\n\n## Research topic 21\n\n## Research topic 22\n\n## Research topic 23\n\n## Research topic 24\n\n## Research topic 25\n\n## Research topic 26\n\n## Research topic 27\n\n## Research topic 28\n\n## Research topic 29\n\n## Research topic 30\n\n## Research topic 31\n\n## Research topic 32\n\n## Research topic 33\n\n## Research topic 34\n\n## Research topic 35\n\n## Research topic 36\n\n## Research topic 37\n\n## Research topic 38\n\n## Research topic 39\n\n## Research topic 40\n\n## Research topic 41\n\n## Research topic 42\n\n## Research topic 43\n\n## Research topic 44\n\n## Research topic 45\n\n## Research topic 46\n\n## Research topic 47\n\n## Research topic 48\n\n## Research topic 49\n\n## Research topic 50\n\n## Research topic 51\n\n## Research topic 52\n\n## Research topic 53\n\n## Research topic 54\n\n## Research topic 55\n\n## Research topic 56\n\n## Research topic 57\n\n## Research topic 58\n\n## Research topic 59\n\n[notes](#re",
+      "filename": "2-notes.md",
+      "result": {
+        "isIncomplete": true,
+        "items": [
+          {
+            "label": "Research topic 00",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-00)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-00)"
+            }
+          },
+          {
+            "label": "Research topic 01",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-01)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-01)"
+            }
+          },
+          {
+            "label": "Research topic 02",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-02)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-02)"
+            }
+          },
+          {
+            "label": "Research topic 03",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-03)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-03)"
+            }
+          },
+          {
+            "label": "Research topic 04",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-04)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-04)"
+            }
+          },
+          {
+            "label": "Research topic 05",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-05)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-05)"
+            }
+          },
+          {
+            "label": "Research topic 06",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-06)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-06)"
+            }
+          },
+          {
+            "label": "Research topic 07",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-07)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-07)"
+            }
+          },
+          {
+            "label": "Research topic 08",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-08)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-08)"
+            }
+          },
+          {
+            "label": "Research topic 09",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-09)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-09)"
+            }
+          },
+          {
+            "label": "Research topic 10",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-10)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-10)"
+            }
+          },
+          {
+            "label": "Research topic 11",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-11)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-11)"
+            }
+          },
+          {
+            "label": "Research topic 12",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-12)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-12)"
+            }
+          },
+          {
+            "label": "Research topic 13",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-13)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-13)"
+            }
+          },
+          {
+            "label": "Research topic 14",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-14)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-14)"
+            }
+          },
+          {
+            "label": "Research topic 15",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-15)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-15)"
+            }
+          },
+          {
+            "label": "Research topic 16",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-16)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-16)"
+            }
+          },
+          {
+            "label": "Research topic 17",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-17)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-17)"
+            }
+          },
+          {
+            "label": "Research topic 18",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-18)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-18)"
+            }
+          },
+          {
+            "label": "Research topic 19",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-19)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-19)"
+            }
+          },
+          {
+            "label": "Research topic 20",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-20)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-20)"
+            }
+          },
+          {
+            "label": "Research topic 21",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-21)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-21)"
+            }
+          },
+          {
+            "label": "Research topic 22",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-22)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-22)"
+            }
+          },
+          {
+            "label": "Research topic 23",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-23)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-23)"
+            }
+          },
+          {
+            "label": "Research topic 24",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-24)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-24)"
+            }
+          },
+          {
+            "label": "Research topic 25",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-25)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-25)"
+            }
+          },
+          {
+            "label": "Research topic 26",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-26)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-26)"
+            }
+          },
+          {
+            "label": "Research topic 27",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-27)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-27)"
+            }
+          },
+          {
+            "label": "Research topic 28",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-28)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-28)"
+            }
+          },
+          {
+            "label": "Research topic 29",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-29)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-29)"
+            }
+          },
+          {
+            "label": "Research topic 30",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-30)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-30)"
+            }
+          },
+          {
+            "label": "Research topic 31",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-31)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-31)"
+            }
+          },
+          {
+            "label": "Research topic 32",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-32)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-32)"
+            }
+          },
+          {
+            "label": "Research topic 33",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-33)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-33)"
+            }
+          },
+          {
+            "label": "Research topic 34",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-34)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-34)"
+            }
+          },
+          {
+            "label": "Research topic 35",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-35)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-35)"
+            }
+          },
+          {
+            "label": "Research topic 36",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-36)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-36)"
+            }
+          },
+          {
+            "label": "Research topic 37",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-37)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-37)"
+            }
+          },
+          {
+            "label": "Research topic 38",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-38)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-38)"
+            }
+          },
+          {
+            "label": "Research topic 39",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-39)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-39)"
+            }
+          },
+          {
+            "label": "Research topic 40",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-40)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-40)"
+            }
+          },
+          {
+            "label": "Research topic 41",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-41)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-41)"
+            }
+          },
+          {
+            "label": "Research topic 42",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-42)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-42)"
+            }
+          },
+          {
+            "label": "Research topic 43",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-43)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-43)"
+            }
+          },
+          {
+            "label": "Research topic 44",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-44)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-44)"
+            }
+          },
+          {
+            "label": "Research topic 45",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-45)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-45)"
+            }
+          },
+          {
+            "label": "Research topic 46",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-46)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-46)"
+            }
+          },
+          {
+            "label": "Research topic 47",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-47)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-47)"
+            }
+          },
+          {
+            "label": "Research topic 48",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-48)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-48)"
+            }
+          },
+          {
+            "label": "Research topic 49",
+            "kind": 18,
+            "filterText": "[notes](#research-topic-49)",
+            "textEdit": {
+              "range": {
+                "start": {
+                  "line": 120,
+                  "character": 0
+                },
+                "end": {
+                  "line": 121,
+                  "character": 0
+                }
+              },
+              "newText": "[notes](#research-topic-49)"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": "## Research topic 00\n\n## Research topic 01\n\n## Research topic 02\n\n## Research topic 03\n\n## Research topic 04\n\n## Research topic 05\n\n## Research topic 06\n\n## Research topic 07\n\n## Research topic 08\n\n## Research topic 09\n\n## Research topic 10\n\n## Research topic 11\n\n## Research topic 12\n\n## Research topic 13\n\n## Research topic 14\n\n## Research topic 15\n\n## Research topic 16\n\n## Research topic 17\n\n## Research topic 18\n\n## Research topic 19\n\n## Research topic 20\n\n## Research topic 21\n\n## Research topic 22\n\n## Research topic 23\n\n## Research topic 24\n\n## Research topic 25\n\n## Research topic 26\n\n## Research topic 27\n\n## Research topic 28\n\n## Research topic 29\n\n## Research topic 30\n\n## Research topic 31\n\n## Research topic 32\n\n## Research topic 33\n\n## Research topic 34\n\n## Research topic 35\n\n## Research topic 36\n\n## Research topic 37\n\n## Research topic 38\n\n## Research topic 39\n\n## Research topic 40\n\n## Research topic 41\n\n## Research topic 42\n\n## Research topic 43\n\n## Research topic 44\n\n## Research topic 45\n\n## Research topic 46\n\n## Research topic 47\n\n## Research topic 48\n\n## Research topic 49\n\n## Research topic 50\n\n## Research topic 51\n\n## Research topic 52\n\n## Research topic 53\n\n## Research topic 54\n\n## Research topic 55\n\n## Research topic 56\n\n## Research topic 57\n\n## Research topic 58\n\n## Research topic 59\n\n[[research-",
+      "filename": "3-notes.md",
+      "result": null
+    },
+    {
+      "input": "## Research topic 00\n\n## Research topic 01\n\n## Research topic 02\n\n## Research topic 03\n\n## Research topic 04\n\n## Research topic 05\n\n## Research topic 06\n\n## Research topic 07\n\n## Research topic 08\n\n## Research topic 09\n\n## Research topic 10\n\n## Research topic 11\n\n## Research topic 12\n\n## Research topic 13\n\n## Research topic 14\n\n## Research topic 15\n\n## Research topic 16\n\n## Research topic 17\n\n## Research topic 18\n\n## Research topic 19\n\n## Research topic 20\n\n## Research topic 21\n\n## Research topic 22\n\n## Research topic 23\n\n## Research topic 24\n\n## Research topic 25\n\n## Research topic 26\n\n## Research topic 27\n\n## Research topic 28\n\n## Research topic 29\n\n## Research topic 30\n\n## Research topic 31\n\n## Research topic 32\n\n## Research topic 33\n\n## Research topic 34\n\n## Research topic 35\n\n## Research topic 36\n\n## Research topic 37\n\n## Research topic 38\n\n## Research topic 39\n\n## Research topic 40\n\n## Research topic 41\n\n## Research topic 42\n\n## Research topic 43\n\n## Research topic 44\n\n## Research topic 45\n\n## Research topic 46\n\n## Research topic 47\n\n## Research topic 48\n\n## Research topic 49\n\n## Research topic 50\n\n## Research topic 51\n\n## Research topic 52\n\n## Research topic 53\n\n## Research topic 54\n\n## Research topic 55\n\n## Research topic 56\n\n## Research topic 57\n\n## Research topic 58\n\n## Research topic 59\n\n[link](research-",
+      "filename": "4-notes.md",
+      "result": null
+    }
+  ]
+}
