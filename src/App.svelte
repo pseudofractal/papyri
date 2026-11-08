@@ -1844,6 +1844,7 @@
         .catch((error) => console.error('Browser events unavailable:', error));
     }
     (async () => {
+      let configurationError = '';
       if (native) {
         try {
           const configured = await invokeHost<Record<string, unknown> | null>(
@@ -1854,7 +1855,7 @@
             configuredPreferences = configured;
           }
         } catch (error) {
-          workspace.error = `Could not load configuration: ${String(error)}`;
+          configurationError = `Could not load configuration: ${String(error)}`;
         }
         try {
           uninstallControl = await installControl(executeControl);
@@ -1891,6 +1892,8 @@
       } catch (error) {
         workspace.error = String(error);
       } finally {
+        if (configurationError && !disposed)
+          workspace.error = [workspace.error, configurationError].filter(Boolean).join('\n');
         resolveWorkspaceReady();
       }
     })();
