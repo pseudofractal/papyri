@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { defaults, mergePreferences, withoutConfiguredPreferences } from '../src/lib/preferences';
 
 describe('preference updates', () => {
+  it('persists preference objects containing reactive proxies', () => {
+    const next = {
+      ...structuredClone(defaults),
+      languageServerPaths: new Proxy({ ...defaults.languageServerPaths }, {}),
+    };
+    expect(withoutConfiguredPreferences(next, defaults, {})).toEqual(defaults);
+  });
+
   it('preserves saved values under declarative overrides while saving other edits', () => {
     const saved = mergePreferences(defaults, {
       theme: 'latte',
