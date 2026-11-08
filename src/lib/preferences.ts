@@ -310,7 +310,7 @@ export function withoutConfiguredPreferences(
   saved: Preferences,
   configured: Record<string, unknown>,
 ): Preferences {
-  const restored = structuredClone(next) as unknown as Record<string, unknown>;
+  const restored = JSON.parse(JSON.stringify(next)) as Record<string, unknown>;
   const previous = saved as unknown as Record<string, unknown>;
   for (const [key, value] of Object.entries(configured)) {
     if (
