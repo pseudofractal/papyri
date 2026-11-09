@@ -41,8 +41,33 @@ pub async fn list_directory(path: String) -> Result<Vec<files::Entry>, String> {
   blocking(move || files::list_directory(path)).await
 }
 #[tauri::command]
+pub async fn create_entry(directory: String, name: String, kind: String) -> Result<String, String> {
+  blocking(move || files::create_entry(directory, name, kind)).await
+}
+#[tauri::command]
+pub async fn rename_file(path: String, name: String) -> Result<String, String> {
+  blocking(move || files::rename_file(path, name)).await
+}
+#[tauri::command]
 pub async fn read_document(path: String) -> Result<files::Document, String> {
   blocking(move || files::read_document(path)).await
+}
+#[tauri::command]
+pub async fn read_text_file(path: String) -> Result<String, String> {
+  blocking(move || files::read_text_file(path)).await
+}
+#[tauri::command]
+pub async fn delete_file(path: String) -> Result<(), String> {
+  blocking(move || files::delete_file(path)).await
+}
+#[tauri::command]
+pub async fn write_document(
+  path: String,
+  text: String,
+  expected_text: String,
+  expected_stamp: String,
+) -> Result<files::Document, String> {
+  blocking(move || files::write_document(path, text, expected_text, expected_stamp)).await
 }
 #[tauri::command]
 pub fn latex_engines() -> Vec<latex::Engine> {
@@ -73,6 +98,41 @@ pub async fn read_pdf(
   })
   .await?;
   Ok(tauri::ipc::Response::new(bytes))
+}
+#[tauri::command]
+pub async fn compile_latex_draft(
+  path: String,
+  text: String,
+  engine: String,
+  compiler_path: String,
+  overlays: Option<Vec<(String, String)>>,
+) -> Result<tauri::ipc::Response, String> {
+  let bytes = blocking(move || {
+    latex::compile_preview(
+      path,
+      engine,
+      compiler_path,
+      text,
+      overlays.unwrap_or_default(),
+    )
+  })
+  .await?;
+  Ok(tauri::ipc::Response::new(bytes))
+}
+#[tauri::command]
+pub async fn latex_sync(
+  id: String,
+  source: Option<String>,
+  line: Option<u32>,
+  page: Option<u32>,
+  x: Option<f64>,
+  y: Option<f64>,
+) -> Result<String, String> {
+  blocking(move || latex::sync_query(id, source, line, page, x, y)).await
+}
+#[tauri::command]
+pub async fn latex_sync_release(id: String) -> Result<(), String> {
+  blocking(move || latex::release_sync(&id)).await
 }
 #[tauri::command]
 pub async fn read_asset(path: String) -> Result<Vec<u8>, String> {

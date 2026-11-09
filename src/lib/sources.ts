@@ -1,4 +1,13 @@
-import { sortEntries, normalize, dirname, basename, isPdf, isTypst, isLatex } from './paths';
+import {
+  sortEntries,
+  normalize,
+  dirname,
+  basename,
+  isMarkdown,
+  isPdf,
+  isTypst,
+  isLatex,
+} from './paths';
 import type { Source, Entry, FileData, Preferences } from './types';
 import { invokeHost } from './native';
 import { MAX_DOCUMENT_BYTES, MAX_PDF_BYTES } from './limits';
@@ -86,7 +95,19 @@ export async function desktopSource(getPreferences: () => Preferences): Promise<
           : stamp;
       },
       list: (path) => invokeHost<Entry[]>('list_directory', { path }),
+      create: (directory, name, kind) =>
+        invokeHost<string>('create_entry', { directory, name, kind }),
+      rename: (path, name) => invokeHost<string>('rename_file', { path, name }),
+      readText: (path) => invokeHost<string>('read_text_file', { path }),
+      deleteFile: (path) => invokeHost<void>('delete_file', { path }),
       readSource: (path) => invokeHost<FileData>('read_document', { path }),
+      write: (path, text, expected) =>
+        invokeHost<FileData>('write_document', {
+          path,
+          text,
+          expectedText: expected.text,
+          expectedStamp: expected.stamp,
+        }),
       async read(path) {
         if (!isPdf(path) && !isTypst(path) && !isLatex(path))
           return invokeHost<FileData>('read_document', { path });
@@ -146,8 +167,11 @@ export async function browserDirectory(): Promise<Source> {
       handle = await handle.getDirectoryHandle(part);
     return handle;
   }
+  async function fileHandle(path: string) {
+    return (await directory(dirname(path))).getFileHandle(basename(path));
+  }
   async function file(path: string) {
-    return (await (await directory(dirname(path))).getFileHandle(basename(path))).getFile();
+    return (await fileHandle(path)).getFile();
   }
   return {
     root: '/',
@@ -172,6 +196,37 @@ export async function browserDirectory(): Promise<Source> {
     },
     async read(path) {
       return readBrowserDocument(await file(path));
+    },
+    async write(path, text, expected) {
+      if (!isMarkdown(path) && !isTypst(path) && !isLatex(path))
+        throw new Error('Only Markdown, Typst, and LaTeX source documents can be saved.');
+      if (new TextEncoder().encode(text).length > MAX_DOCUMENT_BYTES)
+        throw new Error('This document exceeds the 8 MiB limit.');
+      const handle = await fileHandle(path);
+      const unchanged = async () => {
+        const current = await readBrowserDocument(await handle.getFile());
+        return current.stamp === expected.stamp && current.text === expected.text;
+      };
+      if (!(await unchanged())) throw new Error('Document changed on disk; reload before saving.');
+      const writable = await handle.createWritable();
+      try {
+        await writable.write(text);
+        if (!(await unchanged()))
+          throw new Error('Document changed on disk; reload before saving.');
+        await writable.close();
+      } catch (error) {
+        try {
+          await writable.abort();
+        } catch (abortError) {
+          throw new AggregateError(
+            [error, abortError],
+            'Could not save or cancel the pending write.',
+            { cause: abortError },
+          );
+        }
+        throw error;
+      }
+      return readBrowserDocument(await handle.getFile());
     },
     async asset(path) {
       const value = await file(path);

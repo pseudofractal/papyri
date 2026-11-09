@@ -1,0 +1,4550 @@
+{
+  "server": "texlab",
+  "serverInfo": {
+    "name": "TexLab",
+    "version": "5.26.0"
+  },
+  "completionProvider": {
+    "resolveProvider": true,
+    "triggerCharacters": ["\\", "{", "}", "@", "/", " "]
+  },
+  "cases": [
+    {
+      "input": "\\documentclass{article}\n\\begin{document}\n\\input{",
+      "filename": "2-example.tex",
+      "result": {
+        "isIncomplete": true,
+        "items": [
+          {
+            "kind": 1,
+            "label": "2-example.tex",
+            "preselect": false,
+            "sortText": "00",
+            "textEdit": {
+              "newText": "2-example.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-00.tex",
+            "preselect": false,
+            "sortText": "01",
+            "textEdit": {
+              "newText": "chapter-00.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-01.tex",
+            "preselect": false,
+            "sortText": "02",
+            "textEdit": {
+              "newText": "chapter-01.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-02.tex",
+            "preselect": false,
+            "sortText": "03",
+            "textEdit": {
+              "newText": "chapter-02.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-03.tex",
+            "preselect": false,
+            "sortText": "04",
+            "textEdit": {
+              "newText": "chapter-03.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-04.tex",
+            "preselect": false,
+            "sortText": "05",
+            "textEdit": {
+              "newText": "chapter-04.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-05.tex",
+            "preselect": false,
+            "sortText": "06",
+            "textEdit": {
+              "newText": "chapter-05.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-06.tex",
+            "preselect": false,
+            "sortText": "07",
+            "textEdit": {
+              "newText": "chapter-06.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-07.tex",
+            "preselect": false,
+            "sortText": "08",
+            "textEdit": {
+              "newText": "chapter-07.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-08.tex",
+            "preselect": false,
+            "sortText": "09",
+            "textEdit": {
+              "newText": "chapter-08.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-09.tex",
+            "preselect": false,
+            "sortText": "10",
+            "textEdit": {
+              "newText": "chapter-09.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-10.tex",
+            "preselect": false,
+            "sortText": "11",
+            "textEdit": {
+              "newText": "chapter-10.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-11.tex",
+            "preselect": false,
+            "sortText": "12",
+            "textEdit": {
+              "newText": "chapter-11.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-12.tex",
+            "preselect": false,
+            "sortText": "13",
+            "textEdit": {
+              "newText": "chapter-12.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-13.tex",
+            "preselect": false,
+            "sortText": "14",
+            "textEdit": {
+              "newText": "chapter-13.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-14.tex",
+            "preselect": false,
+            "sortText": "15",
+            "textEdit": {
+              "newText": "chapter-14.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-15.tex",
+            "preselect": false,
+            "sortText": "16",
+            "textEdit": {
+              "newText": "chapter-15.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-16.tex",
+            "preselect": false,
+            "sortText": "17",
+            "textEdit": {
+              "newText": "chapter-16.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-17.tex",
+            "preselect": false,
+            "sortText": "18",
+            "textEdit": {
+              "newText": "chapter-17.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-18.tex",
+            "preselect": false,
+            "sortText": "19",
+            "textEdit": {
+              "newText": "chapter-18.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-19.tex",
+            "preselect": false,
+            "sortText": "20",
+            "textEdit": {
+              "newText": "chapter-19.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-20.tex",
+            "preselect": false,
+            "sortText": "21",
+            "textEdit": {
+              "newText": "chapter-20.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-21.tex",
+            "preselect": false,
+            "sortText": "22",
+            "textEdit": {
+              "newText": "chapter-21.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-22.tex",
+            "preselect": false,
+            "sortText": "23",
+            "textEdit": {
+              "newText": "chapter-22.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-23.tex",
+            "preselect": false,
+            "sortText": "24",
+            "textEdit": {
+              "newText": "chapter-23.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-24.tex",
+            "preselect": false,
+            "sortText": "25",
+            "textEdit": {
+              "newText": "chapter-24.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-25.tex",
+            "preselect": false,
+            "sortText": "26",
+            "textEdit": {
+              "newText": "chapter-25.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-26.tex",
+            "preselect": false,
+            "sortText": "27",
+            "textEdit": {
+              "newText": "chapter-26.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-27.tex",
+            "preselect": false,
+            "sortText": "28",
+            "textEdit": {
+              "newText": "chapter-27.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-28.tex",
+            "preselect": false,
+            "sortText": "29",
+            "textEdit": {
+              "newText": "chapter-28.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-29.tex",
+            "preselect": false,
+            "sortText": "30",
+            "textEdit": {
+              "newText": "chapter-29.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-30.tex",
+            "preselect": false,
+            "sortText": "31",
+            "textEdit": {
+              "newText": "chapter-30.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-31.tex",
+            "preselect": false,
+            "sortText": "32",
+            "textEdit": {
+              "newText": "chapter-31.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-32.tex",
+            "preselect": false,
+            "sortText": "33",
+            "textEdit": {
+              "newText": "chapter-32.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-33.tex",
+            "preselect": false,
+            "sortText": "34",
+            "textEdit": {
+              "newText": "chapter-33.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-34.tex",
+            "preselect": false,
+            "sortText": "35",
+            "textEdit": {
+              "newText": "chapter-34.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-35.tex",
+            "preselect": false,
+            "sortText": "36",
+            "textEdit": {
+              "newText": "chapter-35.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-36.tex",
+            "preselect": false,
+            "sortText": "37",
+            "textEdit": {
+              "newText": "chapter-36.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-37.tex",
+            "preselect": false,
+            "sortText": "38",
+            "textEdit": {
+              "newText": "chapter-37.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-38.tex",
+            "preselect": false,
+            "sortText": "39",
+            "textEdit": {
+              "newText": "chapter-38.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-39.tex",
+            "preselect": false,
+            "sortText": "40",
+            "textEdit": {
+              "newText": "chapter-39.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-40.tex",
+            "preselect": false,
+            "sortText": "41",
+            "textEdit": {
+              "newText": "chapter-40.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-41.tex",
+            "preselect": false,
+            "sortText": "42",
+            "textEdit": {
+              "newText": "chapter-41.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-42.tex",
+            "preselect": false,
+            "sortText": "43",
+            "textEdit": {
+              "newText": "chapter-42.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-43.tex",
+            "preselect": false,
+            "sortText": "44",
+            "textEdit": {
+              "newText": "chapter-43.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-44.tex",
+            "preselect": false,
+            "sortText": "45",
+            "textEdit": {
+              "newText": "chapter-44.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-45.tex",
+            "preselect": false,
+            "sortText": "46",
+            "textEdit": {
+              "newText": "chapter-45.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-46.tex",
+            "preselect": false,
+            "sortText": "47",
+            "textEdit": {
+              "newText": "chapter-46.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-47.tex",
+            "preselect": false,
+            "sortText": "48",
+            "textEdit": {
+              "newText": "chapter-47.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          },
+          {
+            "kind": 1,
+            "label": "chapter-48.tex",
+            "preselect": false,
+            "sortText": "49",
+            "textEdit": {
+              "newText": "chapter-48.tex",
+              "range": {
+                "end": {
+                  "character": 7,
+                  "line": 2
+                },
+                "start": {
+                  "character": 7,
+                  "line": 2
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": "\\documentclass{article}\n\\bibliography{references}\n\\begin{document}\n\\cite{",
+      "filename": "3-example.tex",
+      "result": {
+        "isIncomplete": true,
+        "items": [
+          {
+            "data": {
+              "citation": {
+                "key": "ref00",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref00 @article Example title 00 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref00",
+            "preselect": false,
+            "sortText": "00",
+            "textEdit": {
+              "newText": "ref00",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref01",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref01 @article Example title 01 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref01",
+            "preselect": false,
+            "sortText": "01",
+            "textEdit": {
+              "newText": "ref01",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref02",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref02 @article Example title 02 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref02",
+            "preselect": false,
+            "sortText": "02",
+            "textEdit": {
+              "newText": "ref02",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref03",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref03 @article Example title 03 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref03",
+            "preselect": false,
+            "sortText": "03",
+            "textEdit": {
+              "newText": "ref03",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref04",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref04 @article Example title 04 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref04",
+            "preselect": false,
+            "sortText": "04",
+            "textEdit": {
+              "newText": "ref04",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref05",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref05 @article Example title 05 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref05",
+            "preselect": false,
+            "sortText": "05",
+            "textEdit": {
+              "newText": "ref05",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref06",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref06 @article Example title 06 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref06",
+            "preselect": false,
+            "sortText": "06",
+            "textEdit": {
+              "newText": "ref06",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref07",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref07 @article Example title 07 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref07",
+            "preselect": false,
+            "sortText": "07",
+            "textEdit": {
+              "newText": "ref07",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref08",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref08 @article Example title 08 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref08",
+            "preselect": false,
+            "sortText": "08",
+            "textEdit": {
+              "newText": "ref08",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref09",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref09 @article Example title 09 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref09",
+            "preselect": false,
+            "sortText": "09",
+            "textEdit": {
+              "newText": "ref09",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref10",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref10 @article Example title 10 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref10",
+            "preselect": false,
+            "sortText": "10",
+            "textEdit": {
+              "newText": "ref10",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref11",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref11 @article Example title 11 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref11",
+            "preselect": false,
+            "sortText": "11",
+            "textEdit": {
+              "newText": "ref11",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref12",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref12 @article Example title 12 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref12",
+            "preselect": false,
+            "sortText": "12",
+            "textEdit": {
+              "newText": "ref12",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref13",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref13 @article Example title 13 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref13",
+            "preselect": false,
+            "sortText": "13",
+            "textEdit": {
+              "newText": "ref13",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref14",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref14 @article Example title 14 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref14",
+            "preselect": false,
+            "sortText": "14",
+            "textEdit": {
+              "newText": "ref14",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref15",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref15 @article Example title 15 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref15",
+            "preselect": false,
+            "sortText": "15",
+            "textEdit": {
+              "newText": "ref15",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref16",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref16 @article Example title 16 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref16",
+            "preselect": false,
+            "sortText": "16",
+            "textEdit": {
+              "newText": "ref16",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref17",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref17 @article Example title 17 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref17",
+            "preselect": false,
+            "sortText": "17",
+            "textEdit": {
+              "newText": "ref17",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref18",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref18 @article Example title 18 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref18",
+            "preselect": false,
+            "sortText": "18",
+            "textEdit": {
+              "newText": "ref18",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref19",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref19 @article Example title 19 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref19",
+            "preselect": false,
+            "sortText": "19",
+            "textEdit": {
+              "newText": "ref19",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref20",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref20 @article Example title 20 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref20",
+            "preselect": false,
+            "sortText": "20",
+            "textEdit": {
+              "newText": "ref20",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref21",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref21 @article Example title 21 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref21",
+            "preselect": false,
+            "sortText": "21",
+            "textEdit": {
+              "newText": "ref21",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref22",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref22 @article Example title 22 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref22",
+            "preselect": false,
+            "sortText": "22",
+            "textEdit": {
+              "newText": "ref22",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref23",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref23 @article Example title 23 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref23",
+            "preselect": false,
+            "sortText": "23",
+            "textEdit": {
+              "newText": "ref23",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref24",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref24 @article Example title 24 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref24",
+            "preselect": false,
+            "sortText": "24",
+            "textEdit": {
+              "newText": "ref24",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref25",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref25 @article Example title 25 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref25",
+            "preselect": false,
+            "sortText": "25",
+            "textEdit": {
+              "newText": "ref25",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref26",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref26 @article Example title 26 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref26",
+            "preselect": false,
+            "sortText": "26",
+            "textEdit": {
+              "newText": "ref26",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref27",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref27 @article Example title 27 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref27",
+            "preselect": false,
+            "sortText": "27",
+            "textEdit": {
+              "newText": "ref27",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref28",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref28 @article Example title 28 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref28",
+            "preselect": false,
+            "sortText": "28",
+            "textEdit": {
+              "newText": "ref28",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref29",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref29 @article Example title 29 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref29",
+            "preselect": false,
+            "sortText": "29",
+            "textEdit": {
+              "newText": "ref29",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref30",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref30 @article Example title 30 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref30",
+            "preselect": false,
+            "sortText": "30",
+            "textEdit": {
+              "newText": "ref30",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref31",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref31 @article Example title 31 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref31",
+            "preselect": false,
+            "sortText": "31",
+            "textEdit": {
+              "newText": "ref31",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref32",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref32 @article Example title 32 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref32",
+            "preselect": false,
+            "sortText": "32",
+            "textEdit": {
+              "newText": "ref32",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref33",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref33 @article Example title 33 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref33",
+            "preselect": false,
+            "sortText": "33",
+            "textEdit": {
+              "newText": "ref33",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref34",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref34 @article Example title 34 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref34",
+            "preselect": false,
+            "sortText": "34",
+            "textEdit": {
+              "newText": "ref34",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref35",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref35 @article Example title 35 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref35",
+            "preselect": false,
+            "sortText": "35",
+            "textEdit": {
+              "newText": "ref35",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref36",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref36 @article Example title 36 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref36",
+            "preselect": false,
+            "sortText": "36",
+            "textEdit": {
+              "newText": "ref36",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref37",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref37 @article Example title 37 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref37",
+            "preselect": false,
+            "sortText": "37",
+            "textEdit": {
+              "newText": "ref37",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref38",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref38 @article Example title 38 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref38",
+            "preselect": false,
+            "sortText": "38",
+            "textEdit": {
+              "newText": "ref38",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref39",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref39 @article Example title 39 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref39",
+            "preselect": false,
+            "sortText": "39",
+            "textEdit": {
+              "newText": "ref39",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref40",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref40 @article Example title 40 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref40",
+            "preselect": false,
+            "sortText": "40",
+            "textEdit": {
+              "newText": "ref40",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref41",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref41 @article Example title 41 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref41",
+            "preselect": false,
+            "sortText": "41",
+            "textEdit": {
+              "newText": "ref41",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref42",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref42 @article Example title 42 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref42",
+            "preselect": false,
+            "sortText": "42",
+            "textEdit": {
+              "newText": "ref42",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref43",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref43 @article Example title 43 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref43",
+            "preselect": false,
+            "sortText": "43",
+            "textEdit": {
+              "newText": "ref43",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref44",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref44 @article Example title 44 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref44",
+            "preselect": false,
+            "sortText": "44",
+            "textEdit": {
+              "newText": "ref44",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref45",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref45 @article Example title 45 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref45",
+            "preselect": false,
+            "sortText": "45",
+            "textEdit": {
+              "newText": "ref45",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref46",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref46 @article Example title 46 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref46",
+            "preselect": false,
+            "sortText": "46",
+            "textEdit": {
+              "newText": "ref46",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref47",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref47 @article Example title 47 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref47",
+            "preselect": false,
+            "sortText": "47",
+            "textEdit": {
+              "newText": "ref47",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref48",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref48 @article Example title 48 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref48",
+            "preselect": false,
+            "sortText": "48",
+            "textEdit": {
+              "newText": "ref48",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          },
+          {
+            "data": {
+              "citation": {
+                "key": "ref49",
+                "uri": "file:///sample-workspace/references.bib"
+              }
+            },
+            "filterText": "ref49 @article Example title 49 Author, Alice 2020",
+            "kind": 1,
+            "label": "ref49",
+            "preselect": false,
+            "sortText": "49",
+            "textEdit": {
+              "newText": "ref49",
+              "range": {
+                "end": {
+                  "character": 6,
+                  "line": 3
+                },
+                "start": {
+                  "character": 6,
+                  "line": 3
+                }
+              }
+            }
+          }
+        ]
+      },
+      "resolved": [
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 00\". (2020)."
+          },
+          "filterText": "ref00 @article Example title 00 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref00",
+          "preselect": false,
+          "sortText": "00",
+          "textEdit": {
+            "newText": "ref00",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 01\". (2020)."
+          },
+          "filterText": "ref01 @article Example title 01 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref01",
+          "preselect": false,
+          "sortText": "01",
+          "textEdit": {
+            "newText": "ref01",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 02\". (2020)."
+          },
+          "filterText": "ref02 @article Example title 02 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref02",
+          "preselect": false,
+          "sortText": "02",
+          "textEdit": {
+            "newText": "ref02",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 03\". (2020)."
+          },
+          "filterText": "ref03 @article Example title 03 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref03",
+          "preselect": false,
+          "sortText": "03",
+          "textEdit": {
+            "newText": "ref03",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 04\". (2020)."
+          },
+          "filterText": "ref04 @article Example title 04 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref04",
+          "preselect": false,
+          "sortText": "04",
+          "textEdit": {
+            "newText": "ref04",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 05\". (2020)."
+          },
+          "filterText": "ref05 @article Example title 05 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref05",
+          "preselect": false,
+          "sortText": "05",
+          "textEdit": {
+            "newText": "ref05",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 06\". (2020)."
+          },
+          "filterText": "ref06 @article Example title 06 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref06",
+          "preselect": false,
+          "sortText": "06",
+          "textEdit": {
+            "newText": "ref06",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 07\". (2020)."
+          },
+          "filterText": "ref07 @article Example title 07 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref07",
+          "preselect": false,
+          "sortText": "07",
+          "textEdit": {
+            "newText": "ref07",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 08\". (2020)."
+          },
+          "filterText": "ref08 @article Example title 08 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref08",
+          "preselect": false,
+          "sortText": "08",
+          "textEdit": {
+            "newText": "ref08",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 09\". (2020)."
+          },
+          "filterText": "ref09 @article Example title 09 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref09",
+          "preselect": false,
+          "sortText": "09",
+          "textEdit": {
+            "newText": "ref09",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 10\". (2020)."
+          },
+          "filterText": "ref10 @article Example title 10 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref10",
+          "preselect": false,
+          "sortText": "10",
+          "textEdit": {
+            "newText": "ref10",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 11\". (2020)."
+          },
+          "filterText": "ref11 @article Example title 11 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref11",
+          "preselect": false,
+          "sortText": "11",
+          "textEdit": {
+            "newText": "ref11",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 12\". (2020)."
+          },
+          "filterText": "ref12 @article Example title 12 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref12",
+          "preselect": false,
+          "sortText": "12",
+          "textEdit": {
+            "newText": "ref12",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 13\". (2020)."
+          },
+          "filterText": "ref13 @article Example title 13 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref13",
+          "preselect": false,
+          "sortText": "13",
+          "textEdit": {
+            "newText": "ref13",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 14\". (2020)."
+          },
+          "filterText": "ref14 @article Example title 14 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref14",
+          "preselect": false,
+          "sortText": "14",
+          "textEdit": {
+            "newText": "ref14",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 15\". (2020)."
+          },
+          "filterText": "ref15 @article Example title 15 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref15",
+          "preselect": false,
+          "sortText": "15",
+          "textEdit": {
+            "newText": "ref15",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 16\". (2020)."
+          },
+          "filterText": "ref16 @article Example title 16 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref16",
+          "preselect": false,
+          "sortText": "16",
+          "textEdit": {
+            "newText": "ref16",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 17\". (2020)."
+          },
+          "filterText": "ref17 @article Example title 17 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref17",
+          "preselect": false,
+          "sortText": "17",
+          "textEdit": {
+            "newText": "ref17",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 18\". (2020)."
+          },
+          "filterText": "ref18 @article Example title 18 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref18",
+          "preselect": false,
+          "sortText": "18",
+          "textEdit": {
+            "newText": "ref18",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 19\". (2020)."
+          },
+          "filterText": "ref19 @article Example title 19 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref19",
+          "preselect": false,
+          "sortText": "19",
+          "textEdit": {
+            "newText": "ref19",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 20\". (2020)."
+          },
+          "filterText": "ref20 @article Example title 20 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref20",
+          "preselect": false,
+          "sortText": "20",
+          "textEdit": {
+            "newText": "ref20",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 21\". (2020)."
+          },
+          "filterText": "ref21 @article Example title 21 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref21",
+          "preselect": false,
+          "sortText": "21",
+          "textEdit": {
+            "newText": "ref21",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 22\". (2020)."
+          },
+          "filterText": "ref22 @article Example title 22 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref22",
+          "preselect": false,
+          "sortText": "22",
+          "textEdit": {
+            "newText": "ref22",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 23\". (2020)."
+          },
+          "filterText": "ref23 @article Example title 23 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref23",
+          "preselect": false,
+          "sortText": "23",
+          "textEdit": {
+            "newText": "ref23",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 24\". (2020)."
+          },
+          "filterText": "ref24 @article Example title 24 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref24",
+          "preselect": false,
+          "sortText": "24",
+          "textEdit": {
+            "newText": "ref24",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 25\". (2020)."
+          },
+          "filterText": "ref25 @article Example title 25 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref25",
+          "preselect": false,
+          "sortText": "25",
+          "textEdit": {
+            "newText": "ref25",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 26\". (2020)."
+          },
+          "filterText": "ref26 @article Example title 26 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref26",
+          "preselect": false,
+          "sortText": "26",
+          "textEdit": {
+            "newText": "ref26",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 27\". (2020)."
+          },
+          "filterText": "ref27 @article Example title 27 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref27",
+          "preselect": false,
+          "sortText": "27",
+          "textEdit": {
+            "newText": "ref27",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 28\". (2020)."
+          },
+          "filterText": "ref28 @article Example title 28 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref28",
+          "preselect": false,
+          "sortText": "28",
+          "textEdit": {
+            "newText": "ref28",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 29\". (2020)."
+          },
+          "filterText": "ref29 @article Example title 29 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref29",
+          "preselect": false,
+          "sortText": "29",
+          "textEdit": {
+            "newText": "ref29",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 30\". (2020)."
+          },
+          "filterText": "ref30 @article Example title 30 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref30",
+          "preselect": false,
+          "sortText": "30",
+          "textEdit": {
+            "newText": "ref30",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 31\". (2020)."
+          },
+          "filterText": "ref31 @article Example title 31 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref31",
+          "preselect": false,
+          "sortText": "31",
+          "textEdit": {
+            "newText": "ref31",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 32\". (2020)."
+          },
+          "filterText": "ref32 @article Example title 32 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref32",
+          "preselect": false,
+          "sortText": "32",
+          "textEdit": {
+            "newText": "ref32",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 33\". (2020)."
+          },
+          "filterText": "ref33 @article Example title 33 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref33",
+          "preselect": false,
+          "sortText": "33",
+          "textEdit": {
+            "newText": "ref33",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 34\". (2020)."
+          },
+          "filterText": "ref34 @article Example title 34 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref34",
+          "preselect": false,
+          "sortText": "34",
+          "textEdit": {
+            "newText": "ref34",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 35\". (2020)."
+          },
+          "filterText": "ref35 @article Example title 35 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref35",
+          "preselect": false,
+          "sortText": "35",
+          "textEdit": {
+            "newText": "ref35",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 36\". (2020)."
+          },
+          "filterText": "ref36 @article Example title 36 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref36",
+          "preselect": false,
+          "sortText": "36",
+          "textEdit": {
+            "newText": "ref36",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 37\". (2020)."
+          },
+          "filterText": "ref37 @article Example title 37 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref37",
+          "preselect": false,
+          "sortText": "37",
+          "textEdit": {
+            "newText": "ref37",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 38\". (2020)."
+          },
+          "filterText": "ref38 @article Example title 38 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref38",
+          "preselect": false,
+          "sortText": "38",
+          "textEdit": {
+            "newText": "ref38",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 39\". (2020)."
+          },
+          "filterText": "ref39 @article Example title 39 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref39",
+          "preselect": false,
+          "sortText": "39",
+          "textEdit": {
+            "newText": "ref39",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 40\". (2020)."
+          },
+          "filterText": "ref40 @article Example title 40 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref40",
+          "preselect": false,
+          "sortText": "40",
+          "textEdit": {
+            "newText": "ref40",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 41\". (2020)."
+          },
+          "filterText": "ref41 @article Example title 41 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref41",
+          "preselect": false,
+          "sortText": "41",
+          "textEdit": {
+            "newText": "ref41",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 42\". (2020)."
+          },
+          "filterText": "ref42 @article Example title 42 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref42",
+          "preselect": false,
+          "sortText": "42",
+          "textEdit": {
+            "newText": "ref42",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 43\". (2020)."
+          },
+          "filterText": "ref43 @article Example title 43 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref43",
+          "preselect": false,
+          "sortText": "43",
+          "textEdit": {
+            "newText": "ref43",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 44\". (2020)."
+          },
+          "filterText": "ref44 @article Example title 44 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref44",
+          "preselect": false,
+          "sortText": "44",
+          "textEdit": {
+            "newText": "ref44",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 45\". (2020)."
+          },
+          "filterText": "ref45 @article Example title 45 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref45",
+          "preselect": false,
+          "sortText": "45",
+          "textEdit": {
+            "newText": "ref45",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 46\". (2020)."
+          },
+          "filterText": "ref46 @article Example title 46 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref46",
+          "preselect": false,
+          "sortText": "46",
+          "textEdit": {
+            "newText": "ref46",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 47\". (2020)."
+          },
+          "filterText": "ref47 @article Example title 47 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref47",
+          "preselect": false,
+          "sortText": "47",
+          "textEdit": {
+            "newText": "ref47",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 48\". (2020)."
+          },
+          "filterText": "ref48 @article Example title 48 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref48",
+          "preselect": false,
+          "sortText": "48",
+          "textEdit": {
+            "newText": "ref48",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        },
+        {
+          "documentation": {
+            "kind": "markdown",
+            "value": "A. Author: \"Example title 49\". (2020)."
+          },
+          "filterText": "ref49 @article Example title 49 Author, Alice 2020",
+          "kind": 1,
+          "label": "ref49",
+          "preselect": false,
+          "sortText": "49",
+          "textEdit": {
+            "newText": "ref49",
+            "range": {
+              "end": {
+                "character": 6,
+                "line": 3
+              },
+              "start": {
+                "character": 6,
+                "line": 3
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "input": "\\documentclass{article}\n\\begin{document}\n\\section{Topic 00}\\label{sec:topic00}\n\\section{Topic 01}\\label{sec:topic01}\n\\section{Topic 02}\\label{sec:topic02}\n\\section{Topic 03}\\label{sec:topic03}\n\\section{Topic 04}\\label{sec:topic04}\n\\section{Topic 05}\\label{sec:topic05}\n\\section{Topic 06}\\label{sec:topic06}\n\\section{Topic 07}\\label{sec:topic07}\n\\section{Topic 08}\\label{sec:topic08}\n\\section{Topic 09}\\label{sec:topic09}\n\\section{Topic 10}\\label{sec:topic10}\n\\section{Topic 11}\\label{sec:topic11}\n\\section{Topic 12}\\label{sec:topic12}\n\\section{Topic 13}\\label{sec:topic13}\n\\section{Topic 14}\\label{sec:topic14}\n\\section{Topic 15}\\label{sec:topic15}\n\\section{Topic 16}\\label{sec:topic16}\n\\section{Topic 17}\\label{sec:topic17}\n\\section{Topic 18}\\label{sec:topic18}\n\\section{Topic 19}\\label{sec:topic19}\n\\section{Topic 20}\\label{sec:topic20}\n\\section{Topic 21}\\label{sec:topic21}\n\\section{Topic 22}\\label{sec:topic22}\n\\section{Topic 23}\\label{sec:topic23}\n\\section{Topic 24}\\label{sec:topic24}\n\\section{Topic 25}\\label{sec:topic25}\n\\section{Topic 26}\\label{sec:topic26}\n\\section{Topic 27}\\label{sec:topic27}\n\\section{Topic 28}\\label{sec:topic28}\n\\section{Topic 29}\\label{sec:topic29}\n\\section{Topic 30}\\label{sec:topic30}\n\\section{Topic 31}\\label{sec:topic31}\n\\section{Topic 32}\\label{sec:topic32}\n\\section{Topic 33}\\label{sec:topic33}\n\\section{Topic 34}\\label{sec:topic34}\n\\section{Topic 35}\\label{sec:topic35}\n\\section{Topic 36}\\label{sec:topic36}\n\\section{Topic 37}\\label{sec:topic37}\n\\section{Topic 38}\\label{sec:topic38}\n\\section{Topic 39}\\label{sec:topic39}\n\\section{Topic 40}\\label{sec:topic40}\n\\section{Topic 41}\\label{sec:topic41}\n\\section{Topic 42}\\label{sec:topic42}\n\\section{Topic 43}\\label{sec:topic43}\n\\section{Topic 44}\\label{sec:topic44}\n\\section{Topic 45}\\label{sec:topic45}\n\\section{Topic 46}\\label{sec:topic46}\n\\section{Topic 47}\\label{sec:topic47}\n\\section{Topic 48}\\label{sec:topic48}\n\\section{Topic 49}\\label{sec:topic49}\n\\section{Topic 50}\\label{sec:topic50}\n\\section{Topic 51}\\label{sec:topic51}\n\\section{Topic 52}\\label{sec:topic52}\n\\section{Topic 53}\\label{sec:topic53}\n\\section{Topic 54}\\label{sec:topic54}\n\\section{Topic 55}\\label{sec:topic55}\n\\section{Topic 56}\\label{sec:topic56}\n\\section{Topic 57}\\label{sec:topic57}\n\\section{Topic 58}\\label{sec:topic58}\n\\section{Topic 59}\\label{sec:topic59}\n\\ref{",
+      "filename": "4-example.tex",
+      "result": {
+        "isIncomplete": true,
+        "items": [
+          {
+            "detail": "Section (Topic 00)",
+            "filterText": "sec:topic00 Section (Topic 00)",
+            "kind": 1,
+            "label": "sec:topic00",
+            "preselect": false,
+            "sortText": "00",
+            "textEdit": {
+              "newText": "sec:topic00",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 01)",
+            "filterText": "sec:topic01 Section (Topic 01)",
+            "kind": 1,
+            "label": "sec:topic01",
+            "preselect": false,
+            "sortText": "01",
+            "textEdit": {
+              "newText": "sec:topic01",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 02)",
+            "filterText": "sec:topic02 Section (Topic 02)",
+            "kind": 1,
+            "label": "sec:topic02",
+            "preselect": false,
+            "sortText": "02",
+            "textEdit": {
+              "newText": "sec:topic02",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 03)",
+            "filterText": "sec:topic03 Section (Topic 03)",
+            "kind": 1,
+            "label": "sec:topic03",
+            "preselect": false,
+            "sortText": "03",
+            "textEdit": {
+              "newText": "sec:topic03",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 04)",
+            "filterText": "sec:topic04 Section (Topic 04)",
+            "kind": 1,
+            "label": "sec:topic04",
+            "preselect": false,
+            "sortText": "04",
+            "textEdit": {
+              "newText": "sec:topic04",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 05)",
+            "filterText": "sec:topic05 Section (Topic 05)",
+            "kind": 1,
+            "label": "sec:topic05",
+            "preselect": false,
+            "sortText": "05",
+            "textEdit": {
+              "newText": "sec:topic05",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 06)",
+            "filterText": "sec:topic06 Section (Topic 06)",
+            "kind": 1,
+            "label": "sec:topic06",
+            "preselect": false,
+            "sortText": "06",
+            "textEdit": {
+              "newText": "sec:topic06",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 07)",
+            "filterText": "sec:topic07 Section (Topic 07)",
+            "kind": 1,
+            "label": "sec:topic07",
+            "preselect": false,
+            "sortText": "07",
+            "textEdit": {
+              "newText": "sec:topic07",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 08)",
+            "filterText": "sec:topic08 Section (Topic 08)",
+            "kind": 1,
+            "label": "sec:topic08",
+            "preselect": false,
+            "sortText": "08",
+            "textEdit": {
+              "newText": "sec:topic08",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 09)",
+            "filterText": "sec:topic09 Section (Topic 09)",
+            "kind": 1,
+            "label": "sec:topic09",
+            "preselect": false,
+            "sortText": "09",
+            "textEdit": {
+              "newText": "sec:topic09",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 10)",
+            "filterText": "sec:topic10 Section (Topic 10)",
+            "kind": 1,
+            "label": "sec:topic10",
+            "preselect": false,
+            "sortText": "10",
+            "textEdit": {
+              "newText": "sec:topic10",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 11)",
+            "filterText": "sec:topic11 Section (Topic 11)",
+            "kind": 1,
+            "label": "sec:topic11",
+            "preselect": false,
+            "sortText": "11",
+            "textEdit": {
+              "newText": "sec:topic11",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 12)",
+            "filterText": "sec:topic12 Section (Topic 12)",
+            "kind": 1,
+            "label": "sec:topic12",
+            "preselect": false,
+            "sortText": "12",
+            "textEdit": {
+              "newText": "sec:topic12",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 13)",
+            "filterText": "sec:topic13 Section (Topic 13)",
+            "kind": 1,
+            "label": "sec:topic13",
+            "preselect": false,
+            "sortText": "13",
+            "textEdit": {
+              "newText": "sec:topic13",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 14)",
+            "filterText": "sec:topic14 Section (Topic 14)",
+            "kind": 1,
+            "label": "sec:topic14",
+            "preselect": false,
+            "sortText": "14",
+            "textEdit": {
+              "newText": "sec:topic14",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 15)",
+            "filterText": "sec:topic15 Section (Topic 15)",
+            "kind": 1,
+            "label": "sec:topic15",
+            "preselect": false,
+            "sortText": "15",
+            "textEdit": {
+              "newText": "sec:topic15",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 16)",
+            "filterText": "sec:topic16 Section (Topic 16)",
+            "kind": 1,
+            "label": "sec:topic16",
+            "preselect": false,
+            "sortText": "16",
+            "textEdit": {
+              "newText": "sec:topic16",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 17)",
+            "filterText": "sec:topic17 Section (Topic 17)",
+            "kind": 1,
+            "label": "sec:topic17",
+            "preselect": false,
+            "sortText": "17",
+            "textEdit": {
+              "newText": "sec:topic17",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 18)",
+            "filterText": "sec:topic18 Section (Topic 18)",
+            "kind": 1,
+            "label": "sec:topic18",
+            "preselect": false,
+            "sortText": "18",
+            "textEdit": {
+              "newText": "sec:topic18",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 19)",
+            "filterText": "sec:topic19 Section (Topic 19)",
+            "kind": 1,
+            "label": "sec:topic19",
+            "preselect": false,
+            "sortText": "19",
+            "textEdit": {
+              "newText": "sec:topic19",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 20)",
+            "filterText": "sec:topic20 Section (Topic 20)",
+            "kind": 1,
+            "label": "sec:topic20",
+            "preselect": false,
+            "sortText": "20",
+            "textEdit": {
+              "newText": "sec:topic20",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 21)",
+            "filterText": "sec:topic21 Section (Topic 21)",
+            "kind": 1,
+            "label": "sec:topic21",
+            "preselect": false,
+            "sortText": "21",
+            "textEdit": {
+              "newText": "sec:topic21",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 22)",
+            "filterText": "sec:topic22 Section (Topic 22)",
+            "kind": 1,
+            "label": "sec:topic22",
+            "preselect": false,
+            "sortText": "22",
+            "textEdit": {
+              "newText": "sec:topic22",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 23)",
+            "filterText": "sec:topic23 Section (Topic 23)",
+            "kind": 1,
+            "label": "sec:topic23",
+            "preselect": false,
+            "sortText": "23",
+            "textEdit": {
+              "newText": "sec:topic23",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 24)",
+            "filterText": "sec:topic24 Section (Topic 24)",
+            "kind": 1,
+            "label": "sec:topic24",
+            "preselect": false,
+            "sortText": "24",
+            "textEdit": {
+              "newText": "sec:topic24",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 25)",
+            "filterText": "sec:topic25 Section (Topic 25)",
+            "kind": 1,
+            "label": "sec:topic25",
+            "preselect": false,
+            "sortText": "25",
+            "textEdit": {
+              "newText": "sec:topic25",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 26)",
+            "filterText": "sec:topic26 Section (Topic 26)",
+            "kind": 1,
+            "label": "sec:topic26",
+            "preselect": false,
+            "sortText": "26",
+            "textEdit": {
+              "newText": "sec:topic26",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 27)",
+            "filterText": "sec:topic27 Section (Topic 27)",
+            "kind": 1,
+            "label": "sec:topic27",
+            "preselect": false,
+            "sortText": "27",
+            "textEdit": {
+              "newText": "sec:topic27",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 28)",
+            "filterText": "sec:topic28 Section (Topic 28)",
+            "kind": 1,
+            "label": "sec:topic28",
+            "preselect": false,
+            "sortText": "28",
+            "textEdit": {
+              "newText": "sec:topic28",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 29)",
+            "filterText": "sec:topic29 Section (Topic 29)",
+            "kind": 1,
+            "label": "sec:topic29",
+            "preselect": false,
+            "sortText": "29",
+            "textEdit": {
+              "newText": "sec:topic29",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 30)",
+            "filterText": "sec:topic30 Section (Topic 30)",
+            "kind": 1,
+            "label": "sec:topic30",
+            "preselect": false,
+            "sortText": "30",
+            "textEdit": {
+              "newText": "sec:topic30",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 31)",
+            "filterText": "sec:topic31 Section (Topic 31)",
+            "kind": 1,
+            "label": "sec:topic31",
+            "preselect": false,
+            "sortText": "31",
+            "textEdit": {
+              "newText": "sec:topic31",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 32)",
+            "filterText": "sec:topic32 Section (Topic 32)",
+            "kind": 1,
+            "label": "sec:topic32",
+            "preselect": false,
+            "sortText": "32",
+            "textEdit": {
+              "newText": "sec:topic32",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 33)",
+            "filterText": "sec:topic33 Section (Topic 33)",
+            "kind": 1,
+            "label": "sec:topic33",
+            "preselect": false,
+            "sortText": "33",
+            "textEdit": {
+              "newText": "sec:topic33",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 34)",
+            "filterText": "sec:topic34 Section (Topic 34)",
+            "kind": 1,
+            "label": "sec:topic34",
+            "preselect": false,
+            "sortText": "34",
+            "textEdit": {
+              "newText": "sec:topic34",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 35)",
+            "filterText": "sec:topic35 Section (Topic 35)",
+            "kind": 1,
+            "label": "sec:topic35",
+            "preselect": false,
+            "sortText": "35",
+            "textEdit": {
+              "newText": "sec:topic35",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 36)",
+            "filterText": "sec:topic36 Section (Topic 36)",
+            "kind": 1,
+            "label": "sec:topic36",
+            "preselect": false,
+            "sortText": "36",
+            "textEdit": {
+              "newText": "sec:topic36",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 37)",
+            "filterText": "sec:topic37 Section (Topic 37)",
+            "kind": 1,
+            "label": "sec:topic37",
+            "preselect": false,
+            "sortText": "37",
+            "textEdit": {
+              "newText": "sec:topic37",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 38)",
+            "filterText": "sec:topic38 Section (Topic 38)",
+            "kind": 1,
+            "label": "sec:topic38",
+            "preselect": false,
+            "sortText": "38",
+            "textEdit": {
+              "newText": "sec:topic38",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 39)",
+            "filterText": "sec:topic39 Section (Topic 39)",
+            "kind": 1,
+            "label": "sec:topic39",
+            "preselect": false,
+            "sortText": "39",
+            "textEdit": {
+              "newText": "sec:topic39",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 40)",
+            "filterText": "sec:topic40 Section (Topic 40)",
+            "kind": 1,
+            "label": "sec:topic40",
+            "preselect": false,
+            "sortText": "40",
+            "textEdit": {
+              "newText": "sec:topic40",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 41)",
+            "filterText": "sec:topic41 Section (Topic 41)",
+            "kind": 1,
+            "label": "sec:topic41",
+            "preselect": false,
+            "sortText": "41",
+            "textEdit": {
+              "newText": "sec:topic41",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 42)",
+            "filterText": "sec:topic42 Section (Topic 42)",
+            "kind": 1,
+            "label": "sec:topic42",
+            "preselect": false,
+            "sortText": "42",
+            "textEdit": {
+              "newText": "sec:topic42",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 43)",
+            "filterText": "sec:topic43 Section (Topic 43)",
+            "kind": 1,
+            "label": "sec:topic43",
+            "preselect": false,
+            "sortText": "43",
+            "textEdit": {
+              "newText": "sec:topic43",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 44)",
+            "filterText": "sec:topic44 Section (Topic 44)",
+            "kind": 1,
+            "label": "sec:topic44",
+            "preselect": false,
+            "sortText": "44",
+            "textEdit": {
+              "newText": "sec:topic44",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 45)",
+            "filterText": "sec:topic45 Section (Topic 45)",
+            "kind": 1,
+            "label": "sec:topic45",
+            "preselect": false,
+            "sortText": "45",
+            "textEdit": {
+              "newText": "sec:topic45",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 46)",
+            "filterText": "sec:topic46 Section (Topic 46)",
+            "kind": 1,
+            "label": "sec:topic46",
+            "preselect": false,
+            "sortText": "46",
+            "textEdit": {
+              "newText": "sec:topic46",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 47)",
+            "filterText": "sec:topic47 Section (Topic 47)",
+            "kind": 1,
+            "label": "sec:topic47",
+            "preselect": false,
+            "sortText": "47",
+            "textEdit": {
+              "newText": "sec:topic47",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 48)",
+            "filterText": "sec:topic48 Section (Topic 48)",
+            "kind": 1,
+            "label": "sec:topic48",
+            "preselect": false,
+            "sortText": "48",
+            "textEdit": {
+              "newText": "sec:topic48",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          },
+          {
+            "detail": "Section (Topic 49)",
+            "filterText": "sec:topic49 Section (Topic 49)",
+            "kind": 1,
+            "label": "sec:topic49",
+            "preselect": false,
+            "sortText": "49",
+            "textEdit": {
+              "newText": "sec:topic49",
+              "range": {
+                "end": {
+                  "character": 5,
+                  "line": 62
+                },
+                "start": {
+                  "character": 5,
+                  "line": 62
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "input": "\\documentclass{article}\n\\begin{document}\n\\sec",
+      "filename": "5-example.tex",
+      "result": {
+        "isIncomplete": false,
+        "items": []
+      }
+    }
+  ]
+}

@@ -14,6 +14,7 @@ import {
 import workerSource from 'pdfjs-dist/legacy/build/pdf.worker.mjs';
 import { viewShortcut } from '../lib/view';
 import { installLinkPreviews } from './link-preview';
+import { createDomInspector } from './dom-inspector';
 import type { Heading, Preferences } from '../lib/types';
 import 'pdfjs-dist/web/pdf_viewer.css';
 import './pdf.css';
@@ -33,6 +34,7 @@ const payload: Payload = JSON.parse(document.getElementById('payload')!.textCont
 const send = (data: Record<string, unknown>) =>
   parent.postMessage({ ...data, channel: payload.channel }, '*');
 const container = document.getElementById('viewer-container') as HTMLDivElement;
+const domInspector = createDomInspector(document.body);
 const pageInput = document.getElementById('page-number') as HTMLInputElement;
 const previous = document.getElementById('previous-page') as HTMLButtonElement;
 const next = document.getElementById('next-page') as HTMLButtonElement;
@@ -71,6 +73,28 @@ const viewer = new PDFViewer({
 });
 linkService.setViewer(viewer);
 let loaded = false;
+let sourceNavigation = false;
+container.addEventListener('click', (event) => {
+  if (
+    !sourceNavigation ||
+    !(event.target instanceof Element) ||
+    event.target.closest('a,button,input') ||
+    !window.getSelection()?.isCollapsed
+  )
+    return;
+  const pageElement = event.target.closest<HTMLElement>('.page[data-page-number]');
+  if (!pageElement) return;
+  const page = Number(pageElement.dataset.pageNumber);
+  const view = viewer.getPageView(page - 1);
+  if (!view?.viewport) return;
+  const rect = pageElement.getBoundingClientRect();
+  const [pdfX, pdfY] = view.viewport.convertToPdfPoint(
+    event.clientX - rect.left,
+    event.clientY - rect.top,
+  );
+  const box = view.viewport.viewBox;
+  send({ type: 'pdf-source-jump', page, x: pdfX - box[0], y: box[3] - pdfY });
+});
 let opened = false;
 let passwordCallback: ((password: string) => void) | undefined;
 let pendingAnchor = '';
@@ -189,6 +213,7 @@ eventBus.on('pagechanging', ({ pageNumber }: { pageNumber: number }) => {
 });
 eventBus.on('updatefindmatchescount', ({ matchesCount }: { matchesCount: { total: number } }) => {
   matchCount.textContent = `${matchesCount.total} matches`;
+  send({ type: 'matches', count: matchesCount.total });
 });
 previous.onclick = () => {
   viewer.currentPageNumber = Math.max(1, viewer.currentPageNumber - 1);
@@ -227,9 +252,48 @@ window.addEventListener('keydown', (event) => {
     send({ type: 'view-command', ...command });
   }
 });
+let lastSelectionStats = '';
+function publishSelectionStats() {
+  if (
+    document.activeElement instanceof HTMLInputElement ||
+    document.activeElement instanceof HTMLTextAreaElement
+  )
+    return;
+  const text = window.getSelection()?.toString().trim() ?? '';
+  const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+  const characters = text.length;
+  const key = `${words}:${characters}`;
+  if (key === lastSelectionStats) return;
+  lastSelectionStats = key;
+  send({ type: 'selection-stats', words, characters });
+}
+document.addEventListener('selectionchange', publishSelectionStats);
 window.addEventListener('message', (event) => {
   if (event.source !== parent || !event.data) return;
   const data = event.data;
+  if (data.type === 'pdf-source-navigation') {
+    sourceNavigation = data.enabled === true;
+    return;
+  }
+  if (
+    data.type === 'pdf-source-reveal' &&
+    loaded &&
+    Number.isSafeInteger(data.page) &&
+    Number.isFinite(data.x) &&
+    Number.isFinite(data.y)
+  ) {
+    const view = viewer.getPageView(data.page - 1);
+    if (!view?.viewport) return;
+    const box = view.viewport.viewBox;
+    const [x, y] = view.viewport.convertToViewportPoint(box[0] + data.x, box[3] - data.y);
+    viewer.currentPageNumber = data.page;
+    container.scrollTo({
+      top: view.div.offsetTop + y - container.clientHeight / 2,
+      left: view.div.offsetLeft + x - container.clientWidth / 2,
+      behavior: 'smooth',
+    });
+    return;
+  }
   if (data.type === 'scroll' && Number.isSafeInteger(data.request)) {
     const request = data.request;
     const top = Number.isFinite(data.y)
@@ -260,7 +324,51 @@ window.addEventListener('message', (event) => {
     }
     return;
   }
+  if (
+    data.type === 'dom-request' &&
+    Number.isSafeInteger(data.request) &&
+    typeof data.action === 'string'
+  ) {
+    try {
+      const result = domInspector.invoke(
+        data.action,
+        data.params && typeof data.params === 'object' ? data.params : {},
+      );
+      send({ type: 'dom-result', request: data.request, result });
+    } catch (error) {
+      send({ type: 'dom-result', request: data.request, error: String(error) });
+    }
+  }
   if (data.type === 'search' && typeof data.query === 'string') search(data.query);
+  if (data.type === 'selection-request' && Number.isSafeInteger(data.request) && data.request > 0) {
+    const text = window.getSelection()?.toString() ?? '';
+    send({
+      type: 'selection-result',
+      request: data.request,
+      text: text.slice(0, 50_000),
+      source: text.slice(0, 100_000),
+      preview: '',
+    });
+  }
+  if (data.type === 'search-next' && loaded) {
+    eventBus.dispatch('find', {
+      source: viewer,
+      type: 'again',
+      query: pendingQuery,
+      caseSensitive: false,
+      entireWord: false,
+      highlightAll: true,
+      findPrevious: data.previous === true,
+      matchDiacritics: false,
+    });
+  }
+  if (data.type === 'pdf-password' && typeof data.password === 'string' && passwordCallback) {
+    const callback = passwordCallback;
+    passwordCallback = undefined;
+    passwordPanel.hidden = true;
+    passwordInput.value = '';
+    callback(data.password);
+  }
   if (data.type === 'anchor' && typeof data.id === 'string') navigate(data.id);
   if (data.type === 'presentation') {
     payload.theme = data.theme;
@@ -300,9 +408,11 @@ async function openPdf(bytes: Uint8Array) {
         reason === 2 ? 'Incorrect password. Try again.' : 'This PDF requires a password';
       passwordPanel.hidden = false;
       passwordInput.focus();
+      send({ type: 'pdf-password-required', required: true });
       send({ type: 'ready' });
     };
     const pdf = await task.promise;
+    send({ type: 'pdf-password-required', required: false });
     URL.revokeObjectURL(workerUrl);
     pageInput.max = String(pdf.numPages);
     pageCount.textContent = `of ${pdf.numPages}`;
