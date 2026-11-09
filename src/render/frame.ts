@@ -2,6 +2,7 @@ import DOMPurify from 'dompurify';
 import 'katex/dist/katex.min.css';
 import './highlighting.css';
 import './reading.css';
+import './build.css';
 import './link-preview.css';
 import { syncViewportSize } from './viewport';
 import { viewShortcut } from '../lib/view';
@@ -9,6 +10,7 @@ import { createDiagramViewer } from './diagram-view';
 import { installImageViewers } from './image-view';
 import { resolveReferenceTargets } from './reference-targets';
 import { installLinkPreviews } from './link-preview';
+import { createDomInspector } from './dom-inspector';
 const runtimeNonce = (document.currentScript as HTMLScriptElement | null)?.nonce || '';
 const payload = JSON.parse(document.getElementById('payload')!.textContent!);
 const root = document.getElementById('document')!;
@@ -57,6 +59,8 @@ export function sanitize(html: string) {
   });
 }
 let mathOverflowFrame = 0;
+let searchIndex = 0;
+const domInspector = createDomInspector(document.body);
 
 /** Keep overflow only on inline math wider than the reading column. */
 function updateMathOverflow() {
@@ -314,6 +318,49 @@ function nearestSourceBlock(node: Node): Element | null {
   return null;
 }
 
+let sourceNavigation = false;
+document.addEventListener('click', (event) => {
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target) return;
+  const action = target.closest<HTMLElement>('[data-build-action]');
+  if (action) {
+    event.preventDefault();
+    const name = action.dataset.buildAction;
+    if (
+      name === 'mode' &&
+      (action.dataset.buildMode === 'inline' || action.dataset.buildMode === 'inspector')
+    ) {
+      const mode = action.dataset.buildMode;
+      const view = root.querySelector<HTMLElement>('.build-view');
+      if (view) {
+        view.dataset.buildMode = mode;
+        for (const button of root.querySelectorAll<HTMLElement>('.build-segment')) {
+          const active = button.dataset.buildMode === mode;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-pressed', String(active));
+        }
+      }
+      notifyHost({ type: 'build-action', action: name, mode });
+    } else if (name === 'edit') {
+      const line = Number(action.dataset.buildLine);
+      if (Number.isInteger(line) && line > 0) notifyHost({ type: 'build-jump', line });
+    } else if (name) notifyHost({ type: 'build-action', action: name });
+    return;
+  }
+  const jump = target.closest<HTMLElement>('[data-build-jump]');
+  if (jump) {
+    event.preventDefault();
+    const line = Number(jump.dataset.buildJump);
+    if (Number.isInteger(line) && line > 0) notifyHost({ type: 'build-jump', line });
+  }
+});
+document.addEventListener('click', (event) => {
+  if (!sourceNavigation || !(event.target instanceof Element)) return;
+  if (event.target.closest('a, button, input') || !window.getSelection()?.isCollapsed) return;
+  const block = nearestSourceBlock(event.target) as HTMLElement | null;
+  if (block) notifyHost({ type: 'source-jump', line: Number(block.dataset.sourceStart) });
+});
+
 function sourceSlice(markdown: string, start: number, end: number): string {
   const lines = markdown.split(/\r?\n/);
   if (end > lines.length) return '';
@@ -550,6 +597,22 @@ function scrollFromWheel(
 }
 window.addEventListener('message', (event) => {
   if (event.source !== parent) return;
+  if (event.data?.type === 'source-navigation') {
+    sourceNavigation = event.data.enabled === true;
+    return;
+  }
+  if (event.data?.type === 'source-reveal' && Number.isSafeInteger(event.data.line)) {
+    const line = event.data.line;
+    const blocks = [...root.querySelectorAll<HTMLElement>('[data-source-start][data-source-end]')];
+    const match = blocks
+      .filter(
+        (block) =>
+          Number(block.dataset.sourceStart) <= line && line < Number(block.dataset.sourceEnd),
+      )
+      .at(-1);
+    match?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return;
+  }
   if (event.data?.type === 'scroll' && Number.isSafeInteger(event.data.request)) {
     const request = event.data.request;
     const y = finiteNumber(event.data.y)
@@ -614,7 +677,98 @@ window.addEventListener('message', (event) => {
       node.replaceWith(fragment);
     }
     root.querySelector('mark[data-search]')?.scrollIntoView({ block: 'center' });
+    searchIndex = 0;
     notifyHost({ type: 'matches', count: matches });
+  }
+  if (event.data.type === 'search-next') {
+    const marks = [...root.querySelectorAll<HTMLElement>('mark[data-search]')];
+    if (!marks.length) return;
+    const step = event.data.previous === true ? -1 : 1;
+    searchIndex = (searchIndex + step + marks.length) % marks.length;
+    marks[searchIndex]?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    notifyHost({ type: 'matches', count: marks.length });
+  }
+  if (
+    event.data.type === 'dom-request' &&
+    Number.isSafeInteger(event.data.request) &&
+    typeof event.data.action === 'string'
+  ) {
+    try {
+      const result = domInspector.invoke(
+        event.data.action,
+        event.data.params && typeof event.data.params === 'object' ? event.data.params : {},
+      );
+      notifyHost({ type: 'dom-result', request: event.data.request, result });
+    } catch (error) {
+      notifyHost({
+        type: 'dom-result',
+        request: event.data.request,
+        error: String(error),
+      });
+    }
+  }
+  if (
+    event.data.type === 'selection-set' &&
+    Number.isSafeInteger(event.data.request) &&
+    event.data.request > 0 &&
+    typeof event.data.text === 'string' &&
+    event.data.text.length > 0
+  ) {
+    const query = event.data.text.toLowerCase();
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) =>
+        node.parentElement?.closest('script,style,svg,math,.katex,.image-expand')
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT,
+    });
+    let found = false;
+    while (walker.nextNode()) {
+      const node = walker.currentNode as Text;
+      const text = node.textContent || '';
+      const index = text.toLowerCase().indexOf(query);
+      if (index < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + event.data.text.length);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      node.parentElement?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      found = true;
+      break;
+    }
+    if (found) publishSelectionStats();
+    notifyHost({ type: 'selection-set-result', request: event.data.request, found });
+  }
+  if (
+    event.data.type === 'selection-clear' &&
+    Number.isSafeInteger(event.data.request) &&
+    event.data.request > 0
+  ) {
+    window.getSelection()?.removeAllRanges();
+    publishSelectionStats();
+    notifyHost({ type: 'selection-clear-result', request: event.data.request });
+  }
+  if (
+    event.data.type === 'selection-request' &&
+    Number.isSafeInteger(event.data.request) &&
+    event.data.request > 0
+  ) {
+    const selection = window.getSelection();
+    const text = selection && !selection.isCollapsed ? selectionText(selection) : '';
+    notifyHost({
+      type: 'selection-result',
+      request: event.data.request,
+      text: text.slice(0, 50_000),
+      source: (selection && !selection.isCollapsed
+        ? sourceForSelection(selection, text)
+        : ''
+      ).slice(0, 100_000),
+      preview: (selection && !selection.isCollapsed ? selectionPreview(selection) : '').slice(
+        0,
+        20_000,
+      ),
+    });
   }
 });
 window.addEventListener('scroll', () => notifyHost({ type: 'scroll', y: window.scrollY }), {

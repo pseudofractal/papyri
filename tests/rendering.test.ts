@@ -1,9 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { renderMarkdown } from '../src/render/markdown';
 import { validateDelimiters } from '../src/lib/preferences';
-import { resolveLink, sortEntries } from '../src/lib/paths';
+import {
+  displayPath,
+  expandHomePath,
+  relativeProjectPath,
+  resolveLink,
+  sortEntries,
+} from '../src/lib/paths';
 import { framePolicy } from '../src/render/sandbox';
 import { renderSource } from '../src/render/source';
+import { parseBuildFailure } from '../src/lib/build-diagnostics';
 it.each([
   ['typst', '#let x = "hello"'],
   ['latex', '\\section{Hello}'],
@@ -15,6 +22,67 @@ it.each([
   expect(rendered.html).toContain('class="hljs-');
   expect(rendered.html).not.toContain('<script>');
   expect(rendered.html).toContain('&lt;script&gt;');
+});
+describe('failed-build source views', () => {
+  const text = '= Intentional Typst error\n\n#let';
+  const failure = parseBuildFailure(
+    `Compilation failed. Typst compilation failed (exit status: 1): <stdin>:3:4: error: expected pattern
+
+Compilation requires Linux user namespaces. Imports must stay in the document folder; packages must already be cached.`,
+    'typst',
+    '/work/broken.typ',
+  );
+  it('renders the inline diagnostics and both mode controls', () => {
+    const rendered = renderSource(text, 'typst', {
+      path: '/work/broken.typ',
+      failure,
+      mode: 'inline',
+    });
+    expect(rendered.html).toContain('build-toolbar');
+    expect(rendered.html).toContain('build-inline-diagnostic');
+    expect(rendered.html).toContain('data-build-jump="3"');
+    expect(rendered.html).toContain('data-build-action="mode"');
+    expect(rendered.html).toContain('data-build-mode="inspector"');
+  });
+  it('renders the inspector rail without duplicate inline cards', () => {
+    const rendered = renderSource(text, 'typst', {
+      path: '/work/broken.typ',
+      failure,
+      mode: 'inspector',
+    });
+    expect(rendered.html).toContain('build-rail');
+    expect(rendered.html).toContain('Build inspector');
+    expect(rendered.html).toContain('data-build-action="copy-log"');
+    expect(rendered.html).toContain('data-build-mode="inspector"');
+  });
+  it('escapes compiler output in both views', () => {
+    const unsafe = parseBuildFailure(
+      `Compilation failed. Typst compilation failed (exit status: 1):
+<stdin>:1:1: error: <script>alert(1)</script>`,
+      'typst',
+      '/work/broken.typ',
+    );
+    const rendered = renderSource('#let', 'typst', {
+      path: '/work/broken.typ',
+      failure: unsafe,
+      mode: 'inspector',
+    });
+    expect(rendered.html).not.toContain('<script>');
+    expect(rendered.html).toContain('&lt;script&gt;');
+  });
+  it('renders the alert card with the open action beside the location', () => {
+    const rendered = renderSource(text, 'typst', {
+      path: '/work/broken.typ',
+      failure,
+      mode: 'inline',
+    });
+    expect(rendered.html).toContain('build-inline-diagnostic');
+    expect(rendered.html).toContain('build-diagnostic-location');
+    expect(rendered.html).toContain('build-diagnostic-link-icon');
+    expect(rendered.html).toContain('data-build-jump="3"');
+    expect(rendered.html).not.toContain('data-build-box-select');
+    expect(rendered.html).not.toContain('build-diagnostic-actions');
+  });
 });
 describe('Markdown and mathematics', () => {
   it('renders GFM, footnotes, raw HTML, code, and unique heading anchors', () => {
@@ -66,6 +134,24 @@ describe('Markdown and mathematics', () => {
     expect(() => renderMarkdown('x'.repeat(8 * 1024 * 1024 + 1))).toThrow('8 MiB'));
 });
 describe('path resolution and security policy', () => {
+  it('abbreviates only the current home directory and expands entered paths', () => {
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { __PAPYRI_HOME__: '/home/alice' },
+    });
+    expect(displayPath('/home/alice/project')).toBe('~/project');
+    expect(displayPath('/home/alice')).toBe('~');
+    expect(displayPath('/home/alice2/file')).toBe('/home/alice2/file');
+    expect(expandHomePath('~/project')).toBe('/home/alice/project');
+    expect(expandHomePath('~other/project')).toBe('~other/project');
+    Reflect.deleteProperty(globalThis, 'window');
+  });
+  it('copies relative paths only inside the project root', () => {
+    expect(relativeProjectPath('/work', '/work/chapters/a.md')).toBe('chapters/a.md');
+    expect(relativeProjectPath('/', '/work/a.md')).toBe('work/a.md');
+    expect(relativeProjectPath('/work', '/work')).toBe('.');
+    expect(relativeProjectPath('/work', '/workspace/a.md')).toBe('/workspace/a.md');
+  });
   it('resolves parent, absolute, encoded links and anchors', () => {
     expect(resolveLink('/notes/one/readme.md', '../two.md#A%20B')).toEqual({
       kind: 'local',

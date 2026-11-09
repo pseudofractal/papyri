@@ -1,6 +1,7 @@
 import { RenderCache } from './cache';
 const cache = new RenderCache();
 import type { Delimiter, Rendered } from '../lib/types';
+import type { BuildRenderOptions } from '../render/source';
 const PREWARM_TIMEOUT_MS = 15_000;
 let prewarmedWorker: Worker | undefined;
 let prewarmTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -40,9 +41,17 @@ export function parseDocument(
   signal: AbortSignal,
   delimiters: Delimiter[],
   language?: 'typst' | 'latex',
+  build?: BuildRenderOptions,
 ): Promise<Rendered> {
   if (signal.aborted) return Promise.reject(new DOMException('Cancelled', 'AbortError'));
-  const key = (language || 'markdown') + '\0' + JSON.stringify(delimiters) + '\0' + text;
+  const key =
+    (language || 'markdown') +
+    '\0' +
+    JSON.stringify(delimiters) +
+    '\0' +
+    (build ? JSON.stringify(build) : '') +
+    '\0' +
+    text;
   const cached = cache.get(key);
   if (cached) return Promise.resolve(cached);
   return new Promise((resolve, reject) => {
@@ -73,7 +82,7 @@ export function parseDocument(
       finish();
       reject(new Error(event.message));
     };
-    worker.postMessage({ text, delimiters, language });
+    worker.postMessage({ text, delimiters, language, build });
     if (signal.aborted) abort();
   });
 }

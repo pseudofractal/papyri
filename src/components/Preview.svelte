@@ -1,3 +1,7 @@
+<script module lang="ts">
+  const buildModeStore = new Map<string, 'inline' | 'inspector'>();
+</script>
+
 <script lang="ts">
   import { untrack } from 'svelte';
   import type { ViewCommand } from '../lib/view';
@@ -11,12 +15,13 @@
   } from '../render/sandbox';
   import type { Preferences, Source, Heading } from '../lib/types';
   import type { AnchorTarget, Tab } from '../lib/workspace.svelte';
-  import { isTypst, isLatex } from '../lib/paths';
+  import { displayPath, displayPathMessage, isTypst, isLatex } from '../lib/paths';
   import { exportDiagram } from '../lib/diagram-export';
   import { traceStartup, traceStartupPaint } from '../lib/startup-trace';
   import { native } from '../lib/sources';
   import { mayContainMath, warmMathFonts } from '../render/math-fonts';
   import { loadPdfResource } from '../render/pdf-resources';
+  import { parseBuildFailure } from '../lib/build-diagnostics';
   import { SCROLL_ACK_TIMEOUT_MS } from '../lib/control-timings';
   import { PreviewNotReadyError } from '../lib/preview-control';
   import { MAX_SCROLL_POSITION } from '../lib/view';
@@ -33,6 +38,8 @@
     onselectioncopy,
     onpagecontext,
     onselectionstats,
+    onmatches,
+    onpdfpassword,
     onlink,
     onheadings,
     onscroll,
@@ -41,6 +48,15 @@
     onpdfpage,
     onrendererror,
     ondismiss,
+    onsourcejump,
+    onbuildjump,
+    onbuildretry,
+    onbuildcopy,
+    buildView = true,
+    retainDuringUpdate = false,
+    onrendered,
+    showRenderInfo = true,
+    onpdfsourcejump,
   }: {
     tab: Tab;
     scrollPosition?: number;
@@ -60,6 +76,8 @@
     onselectioncopy?: (info: { kind: 'source' | 'text'; text: string; source: string }) => void;
     onpagecontext?: (info: { x: number; y: number }) => void;
     onselectionstats?: (info: { words: number; characters: number }) => void;
+    onmatches?: (count: number) => void;
+    onpdfpassword?: (required: boolean) => void;
     onlink: (href: string) => void;
     onheadings: (headings: Heading[]) => void;
     onscroll: (path: string, y: number) => void;
@@ -68,10 +86,27 @@
     onpdfpage?: (path: string, page: number, total: number) => void;
     onrendererror?: (path: string, error: string) => void;
     ondismiss?: () => void;
+    onsourcejump?: (line: number) => void;
+    onbuildjump?: (line: number) => void;
+    onbuildretry?: () => void;
+    onbuildcopy?: (text: string) => void;
+    buildView?: boolean;
+    retainDuringUpdate?: boolean;
+    onrendered?: () => void;
+    showRenderInfo?: boolean;
+    onpdfsourcejump?: (location: { page: number; x: number; y: number }) => void;
   } = $props();
   let frame = $state<HTMLIFrameElement>();
-  let srcdoc = $state('');
-  let frameGeneration = $state(0);
+  let frames = $state<
+    { channel: string; document: string; trusted: boolean; bytes?: Uint8Array }[]
+  >([]);
+  const frameElements = new Map<string, HTMLIFrameElement>();
+  let pendingChannel = '';
+  function registerFrame(element: HTMLIFrameElement, channel: string) {
+    frameElements.set(channel, element);
+    if (channel === activeChannel) frame = element;
+    return { destroy: () => frameElements.delete(channel) };
+  }
   let error = $state('');
   let loading = $state(true);
   let elapsed = $state(0);
@@ -88,6 +123,102 @@
       timeout: ReturnType<typeof setTimeout>;
     }
   >();
+  const pendingSelections = new Map<
+    number,
+    {
+      resolve: (value: { text: string; source: string; preview: string }) => void;
+      reject: (error: Error) => void;
+      timeout: ReturnType<typeof setTimeout>;
+    }
+  >();
+  let selectionRequest = 0;
+  let domRequest = 0;
+  const pendingDom = new Map<
+    number,
+    {
+      resolve: (value: unknown) => void;
+      reject: (error: Error) => void;
+      timeout: ReturnType<typeof setTimeout>;
+    }
+  >();
+  export function frameRect() {
+    const rect = frame?.getBoundingClientRect();
+    return rect ? { x: rect.left, y: rect.top, width: rect.width, height: rect.height } : null;
+  }
+  export function dom(action: string, params: Record<string, unknown> = {}): Promise<unknown> {
+    if (!frame || !frameReady) return Promise.reject(new Error('The preview is not ready.'));
+    const request = ++domRequest;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        pendingDom.delete(request);
+        reject(new Error('The preview did not answer the DOM request.'));
+      }, SCROLL_ACK_TIMEOUT_MS);
+      pendingDom.set(request, { resolve, reject, timeout });
+      frame?.contentWindow?.postMessage({ type: 'dom-request', request, action, params }, '*');
+    });
+  }
+  let selectionSetRequest = 0;
+  let selectionClearRequest = 0;
+  const pendingSelectionClears = new Map<
+    number,
+    { resolve: () => void; timeout: ReturnType<typeof setTimeout> }
+  >();
+  const pendingSelectionSets = new Map<
+    number,
+    {
+      resolve: (found: boolean) => void;
+      reject: (error: Error) => void;
+      timeout: ReturnType<typeof setTimeout>;
+    }
+  >();
+  export function requestSelection(): Promise<{ text: string; source: string; preview: string }> {
+    if (!frame || !frameReady || trusted)
+      return Promise.reject(new Error('The preview has no selectable text right now.'));
+    const request = ++selectionRequest;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        pendingSelections.delete(request);
+        reject(new Error('The preview did not answer the selection request.'));
+      }, SCROLL_ACK_TIMEOUT_MS);
+      pendingSelections.set(request, { resolve, reject, timeout });
+      frame?.contentWindow?.postMessage({ type: 'selection-request', request }, '*');
+    });
+  }
+  export function selectText(text: string): Promise<boolean> {
+    if (!frame || !frameReady || trusted)
+      return Promise.reject(new Error('The preview is not ready for selection.'));
+    if (tab.bytes)
+      return Promise.reject(new Error('Setting a selection in PDF previews is not supported.'));
+    if (!text) return Promise.reject(new Error('Selection text must not be empty.'));
+    const request = ++selectionSetRequest;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        pendingSelectionSets.delete(request);
+        reject(new Error('The preview did not answer the selection request.'));
+      }, SCROLL_ACK_TIMEOUT_MS);
+      pendingSelectionSets.set(request, { resolve, reject, timeout });
+      frame?.contentWindow?.postMessage({ type: 'selection-set', request, text }, '*');
+    });
+  }
+  export function clearSelection(): Promise<void> {
+    if (!frame || !frameReady)
+      return Promise.reject(new Error('The preview is not ready for selection.'));
+    const request = ++selectionClearRequest;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        pendingSelectionClears.delete(request);
+        reject(new Error('The preview did not answer the selection request.'));
+      }, SCROLL_ACK_TIMEOUT_MS);
+      pendingSelectionClears.set(request, { resolve, timeout });
+      frame?.contentWindow?.postMessage({ type: 'selection-clear', request }, '*');
+    });
+  }
+  export function searchNext(previous = false): void {
+    frame?.contentWindow?.postMessage({ type: 'search-next', previous }, '*');
+  }
+  export function unlockPdf(password: string): void {
+    frame?.contentWindow?.postMessage({ type: 'pdf-password', password }, '*');
+  }
   export function scrollTo(y: number): Promise<number> {
     if (!Number.isFinite(y)) return Promise.reject(new Error('Scroll position must be finite.'));
     return requestScroll({ y: Math.max(0, y) });
@@ -98,6 +229,13 @@
   }
   export function documentPath() {
     return tab.path;
+  }
+  export function revealSource(line: number) {
+    if (frameReady) frame?.contentWindow?.postMessage({ type: 'source-reveal', line }, '*');
+  }
+  export function revealPdf(location: { page: number; x: number; y: number }) {
+    if (frameReady)
+      frame?.contentWindow?.postMessage({ type: 'pdf-source-reveal', ...location }, '*');
   }
   function requestScroll(payload: { y?: number; dy?: number }): Promise<number> {
     if (!frame || !frameReady) return Promise.reject(new PreviewNotReadyError());
@@ -133,8 +271,19 @@
     }),
   );
   const delimiterKey = $derived(JSON.stringify(preferences.delimiters));
-  let activeChannel = '';
+  let activeChannel = $state('');
   let allowsMessages = false;
+  let buildModes = $state<Record<string, 'inline' | 'inspector'>>({});
+  const buildLanguage = $derived(
+    isTypst(tab.path) ? 'typst' : isLatex(tab.path) ? 'latex' : undefined,
+  );
+  const buildFailure = $derived(
+    buildView && buildLanguage && tab.compilationError
+      ? parseBuildFailure(tab.compilationError, buildLanguage, tab.path)
+      : null,
+  );
+  const failedSource = $derived(!!buildFailure && !tab.bytes);
+  const buildMode = $derived(buildModes[tab.path] ?? buildModeStore.get(tab.path) ?? 'inline');
   $effect(() => {
     const text = tab.text;
     const bytes = tab.bytes;
@@ -146,17 +295,31 @@
     const network = networkAllowed;
     const prefs = untrack(() => ({ ...$state.snapshot(preferences), delimiters, network }));
     const language = isTypst(path) ? 'typst' : isLatex(path) ? 'latex' : undefined;
+    const build =
+      failedSource && buildFailure
+        ? {
+            path,
+            failure: buildFailure,
+            mode: untrack(() => buildMode),
+          }
+        : undefined;
     const trust = bytes || language ? false : trusted;
     const currentSource = source;
     const controller = new AbortController();
     const channelEntropyWords = 4;
     const channel = crypto.getRandomValues(new Uint32Array(channelEntropyWords)).join('-');
-    frameReady = false;
     expanded = false;
     expandedKind = null;
-    allowsMessages = false;
-    activeChannel = '';
-    loading = true;
+    const keepVisible = (!!onsourcejump || retainDuringUpdate) && untrack(() => frameReady);
+    if (!keepVisible) {
+      frameReady = false;
+      allowsMessages = false;
+      activeChannel = '';
+    } else {
+      pendingChannel = '';
+      frames = untrack(() => frames.filter((item) => item.channel === activeChannel));
+    }
+    loading = !keepVisible;
     error = '';
     cancelScrolls('The preview changed.');
     (async () => {
@@ -169,10 +332,12 @@
           elapsed = 0;
         } else {
           const [result] = await Promise.all([
-            parseDocument(text, controller.signal, prefs.delimiters, language).then((result) => {
-              if (!controller.signal.aborted) traceStartup('parser-ready');
-              return result;
-            }),
+            parseDocument(text, controller.signal, prefs.delimiters, language, build).then(
+              (result) => {
+                if (!controller.signal.aborted) traceStartup('parser-ready');
+                return result;
+              },
+            ),
             loadRuntime().then((runtime) => {
               if (
                 !controller.signal.aborted &&
@@ -195,12 +360,18 @@
         }
         if (controller.signal.aborted) return;
         traceStartup('frame-built');
-        activeChannel = channel;
-        allowsMessages = !trust;
-        srcdoc = document;
-        // Recreate the iframe so a load already in flight for an older
-        // document cannot win over this render and leave the host waiting.
-        frameGeneration++;
+        if (keepVisible) {
+          pendingChannel = channel;
+          frames = [
+            ...frames.filter((item) => item.channel === activeChannel),
+            { channel, document, trusted: trust, bytes },
+          ];
+        } else {
+          pendingChannel = '';
+          activeChannel = channel;
+          allowsMessages = !trust;
+          frames = [{ channel, document, trusted: trust, bytes }];
+        }
         onheadings(headings);
         loading = false;
       } catch (reason) {
@@ -228,6 +399,74 @@
       frame?.contentWindow?.postMessage({ type: 'presentation', ...presentation }, '*');
   });
   function message(event: MessageEvent) {
+    const pending = frames.find((item) => item.channel === pendingChannel);
+    const pendingFrame = pending && frameElements.get(pending.channel)?.contentWindow;
+    if (
+      pending &&
+      event.source === pendingFrame &&
+      event.data?.channel === pending.channel &&
+      pending.bytes
+    ) {
+      if (event.data.type === 'pdf-request') {
+        const bytes = pending.bytes.slice();
+        pendingFrame?.postMessage({ type: 'pdf-data', bytes }, '*', [bytes.buffer]);
+        return;
+      }
+      if (
+        event.data.type === 'pdf-resource-request' &&
+        typeof event.data.name === 'string' &&
+        event.data.name.length <= 128 &&
+        Number.isSafeInteger(event.data.request) &&
+        event.data.request > 0
+      ) {
+        const request = event.data.request;
+        void loadPdfResource(event.data.name)
+          .then((bytes) => {
+            if (pendingChannel === pending.channel)
+              pendingFrame?.postMessage({ type: 'pdf-resource-result', request, bytes }, '*', [
+                bytes.buffer as ArrayBuffer,
+              ]);
+          })
+          .catch((reason: unknown) => {
+            if (pendingChannel === pending.channel)
+              pendingFrame?.postMessage(
+                { type: 'pdf-resource-result', request, error: String(reason) },
+                '*',
+              );
+          });
+        return;
+      }
+      if (event.data.type === 'pdf-error') {
+        error =
+          typeof event.data.error === 'string'
+            ? event.data.error.slice(0, 8192)
+            : 'Could not render PDF.';
+        pendingChannel = '';
+        frames = frames.filter((item) => item.channel === activeChannel);
+        onrendererror?.(tab.path, error);
+        return;
+      }
+    }
+    if (
+      pending &&
+      event.source === frameElements.get(pending.channel)?.contentWindow &&
+      event.data?.channel === pending.channel &&
+      event.data?.type === (pending.bytes ? 'pdf-rendered' : 'ready')
+    ) {
+      frame = frameElements.get(pending.channel);
+      activeChannel = pending.channel;
+      allowsMessages = !pending.trusted;
+      pendingChannel = '';
+      frames = [pending];
+      frameReady = true;
+      if (onsourcejump)
+        frame?.contentWindow?.postMessage({ type: 'source-navigation', enabled: true }, '*');
+      if (onpdfsourcejump)
+        frame?.contentWindow?.postMessage({ type: 'pdf-source-navigation', enabled: true }, '*');
+      if (!tab.bytes) traceStartupPaint('document');
+      onrendered?.();
+      return;
+    }
     if (
       event.source !== frame?.contentWindow ||
       !event.data ||
@@ -236,6 +475,47 @@
     )
       return;
     const data = event.data;
+    if (
+      data.type === 'pdf-source-jump' &&
+      allowsMessages &&
+      tab.bytes &&
+      Number.isSafeInteger(data.page) &&
+      data.page > 0 &&
+      Number.isFinite(data.x) &&
+      Number.isFinite(data.y) &&
+      data.x >= 0 &&
+      data.y >= 0
+    ) {
+      onpdfsourcejump?.({ page: data.page, x: data.x, y: data.y });
+      return;
+    }
+    if (
+      data.type === 'source-jump' &&
+      allowsMessages &&
+      Number.isSafeInteger(data.line) &&
+      data.line >= 0
+    ) {
+      onsourcejump?.(data.line);
+      return;
+    }
+    if (
+      data.type === 'build-jump' &&
+      allowsMessages &&
+      Number.isSafeInteger(data.line) &&
+      data.line > 0
+    ) {
+      onbuildjump?.(data.line);
+      return;
+    }
+    if (data.type === 'build-action' && allowsMessages && typeof data.action === 'string') {
+      if (data.action === 'retry') onbuildretry?.();
+      else if (data.action === 'copy-log') onbuildcopy?.(buildFailure?.log ?? '');
+      else if (data.action === 'mode' && (data.mode === 'inline' || data.mode === 'inspector')) {
+        buildModeStore.set(tab.path, data.mode);
+        buildModes = { ...buildModes, [tab.path]: data.mode };
+      }
+      return;
+    }
     if (data.type === 'dismiss') {
       ondismiss?.();
       return;
@@ -320,9 +600,68 @@
       return;
     }
     if (
+      data.type === 'matches' &&
+      Number.isInteger(data.count) &&
+      data.count >= 0 &&
+      data.count <= 1_000_000
+    ) {
+      onmatches?.(data.count);
+      return;
+    }
+    if (data.type === 'dom-result' && Number.isSafeInteger(data.request)) {
+      const pending = pendingDom.get(data.request);
+      if (pending) {
+        pendingDom.delete(data.request);
+        clearTimeout(pending.timeout);
+        if (typeof data.error === 'string') pending.reject(new Error(data.error));
+        else pending.resolve(data.result);
+      }
+      return;
+    }
+    if (data.type === 'selection-clear-result' && Number.isSafeInteger(data.request)) {
+      const pending = pendingSelectionClears.get(data.request);
+      if (pending) {
+        pendingSelectionClears.delete(data.request);
+        clearTimeout(pending.timeout);
+        pending.resolve();
+      }
+      return;
+    }
+    if (data.type === 'selection-set-result' && Number.isSafeInteger(data.request)) {
+      const pending = pendingSelectionSets.get(data.request);
+      if (pending) {
+        pendingSelectionSets.delete(data.request);
+        clearTimeout(pending.timeout);
+        pending.resolve(data.found === true);
+      }
+      return;
+    }
+    if (data.type === 'selection-result' && Number.isSafeInteger(data.request)) {
+      const pending = pendingSelections.get(data.request);
+      if (pending) {
+        pendingSelections.delete(data.request);
+        clearTimeout(pending.timeout);
+        if (
+          typeof data.text === 'string' &&
+          typeof data.source === 'string' &&
+          typeof data.preview === 'string'
+        )
+          pending.resolve({
+            text: data.text.slice(0, 50_000),
+            source: data.source.slice(0, 100_000),
+            preview: data.preview.slice(0, 20_000),
+          });
+        else pending.reject(new Error('The preview returned an invalid selection.'));
+      }
+      return;
+    }
+    if (data.type === 'pdf-password-required' && typeof data.required === 'boolean') {
+      onpdfpassword?.(data.required);
+      return;
+    }
+    if (
       data.type === 'selection-stats' &&
       allowsMessages &&
-      !tab.bytes &&
       Number.isInteger(data.words) &&
       Number.isInteger(data.characters) &&
       data.words >= 0 &&
@@ -384,11 +723,16 @@
     }
     if (data.type === 'ready') {
       frameReady = true;
+      if (onsourcejump)
+        frame?.contentWindow?.postMessage({ type: 'source-navigation', enabled: true }, '*');
+      if (onpdfsourcejump)
+        frame?.contentWindow?.postMessage({ type: 'pdf-source-navigation', enabled: true }, '*');
       if (!tab.bytes) traceStartupPaint('document');
       return;
     }
     if (data.type === 'pdf-rendered' && tab.bytes) {
       traceStartupPaint('pdf-page');
+      onrendered?.();
       return;
     }
     if (
@@ -502,26 +846,27 @@
       <span class="loading loading-spinner loading-sm"></span> Loading document…
     </div>{/if}
   {#if error}<div class="preview-status error" role="alert">
-      <span>{error}</span>
+      <span>{displayPathMessage(error)}</span>
       <button class="btn btn-ghost btn-sm" onclick={() => retryRequest++}>Retry preview</button>
     </div>{/if}
-  {#if srcdoc}{#key frameGeneration}<iframe
-        bind:this={frame}
-        class:pending={!frameReady}
-        title="{tab.bytes
-          ? 'PDF'
-          : isTypst(tab.path) || isLatex(tab.path)
-            ? 'Source'
-            : 'Markdown'} preview: {tab.path}"
-        sandbox="allow-scripts"
-        referrerpolicy="no-referrer"
-        {srcdoc}
-      ></iframe>{/key}{/if}
-  <span class="render-time"
-    >{tab.bytes
-      ? 'PDF.js · Read-only'
-      : isTypst(tab.path) || isLatex(tab.path)
-        ? 'Source · Read-only'
-        : `${elapsed} ms parse · ${trusted ? 'Scripts enabled' : 'Isolated preview'}`}</span
-  >
+  {#each frames as item (item.channel)}<iframe
+      use:registerFrame={item.channel}
+      class:pending={item.channel !== activeChannel || !frameReady}
+      class:buffered={item.channel !== activeChannel && frameReady}
+      title="{tab.bytes
+        ? 'PDF'
+        : isTypst(tab.path) || isLatex(tab.path)
+          ? 'Source'
+          : 'Markdown'} preview: {displayPath(tab.path)}"
+      sandbox="allow-scripts"
+      referrerpolicy="no-referrer"
+      srcdoc={item.document}
+    ></iframe>{/each}
+  {#if showRenderInfo && !failedSource}<span class="render-time"
+      >{tab.bytes
+        ? 'PDF.js · Read-only'
+        : isTypst(tab.path) || isLatex(tab.path)
+          ? 'Source · Read-only'
+          : `${elapsed} ms parse · ${trusted ? 'Scripts enabled' : 'Isolated preview'}`}</span
+    >{/if}
 </div>
