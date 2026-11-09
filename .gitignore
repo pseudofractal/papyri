@@ -18,3 +18,4 @@ public/pdf-resources.json
 
 __pycache__/
 public/dictionaries/
+public/vendor-licenses/

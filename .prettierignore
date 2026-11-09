@@ -14,3 +14,5 @@ public/diagrams.js
 public/pdf.js
 public/pdf.css
 public/pdf-licenses/
+
+src/assets/latex-completions
