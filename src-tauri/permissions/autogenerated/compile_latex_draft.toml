@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-compile-latex-draft"
+description = "Enables the compile_latex_draft command without any pre-configured scope."
+commands.allow = ["compile_latex_draft"]
+
+[[permission]]
+identifier = "deny-compile-latex-draft"
+description = "Denies the compile_latex_draft command without any pre-configured scope."
+commands.deny = ["compile_latex_draft"]

@@ -48,6 +48,58 @@ describe('control state snapshots', () => {
     expect(state.tabs[2].error).toBe('compile failed');
   });
 
+  it('passes through editor, explorer, search, and lock state', () => {
+    const state = buildControlState({
+      workspace: workspace({ active: '/paper.pdf' }),
+      pdfPage: { path: '/paper.pdf', page: 0, total: 0 },
+      pagedDocument: true,
+      view,
+      preferences: structuredClone(defaults),
+      pdfLocked: true,
+      editor: {
+        available: false,
+        open: false,
+        path: '/paper.pdf',
+        language: 'markdown',
+        dirty: false,
+        busy: false,
+        readOnly: true,
+        status: 'Source editing is unavailable.',
+        error: null,
+        cursor: null,
+        selection: null,
+        diagnostics: { errors: 0, warnings: 0, information: 0, hints: 0 },
+      },
+      explorer: { workingDirectory: '/notes', selected: '/notes/a.md', expanded: ['/notes'] },
+      search: { open: true, query: 'needle', matches: 3 },
+      note: { path: '/paper.pdf', text: 'note' },
+      trust: { supported: false, enabled: false },
+      livePreview: { available: false, visible: true, split: 50 },
+      tools: { busy: true, message: 'Downloading…', error: '' },
+      selection: { words: 2, characters: 9 },
+      menu: {
+        open: true,
+        kind: 'file',
+        title: 'File',
+        x: 4,
+        y: 8,
+        path: '/notes/a.md',
+        directory: false,
+        items: [{ index: 0, id: 'open', label: 'Open' }],
+      },
+      recent: { files: ['/paper.pdf'], folders: [{ path: '/notes' }], commands: ['refresh'] },
+    });
+    expect(state.pdf).toEqual({ path: '/paper.pdf', page: 0, total: 0, locked: true });
+    expect(state.explorer.selected).toBe('/notes/a.md');
+    expect(state.search).toEqual({ open: true, query: 'needle', matches: 3 });
+    expect(state.note.text).toBe('note');
+    expect(state.tools.busy).toBe(true);
+    expect(state.selection).toEqual({ words: 2, characters: 9 });
+    expect(state.menu.kind).toBe('file');
+    expect(state.menu.items[0].label).toBe('Open');
+    expect(state.recent.commands).toEqual(['refresh']);
+  });
+
   it('reports PDF state only for the active paged document', () => {
     const pdfPage = { path: '/paper.pdf', page: 2, total: 10 };
     expect(
@@ -58,7 +110,7 @@ describe('control state snapshots', () => {
         view,
         preferences: structuredClone(defaults),
       }).pdf,
-    ).toEqual(pdfPage);
+    ).toEqual({ ...pdfPage, locked: false });
     expect(
       buildControlState({
         workspace: workspace({ active: '/notes.md' }),

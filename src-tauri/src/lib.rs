@@ -6,9 +6,15 @@ mod commands;
 mod control;
 mod executables;
 mod files;
+mod input;
 mod latex;
 mod logging;
+mod lsp;
+mod lsp_protocol;
+mod screenshot;
 mod security;
+mod texlive;
+mod tools;
 mod typst;
 use tauri::Manager;
 
@@ -31,8 +37,16 @@ pub fn run() {
       commands::initial_path,
       commands::startup_trace,
       commands::list_directory,
+      commands::create_entry,
+      commands::rename_file,
       commands::read_document,
+      commands::read_text_file,
+      commands::delete_file,
+      commands::write_document,
       commands::read_pdf,
+      commands::compile_latex_draft,
+      commands::latex_sync,
+      commands::latex_sync_release,
       commands::latex_engines,
       commands::typst_binary,
       commands::read_asset,
@@ -40,6 +54,22 @@ pub fn run() {
       commands::pick_path,
       commands::save_diagram,
       commands::open_external,
+      screenshot::capture_screen,
+      screenshot::capture_webview,
+      input::input_inject,
+      input::clipboard_read,
+      input::clipboard_write,
+      input::clipboard_read_image,
+      input::clipboard_write_image,
+      input::window_list,
+      input::window_focus,
+      input::window_capture,
+      lsp::lsp_start,
+      lsp::lsp_send,
+      lsp::lsp_stop,
+      tools::install_tool,
+      tools::pick_executable,
+      texlive::manage_texlive,
       browser::browser_show,
       browser::browser_select,
       browser::browser_quote,
@@ -53,6 +83,8 @@ pub fn run() {
       browser::browser_stop,
       browser::browser_set_visible,
       browser::browser_set_bounds,
+      browser::browser_dom,
+      browser::browser_capture,
       control::control_ready,
       control::control_respond,
       control::control_emit
@@ -60,14 +92,38 @@ pub fn run() {
   trace_native_startup("builder");
   tauri::Builder::default()
     .manage(control::ControlState::default())
+    .manage(lsp::ServerState::default())
     .append_invoke_initialization_script(security::initialization(&token))
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
+    .on_window_event(|window, event| {
+      if window.label() == "main" {
+        if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+          api.prevent_close();
+          control::request_window_close(window.app_handle().clone());
+        }
+      }
+    })
     .setup(|app| {
       trace_native_startup("setup");
       let window = app
         .get_webview_window("main")
         .ok_or("Main window is unavailable")?;
+      window.with_webview(|webview| {
+        use webkit2gtk::{
+          UserContentInjectedFrames, UserContentManagerExt, UserScript, UserScriptInjectionTime,
+          WebViewExt,
+        };
+        if let Some(manager) = webview.inner().user_content_manager() {
+          manager.add_script(&UserScript::new(
+            include_str!("preview_zoom.js"),
+            UserContentInjectedFrames::AllFrames,
+            UserScriptInjectionTime::Start,
+            &[],
+            &[],
+          ));
+        }
+      })?;
       let icon = app
         .default_window_icon()
         .ok_or("Application icon is unavailable")?;

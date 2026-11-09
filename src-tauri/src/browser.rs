@@ -4,13 +4,16 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 use gtk::prelude::*;
+use javascriptcore::ValueExt;
 use serde::Serialize;
+use serde_json::Value;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_opener::OpenerExt;
 use webkit2gtk::{
   glib, CookieAcceptPolicy, CookieManagerExt, CookiePersistentStorage, HitTestResultExt, LoadEvent,
   NavigationPolicyDecision, NavigationPolicyDecisionExt, PolicyDecisionExt, PolicyDecisionType,
-  SettingsExt, URIRequestExt, WebContext, WebView, WebViewExt, WebsiteDataManager,
+  SettingsExt, URIRequestExt, UserContentInjectedFrames, UserContentManagerExt, UserScript,
+  UserScriptInjectionTime, WebContext, WebView, WebViewExt, WebsiteDataManager,
   WebsiteDataManagerExt, WindowPropertiesExt,
 };
 
@@ -66,6 +69,15 @@ fn configure_browser_view(view: &WebView) {
     if cfg!(debug_assertions) {
       settings.set_enable_write_console_messages_to_stdout(true);
     }
+  }
+  if let Some(manager) = view.user_content_manager() {
+    manager.add_script(&UserScript::new(
+      include_str!("browser_dom.js"),
+      UserContentInjectedFrames::TopFrame,
+      UserScriptInjectionTime::Start,
+      &[],
+      &[],
+    ));
   }
 }
 
@@ -570,6 +582,105 @@ fn popup_target(value: &str) -> Option<String> {
   }
   let query = glib::uri_escape_string(trimmed, None::<&str>, true);
   normalize_url(&format!("https://duckduckgo.com/?q={query}")).ok()
+}
+
+#[tauri::command]
+pub async fn browser_capture(
+  app: AppHandle,
+  rect: Option<crate::screenshot::NormalizedRect>,
+  output: Option<String>,
+  clipboard: bool,
+) -> Result<Value, String> {
+  let (sender, receiver) = std::sync::mpsc::channel();
+  app
+    .run_on_main_thread(move || {
+      let result = BROWSER.with(|cell| {
+        let borrowed = cell.borrow();
+        let host = borrowed
+          .as_ref()
+          .ok_or_else(|| "The browser panel is not available.".to_string())?;
+        let view = host
+          .active_view()
+          .ok_or_else(|| "No website tab is active.".to_string())?;
+        let drawable = view
+          .window()
+          .ok_or_else(|| "The browser view has no drawable surface.".to_string())?;
+        let width = view.allocated_width();
+        let height = view.allocated_height();
+        let pixbuf = drawable
+          .pixbuf(0, 0, width, height)
+          .ok_or_else(|| "Could not capture the browser surface.".to_string())?;
+        let cropped = match rect {
+          None => pixbuf,
+          Some(rect) => {
+            let left = (rect.x.clamp(0.0, 1.0) * width as f64).floor() as i32;
+            let top = (rect.y.clamp(0.0, 1.0) * height as f64).floor() as i32;
+            let right = ((rect.x + rect.width).clamp(0.0, 1.0) * width as f64).ceil() as i32;
+            let bottom = ((rect.y + rect.height).clamp(0.0, 1.0) * height as f64).ceil() as i32;
+            pixbuf.new_subpixbuf(left, top, (right - left).max(1), (bottom - top).max(1))
+          }
+        };
+        cropped
+          .save_to_bufferv("png", &[])
+          .map_err(|error| error.to_string())
+      });
+      let _ = sender.send(result);
+    })
+    .map_err(|error| format!("Could not capture the browser: {error}"))?;
+  let bytes = receiver
+    .recv_timeout(std::time::Duration::from_secs(10))
+    .map_err(|_| "Browser capture timed out.".to_string())??;
+  crate::screenshot::store_png(bytes, output, clipboard, "browser")
+}
+
+#[tauri::command]
+pub async fn browser_dom(app: AppHandle, action: String, params: Value) -> Result<Value, String> {
+  tauri::async_runtime::spawn_blocking(move || {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    app
+      .run_on_main_thread(move || {
+        let result = BROWSER.with(|cell| {
+          let borrowed = cell.borrow();
+          let host = borrowed
+            .as_ref()
+            .ok_or_else(|| "The browser panel is not available.".to_string())?;
+          let view = host
+            .active_view()
+            .ok_or_else(|| "No website tab is active.".to_string())?;
+          let action = serde_json::to_string(&action).map_err(|error| error.to_string())?;
+          let params = serde_json::to_string(&params).map_err(|error| error.to_string())?;
+          let script = format!("window.__papyriDom.invoke({action}, {params})");
+          let callback_sender = sender.clone();
+          view.evaluate_javascript(
+            &script,
+            None,
+            None,
+            None::<&gtk::gio::Cancellable>,
+            move |result| {
+              let output = result
+                .map_err(|error| error.to_string())
+                .and_then(|value| {
+                  value
+                    .to_json(0)
+                    .ok_or_else(|| "The page returned an invalid DOM result.".to_string())
+                })
+                .and_then(|json| serde_json::from_str(&json).map_err(|error| error.to_string()));
+              let _ = callback_sender.send(output);
+            },
+          );
+          Ok(())
+        });
+        if let Err(error) = result {
+          let _ = sender.send(Err(error));
+        }
+      })
+      .map_err(|error| format!("Could not access the browser: {error}"))?;
+    receiver
+      .recv_timeout(std::time::Duration::from_secs(10))
+      .map_err(|_| "The browser DOM request timed out.".to_string())?
+  })
+  .await
+  .map_err(|error| error.to_string())?
 }
 
 fn insert_quote(view: &WebView, text: &str) {

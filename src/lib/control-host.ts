@@ -16,7 +16,21 @@ export type ControlExecutor = (method: string, params: Record<string, unknown>) 
  * is installed before `control_ready`, so startup requests cannot be lost.
  */
 export async function installControl(execute: ControlExecutor): Promise<UnlistenFn> {
-  const readOnly = new Set(['state', 'headings', 'commands']);
+  const readOnly = new Set([
+    'state',
+    'headings',
+    'commands',
+    'editor.get',
+    'explorer.list',
+    'note.get',
+    'selection.get',
+    'dom.query',
+    'dom.get',
+    'screenshot',
+    'clipboard.get',
+    'window.list',
+    'window.capture',
+  ]);
   const viewMethods = new Set([
     'theme',
     'zoom',
@@ -24,7 +38,29 @@ export async function installControl(execute: ControlExecutor): Promise<Unlisten
     'decorationless',
     'preferences.set',
     'search',
+    'panel',
+    'note.set',
+    'trust',
+    'right.tab',
+    'browser.navigate',
+    'browser.back',
+    'browser.forward',
+    'browser.reload',
+    'browser.stop',
+    'browser.zoom',
+    'browser.window',
+    'browser.quote',
+    'browser.search',
+    'live-preview',
+    'live-preview.zoom',
+    'live-preview.fit',
+    'selection.copy',
+    'document.copy',
+    'settings.tab',
+    'clipboard.set',
+    'window.focus',
   ]);
+  const toolMethods = new Set(['tools.install', 'tools.texlive']);
   const documentMethods = new Set([
     'open',
     'close',
@@ -39,20 +75,53 @@ export async function installControl(execute: ControlExecutor): Promise<Unlisten
     'scroll.bottom',
     'heading',
     'page',
+    'pdf.password',
     'command',
     'refresh',
+    'editor.open',
+    'editor.close',
+    'editor.toggle',
+    'editor.save',
+    'editor.reload',
+    'editor.discard',
+    'editor.set',
+    'editor.reveal',
+    'editor.sync',
+    'explorer.cwd',
+    'explorer.expand',
+    'explorer.collapse',
+    'explorer.select',
+    'explorer.create',
+    'explorer.rename',
+    'explorer.delete',
+    'search.next',
+    'search.previous',
+    'dom.focus',
+    'dom.click',
+    'dom.type',
+    'input.move',
+    'input.click',
+    'input.drag',
+    'input.scroll',
+    'input.key',
+    'input.type',
   ]);
   // Document and view mutations use separate queues: opening a slow document
   // must not block theme, zoom, settings, or panel changes.
   const enqueueDocument = createMutationQueue();
   const enqueueView = createMutationQueue();
+  const enqueueTool = createMutationQueue();
   const dispatch = (method: string, params: Record<string, unknown>, deadline?: number) => {
     if (readOnly.has(method)) return execute(method, params);
     const isDocument =
       documentMethods.has(method) ||
       (method === 'panel' && params.name === 'split') ||
-      (!viewMethods.has(method) && method !== 'panel');
-    const enqueue = isDocument ? enqueueDocument : enqueueView;
+      (!viewMethods.has(method) && !toolMethods.has(method) && method !== 'panel');
+    const enqueue = toolMethods.has(method)
+      ? enqueueTool
+      : isDocument
+        ? enqueueDocument
+        : enqueueView;
     return enqueue(() => execute(method, params), deadline);
   };
   return listen<ControlRequest>('papyri-control-request', (event) => {

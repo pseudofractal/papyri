@@ -58,7 +58,9 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
     body = "\n\n[Next](./sub/next.md)\n\n![Local pixel](./pixel.png)\n\n```mermaid\nflowchart LR\nA --> B\n```\n\n```dot\ndigraph { A -> B; }\n```\n\n" + "A paragraph.\n\n" * 150
     equation = r"[ \begin{bmatrix}Y_a&I\ O&J_R\end{bmatrix} \begin{bmatrix}\mathbf A\\mathbf B\end{bmatrix}" + "\n\n" + r"\begin{bmatrix}\kappa^2\mathbf e_0\\mathbf0\end{bmatrix}. \tag{7} ]"
     wide_matrix = r"\( \begin{bmatrix}" + " & ".join("x_{" + str(index) + "}" for index in range(60)) + r"\end{bmatrix} \)"
-    body = "\n\nSee (7) and [1].\n\n" + wide_matrix + body + "\n\n" + equation + "\n\n## References\n\n[1] Example reference."
+    short_math = r"Text before \(e^{i\pi} + 1 = 0\) and after."
+    list_markers = '<section id="list-markers"><ol start="9"><li>Nine<ol start="12"><li>Twelve</li><li>Thirteen</li></ol></li><li value="25">Twenty-five</li><li>Twenty-six</li></ol><ol reversed><li>Three</li><li>Two</li><li>One</li></ol><ol reversed start="12"><li>Twelve</li><li value="5">Five</li><li>Four</li></ol></section>'
+    body = "\n\nSee (7) and [1].\n\n" + wide_matrix + "\n\n" + short_math + "\n\n" + list_markers + body + "\n\n" + equation + "\n\n## References\n\n[1] Example reference."
     body += "\n\n~~~sh\ncommand --input " + "models/geometry/" * 30 + "input.json\n~~~"
     body += '\n\nNeedle in prose.\n\n<svg id="search-regression" xmlns="http://www.w3.org/2000/svg" width="300" height="80"><text x="5" y="40">Needle</text></svg>\n\n```json\n{"property": 1}\n```\n\n## Equation 7\n\n## Reference 1'
     body = "\n\n[Self](./hello%20world.md)" + body
@@ -122,6 +124,36 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             frame()
             return execute(script)
 
+        def selection_screenshot():
+            request("POST", prefix + "/frame", {"id": None})
+            element = request("POST", prefix + "/element", {"using": "css selector", "value": "iframe"})
+            screenshot = request("GET", prefix + "/element/" + next(iter(element.values())) + "/screenshot")
+            frame()
+            return screenshot
+
+        def selection_cover_pixels(screenshot):
+            # Decode with the browser's canvas API and isolate the two leading bands.
+            # Other formulas' fading scrollbars are outside these pixel comparisons.
+            return asynchronous("""
+              const done=arguments[arguments.length-1],image=new Image();
+              image.onload=()=>{
+                const math=document.querySelector('.math:has(.selection-highlight)');
+                const bounds=math.getBoundingClientRect();
+                const scale=image.naturalWidth/innerWidth;
+                const height=Math.floor(parseFloat(getComputedStyle(math,'::before').height)*scale);
+                const canvas=document.createElement('canvas');
+                canvas.width=Math.floor(bounds.width*scale);canvas.height=height;
+                const context=canvas.getContext('2d');
+                const bands=[bounds.top*scale-height,bounds.bottom*scale].map(top=>{
+                  context.clearRect(0,0,canvas.width,height);
+                  context.drawImage(image,Math.round(bounds.left*scale),Math.round(top),canvas.width,height,0,0,canvas.width,height);
+                  return canvas.toDataURL();
+                });
+                done(bands);
+              };
+              image.onerror=()=>done(null);
+              image.src='data:image/png;base64,'+""" + json.dumps(screenshot) + ";")
+
         def assert_dialog_layout():
             def bounds_fit():
                 return execute("const p=document.querySelector('dialog[open] .modal-box'),r=p.getBoundingClientRect(),v=visualViewport,w=Math.min(innerWidth,v.width),h=Math.min(innerHeight,v.height);return Math.abs(r.width-w*.75)<=2&&r.height<=h*.8+2&&r.left>=v.offsetLeft+w*.125-2&&r.right<=v.offsetLeft+w*.875+2&&r.top>=v.offsetTop+h*.1-2&&r.bottom<=v.offsetTop+h*.9+2&&p.scrollWidth<=p.clientWidth+1")
@@ -149,6 +181,54 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         execute("document.querySelector('.brand').style.removeProperty('color')")
         frame()
         until(lambda: preview("return document.querySelector('h1')?.textContent === 'Native works'"), "native Markdown render")
+        request("POST", prefix + "/frame", {"id": None})
+        execute("document.querySelector('[aria-label=\"Edit source\"]').click()")
+        until(lambda: execute("return !!document.querySelector('.cm-content')"), "native source editor")
+        until(lambda: execute("return document.querySelector('.editor-status')?.textContent.includes('Language server connected')"), "native Markdown language server", seconds=45)
+        execute("document.querySelector('.cm-content').focus()")
+        keyboard("x")
+        until(lambda: execute("return !document.querySelector('[aria-label=\"Save source\"]')?.disabled"), "dirty editor")
+        rejected_quit = subprocess.run([binary, "ctl", "quit"], capture_output=True, text=True, env=test_environment, timeout=90)
+        assert rejected_quit.returncode != 0 and "unsaved" in rejected_quit.stderr.lower(), rejected_quit.stderr
+        keyboard("\ue009", "z")
+        until(lambda: execute("return document.querySelector('[aria-label=\"Save source\"]')?.disabled"), "undo editor change")
+        execute("document.querySelector('[aria-label=\"Show preview\"]').click()")
+        until(lambda: preview("return document.querySelector('h1')?.textContent === 'Native works'"), "preview restored after editing")
+        asynchronous("const done=arguments[arguments.length-1];document.fonts.ready.then(()=>done(true))")
+        assert execute("return [...document.querySelectorAll('#list-markers li')].map(item=>getComputedStyle(item,'::before').content)") == [json.dumps(label) for label in ["9.", "12.", "13.", "25.", "26.", "3.", "2.", "1.", "12.", "5.", "4."]]
+        assert execute("return [...document.querySelectorAll('#list-markers li')].every(item=>{const style=getComputedStyle(item,'::before'),bounds=item.getBoundingClientRect(),right=bounds.right-parseFloat(style.right);return bounds.left-right>4&&right-parseFloat(style.width)>=0})")
+        execute("document.querySelector('main').style.width='220px';window.dispatchEvent(new Event('resize'))")
+        until(lambda: execute("return !!document.querySelector('.math-content.scrollable')"), "native narrow math overflow")
+        for font_size in [16, 24]:
+            execute("document.documentElement.style.fontSize='" + str(font_size) + "px';window.dispatchEvent(new Event('resize'))")
+            for math_index in [0, 1]:
+                execute("""
+                  const math=document.querySelectorAll('.math')[""" + str(math_index) + """];
+                  const range=document.createRange();range.selectNodeContents(math.parentElement);
+                  const selection=getSelection();selection.removeAllRanges();selection.addRange(range);
+                """)
+                until(lambda: execute("return !!document.querySelectorAll('.math')[" + str(math_index) + "].querySelector('.selection-highlight')"), "native whole-formula highlight")
+                assert execute("""
+                  const math=document.querySelectorAll('.math')[""" + str(math_index) + """],style=getComputedStyle(math),cap=getComputedStyle(math,'::before');
+                  const leading=(parseFloat(style.lineHeight)-parseFloat(style.fontSize))/2;
+                  return style.overflow==='visible'&&cap.backgroundColor===style.backgroundColor&&Math.abs(parseFloat(cap.height)-leading)<.1&&Math.abs(parseFloat(cap.top)+leading)<.1;
+                """)
+                # Compare actual WebKit pixels with and without the leading cover.
+                covered = selection_screenshot()
+                covered_pixels = selection_cover_pixels(covered)
+                execute("const style=document.createElement('style');style.id='hide-selection-cover';style.textContent='.math::before,.math::after{visibility:hidden!important}';document.head.append(style)")
+                uncovered = selection_screenshot()
+                uncovered_pixels = selection_cover_pixels(uncovered)
+                execute("document.querySelector('#hide-selection-cover').remove()")
+                restored = selection_screenshot()
+                restored_pixels = selection_cover_pixels(restored)
+                for state, screenshot in [("covered", covered), ("uncovered", uncovered), ("restored", restored)]:
+                    Path(f"/tmp/papyri-native-math-selection-{font_size}-{math_index}-{state}.png").write_bytes(base64.b64decode(screenshot))
+                assert covered_pixels and uncovered_pixels and restored_pixels, "Selection screenshots must decode"
+                for covered_band, uncovered_band, restored_band in zip(covered_pixels, uncovered_pixels, restored_pixels):
+                    assert covered_band != uncovered_band, "WebKit must paint the selection cover outside the scroll container"
+                    assert restored_band == covered_band, "Selection pixels must return when the cover is restored"
+        execute("getSelection().removeAllRanges();document.querySelector('main').style.removeProperty('width');document.documentElement.style.removeProperty('font-size');window.scrollTo(0,0);window.dispatchEvent(new Event('resize'))")
         execute("document.documentElement.dataset.session='preserved'")
         original_theme = execute("return document.documentElement.dataset.theme")
         request("POST", prefix + "/frame", {"id": None})
@@ -196,6 +276,19 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         expected_background = "rgb(239, 241, 245)" if original_theme == "mocha" else "rgb(30, 30, 46)"
         until(lambda: execute("return getComputedStyle(document.querySelector('.settings-panel')).backgroundColor") == expected_background, "native themed settings")
         assert execute("return getComputedStyle(document.querySelector('.settings-panel')).color") == expected_color
+        discovery = asynchronous("""
+          const done=arguments[arguments.length-1],token=window.__PAPYRI_HOST_TOKEN__;
+          Promise.all(['typst_binary','latex_engines'].map(command=>window.__TAURI_INTERNALS__.invoke(command,{hostToken:token})))
+            .then(([typst,engines])=>done({typst,engines})).catch(error=>done({error:String(error)}));
+        """)
+        assert "error" not in discovery and len(discovery["engines"]) == 3, discovery
+        tool_permissions = asynchronous("""
+          const done=arguments[arguments.length-1],token=window.__PAPYRI_HOST_TOKEN__;
+          Promise.all([['install_tool',{name:'unsupported'}],['manage_texlive',{action:'unsupported'}]].map(([command,args])=>
+            window.__TAURI_INTERNALS__.invoke(command,{...args,hostToken:token}).then(()=>'',error=>String(error))))
+            .then(done);
+        """)
+        assert "Unsupported managed tool" in tool_permissions[0] and "Unsupported TeX Live action" in tool_permissions[1], tool_permissions
         execute("document.querySelector('#settings-tab-reading').click()")
         until(lambda: execute("return !document.querySelector('#settings-panel-reading').hidden"), "native settings reading tab")
         execute("const values=[['Markdown text font','serif'],['Math font','STIX Two Math, serif']];for(const [label,value] of values){const input=document.querySelector(`[aria-label=\"${label}\"]`);input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}))}")
@@ -257,7 +350,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         until(lambda: execute("return document.documentElement.dataset.fitWidth==='true'"), "native fit-to-width shortcut")
         assert execute("return document.documentElement.style.zoom === ''")
         assert execute("return document.documentElement.scrollWidth === document.documentElement.clientWidth")
-        assert execute("const math=document.querySelector('.math');return math.scrollWidth>math.clientWidth && math.getBoundingClientRect().right<=document.documentElement.clientWidth")
+        assert execute("const math=document.querySelector('.math-content.scrollable');return math.scrollWidth>math.clientWidth && math.getBoundingClientRect().right<=document.documentElement.clientWidth")
         def fitted_layout(index=0):
             frame(index)
             return execute("const root=document.documentElement.getBoundingClientRect(),main=document.querySelector('main').getBoundingClientRect();return {viewport:innerWidth,root:root.width,right:main.right,width:main.width}")
@@ -563,6 +656,15 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         assert state["preferences"]["fitWidth"] is True, state["preferences"]
         control("fit-width", "off")
         control("preferences", "set", json.dumps({"theme": before["theme"], "network": before["network"], "documentZoom": before["documentZoom"], "fitWidth": before["fitWidth"]}), "--json")
+        for name, text in [("language-server.typ", "= Language server\n"), ("language-server.tex", "\\documentclass{article}\n\\begin{document}\nHello\n\\end{document}\n")]:
+            source = root / name
+            source.write_text(text)
+            control("open", str(source))
+            until(lambda: execute("return [...document.querySelectorAll('.tab-select')].some(button=>button.getAttribute('aria-pressed')==='true'&&button.title===" + json.dumps(str(source)) + ")"), "native source tab")
+            until(lambda: execute("return !document.querySelector('[aria-label=\"Edit source\"]')?.disabled"), "native source ready")
+            execute("document.querySelector('[aria-label=\"Edit source\"]').click()")
+            until(lambda: execute("return document.querySelector('.editor-status')?.textContent.includes('Language server connected')"), "native " + name + " language server", seconds=45)
+            execute("document.querySelector('[aria-label=\"Show preview\"]').click()")
         request("DELETE", prefix)
         session = None
         for args, expected in [(["--log", "terminal"], str(Path.cwd())), (["--log", "terminal", str(root)], str(root))]:
@@ -628,7 +730,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             ).returncode != 0,
             "detached app shutdown",
         )
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "settings tabs and configurable fonts", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG", "spelling suggestions", "recent folder persistence and palette"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "Markdown language server initialization", "ordered list numbering and spacing", "wrapped and scrolling math selection pixels", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "settings tabs and configurable fonts", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG", "spelling suggestions", "recent folder persistence and palette"]}, indent=2))
     except Exception:
         if session:
             try:

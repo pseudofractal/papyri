@@ -42,6 +42,8 @@ pub struct Request {
   pub method: String,
   #[serde(default)]
   pub params: Value,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub timeout_ms: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -309,11 +311,16 @@ pub fn send_request(stream: &mut UnixStream, request: &Request) -> Result<(), St
     .map_err(|error| format!("Could not write the control request: {error}"))
 }
 
-/// Send one request and wait for its response. Handles `ping` and `state`.
-pub fn request(method: &str, params: Value, wait: Duration) -> Result<Value, ProtocolError> {
+/// Send one request with an explicit response timeout.
+pub fn request_with_timeout(
+  method: &str,
+  params: Value,
+  wait: Duration,
+  timeout: Duration,
+) -> Result<Value, ProtocolError> {
   let mut stream = connect(wait).map_err(|message| ProtocolError::new("unavailable", message))?;
   stream
-    .set_read_timeout(Some(REQUEST_TIMEOUT + RESPONSE_GRACE))
+    .set_read_timeout(Some(timeout + RESPONSE_GRACE))
     .map_err(|error| ProtocolError::new("io-error", error.to_string()))?;
   send_request(
     &mut stream,
@@ -321,6 +328,7 @@ pub fn request(method: &str, params: Value, wait: Duration) -> Result<Value, Pro
       id: json!(1),
       method: method.to_string(),
       params,
+      timeout_ms: Some(timeout.as_millis().min(u64::MAX as u128) as u64),
     },
   )
   .map_err(|message| ProtocolError::new("io-error", message))?;
@@ -420,7 +428,7 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
       }
       "subscribe" => match parse_subscription(&request.params) {
         Ok(events) => {
-          let reply = dispatch(&app, "state", json!({}));
+          let reply = dispatch(&app, "state", json!({}), REQUEST_TIMEOUT);
           if let Some(error) = reply.error {
             let _ = sender.send(response_line(
               request.id,
@@ -489,6 +497,11 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
         let _ = sender.send(response_line(request.id, reply));
       }
       "quit" => {
+        let readiness = dispatch(&app, "prepare-quit", json!({}), REQUEST_TIMEOUT);
+        if readiness.error.is_some() {
+          let _ = sender.send(response_line(request.id, readiness));
+          continue;
+        }
         let _ = sender.send(response_line(
           request.id,
           Reply::success(json!({ "quitting": true })),
@@ -501,7 +514,12 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
         break;
       }
       _ => {
-        let reply = dispatch(&app, &request.method, request.params);
+        let reply = dispatch(
+          &app,
+          &request.method,
+          request.params,
+          request_timeout(request.timeout_ms),
+        );
         let _ = sender.send(response_line(request.id, reply));
       }
     }
@@ -571,7 +589,14 @@ fn unix_millis() -> u64 {
     .map_or(0, |duration| duration.as_millis() as u64)
 }
 
-fn dispatch(app: &AppHandle, method: &str, params: Value) -> Reply {
+fn request_timeout(value: Option<u64>) -> Duration {
+  let millis = value
+    .unwrap_or(REQUEST_TIMEOUT.as_millis() as u64)
+    .clamp(1_000, 24 * 60 * 60 * 1_000);
+  Duration::from_millis(millis)
+}
+
+fn dispatch(app: &AppHandle, method: &str, params: Value, timeout: Duration) -> Reply {
   if method.is_empty() || method.len() > 64 {
     return Reply::failure("bad-method", "Method names must be 1-64 characters.");
   }
@@ -585,7 +610,7 @@ fn dispatch(app: &AppHandle, method: &str, params: Value) -> Reply {
   let request = state.next_request.fetch_add(1, Ordering::Relaxed);
   let (sender, receiver) = mpsc::sync_channel(1);
   state.pending.lock().unwrap().insert(request, sender);
-  let deadline = unix_millis().saturating_add(REQUEST_TIMEOUT.as_millis() as u64);
+  let deadline = unix_millis().saturating_add(timeout.as_millis() as u64);
   let event = json!({
     "id": request,
     "method": method,
@@ -596,7 +621,7 @@ fn dispatch(app: &AppHandle, method: &str, params: Value) -> Reply {
     let _ = state.take_reply(request);
     return Reply::failure("window-unavailable", error.to_string());
   }
-  match receiver.recv_timeout(REQUEST_TIMEOUT) {
+  match receiver.recv_timeout(timeout) {
     Ok(reply) => reply,
     Err(_) => {
       let _ = state.take_reply(request);
@@ -604,11 +629,20 @@ fn dispatch(app: &AppHandle, method: &str, params: Value) -> Reply {
         "timeout",
         format!(
           "Papyri did not respond to `{method}` within {} seconds.",
-          REQUEST_TIMEOUT.as_secs()
+          timeout.as_secs()
         ),
       )
     }
   }
+}
+
+pub fn request_window_close(app: AppHandle) {
+  thread::spawn(move || {
+    let reply = dispatch(&app, "prepare-window-close", json!({}), REQUEST_TIMEOUT);
+    if reply.error.is_none() {
+      app.exit(0);
+    }
+  });
 }
 
 #[tauri::command]

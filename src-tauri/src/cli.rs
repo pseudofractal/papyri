@@ -13,13 +13,17 @@ use serde_json::{json, Value};
 use std::{
   ffi::OsString,
   fmt,
-  io::{BufRead, BufReader, IsTerminal, Write},
+  io::{BufRead, BufReader, IsTerminal, Read, Write},
   path::{Path, PathBuf},
+  sync::atomic::{AtomicU64, Ordering},
   thread,
   time::{Duration, Instant},
 };
 
 const MAX_WAIT_SECONDS: f64 = 86_400.0;
+const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
+const TOOL_REQUEST_TIMEOUT: Duration = Duration::from_secs(3600);
+static REQUEST_TIMEOUT_MS: AtomicU64 = AtomicU64::new(60_000);
 
 #[derive(Debug)]
 struct CliError {
@@ -207,6 +211,20 @@ fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
     std::env::set_var("PAPYRI_CONTROL_SOCKET", socket);
   }
   let wait = seconds(args.wait);
+  let timeout = args
+    .timeout
+    .map(seconds)
+    .unwrap_or(DEFAULT_REQUEST_TIMEOUT)
+    .max(Duration::from_millis(1_000));
+  REQUEST_TIMEOUT_MS.store(
+    timeout.as_millis().min(u64::MAX as u128) as u64,
+    Ordering::Relaxed,
+  );
+  let tool_timeout = args
+    .timeout
+    .map(seconds)
+    .unwrap_or(TOOL_REQUEST_TIMEOUT)
+    .max(timeout);
   match args.command {
     CtlCommand::Ping => print_result("ping", ping(wait)?, args.json),
     CtlCommand::State => print_result("state", request("state", json!({}), wait)?, args.json),
@@ -301,11 +319,296 @@ fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
       let params = json!({ "name": panel.name.as_str(), "action": panel.action.as_str() });
       print_result("panel", request("panel", params, wait)?, args.json)
     }
-    CtlCommand::Search { query } => print_result(
-      "search",
-      request("search", json!({ "query": query }), wait)?,
+    CtlCommand::Editor(editor) => {
+      let (method, params) = editor_request(editor.command)?;
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Explorer(explorer) => {
+      let (method, params) = explorer_request(explorer.command)?;
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Note(note) => {
+      let (method, params) = note_request(note.command)?;
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Trust { action } => {
+      let params = match action {
+        Some(ToggleAction::On) => json!({ "enabled": true }),
+        Some(ToggleAction::Off) => json!({ "enabled": false }),
+        Some(ToggleAction::Toggle) | None => json!({}),
+      };
+      print_result("trust", request("trust", params, wait)?, args.json)
+    }
+    CtlCommand::Menu(menu) => {
+      let (method, params) = menu_request(menu.command)?;
+      let result = if method == "menu.get" {
+        let state = request("state", json!({}), wait)?;
+        state.get("menu").cloned().unwrap_or(Value::Null)
+      } else {
+        request(method, params, wait)?
+      };
+      print_result(method, result, args.json)
+    }
+    CtlCommand::Dom(dom) => {
+      let (method, params) = dom_request(dom.command, dom.frame)?;
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Screenshot(screenshot) => {
+      let (method, params) = screenshot_request(screenshot)?;
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Input(input) => {
+      let (method, params) = input_request(input.command)?;
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Clipboard(clipboard) => match clipboard.command {
+      ClipboardCommand::Get => print_result(
+        "clipboard.get",
+        request("clipboard.get", json!({}), wait)?,
+        args.json,
+      ),
+      ClipboardCommand::Set(input) => {
+        let text = text_input(input, "clipboard text")?;
+        print_result(
+          "clipboard.set",
+          request("clipboard.set", json!({ "text": text }), wait)?,
+          args.json,
+        )
+      }
+      ClipboardCommand::GetImage { output } => {
+        let mut params = json!({});
+        if let Some(output) = output {
+          params["output"] = json!(absolute_path(&expand_home(&output))?.to_string_lossy());
+        }
+        print_result(
+          "clipboard.get-image",
+          request("clipboard.get-image", params, wait)?,
+          args.json,
+        )
+      }
+      ClipboardCommand::SetImage { path } => print_result(
+        "clipboard.set-image",
+        request(
+          "clipboard.set-image",
+          json!({ "path": absolute_path(&expand_home(&path))?.to_string_lossy() }),
+          wait,
+        )?,
+        args.json,
+      ),
+    },
+    CtlCommand::Record(record) => {
+      if record.count == 0 || record.count > 300 {
+        return Err("--count must be between 1 and 300.".into());
+      }
+      if record.interval_ms < 100 || record.interval_ms > 60_000 {
+        return Err("--interval-ms must be between 100 and 60000.".into());
+      }
+      let output_dir = absolute_path(&expand_home(&record.output_dir))?;
+      let capture_seconds = (record.count as f64 * record.interval_ms as f64) / 1000.0;
+      let record_timeout = args
+        .timeout
+        .map(seconds)
+        .unwrap_or_else(|| Duration::from_secs_f64((capture_seconds + 30.0).clamp(60.0, 86_400.0)));
+      print_result(
+        "record",
+        request_with_timeout(
+          "record",
+          json!({
+            "count": record.count,
+            "intervalMs": record.interval_ms,
+            "target": record.target.as_str(),
+            "outputDir": output_dir.to_string_lossy(),
+          }),
+          wait,
+          record_timeout,
+        )?,
+        args.json,
+      )
+    }
+    CtlCommand::Wait(wait_args) => {
+      let (method, params) = wait_request(wait_args.command)?;
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Window(window) => match window.command {
+      WindowCommand::List => print_result(
+        "window.list",
+        request("window.list", json!({}), wait)?,
+        args.json,
+      ),
+      WindowCommand::Focus { id } => print_result(
+        "window.focus",
+        request("window.focus", json!({ "id": id }), wait)?,
+        args.json,
+      ),
+      WindowCommand::Capture {
+        id,
+        output,
+        clipboard,
+      } => {
+        let mut params = json!({ "id": id, "clipboard": clipboard });
+        if let Some(output) = output {
+          params["output"] = json!(absolute_path(&expand_home(&output))?.to_string_lossy());
+        }
+        print_result(
+          "window.capture",
+          request("window.capture", params, wait)?,
+          args.json,
+        )
+      }
+    },
+    CtlCommand::Right { tab } => print_result(
+      "right.tab",
+      request("right.tab", json!({ "tab": tab.as_str() }), wait)?,
       args.json,
     ),
+    CtlCommand::Browser(browser) => {
+      let (method, params) = browser_request(browser.command)?;
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Search(search) => {
+      let chosen = [search.query.is_some(), search.next, search.previous]
+        .into_iter()
+        .filter(|value| *value)
+        .count();
+      if chosen != 1 {
+        return Err("Use a query, --next, or --previous (exactly one).".into());
+      }
+      if let Some(query) = search.query {
+        print_result(
+          "search",
+          request("search", json!({ "query": query }), wait)?,
+          args.json,
+        )
+      } else if search.next {
+        print_result(
+          "search.next",
+          request("search.next", json!({}), wait)?,
+          args.json,
+        )
+      } else {
+        print_result(
+          "search.previous",
+          request("search.previous", json!({}), wait)?,
+          args.json,
+        )
+      }
+    }
+    CtlCommand::Pdf(pdf) => match pdf.command {
+      PdfCommand::Password { password, stdin } => {
+        let password = match password {
+          Some(value) => value,
+          None if stdin => read_stdin("PDF password")?
+            .trim_end_matches(&['\r', '\n'][..])
+            .to_string(),
+          None => return Err("Provide a password or pass --stdin.".into()),
+        };
+        print_result(
+          "pdf.password",
+          request("pdf.password", json!({ "password": password }), wait)?,
+          args.json,
+        )
+      }
+    },
+    CtlCommand::LivePreview { action } => {
+      let params = match action {
+        Some(ToggleAction::On) => json!({ "enabled": true }),
+        Some(ToggleAction::Off) => json!({ "enabled": false }),
+        Some(ToggleAction::Toggle) | None => json!({}),
+      };
+      print_result(
+        "live-preview",
+        request("live-preview", params, wait)?,
+        args.json,
+      )
+    }
+    CtlCommand::LivePreviewZoom { action } => print_result(
+      "live-preview.zoom",
+      request(
+        "live-preview.zoom",
+        json!({ "action": action.as_str() }),
+        wait,
+      )?,
+      args.json,
+    ),
+    CtlCommand::LivePreviewFit => print_result(
+      "live-preview.fit",
+      request("live-preview.fit", json!({}), wait)?,
+      args.json,
+    ),
+    CtlCommand::LivePreviewSplit { percent } => {
+      if !(10.0..=90.0).contains(&percent) {
+        return Err("The split percentage must be between 10 and 90.".into());
+      }
+      print_result(
+        "live-preview.split",
+        request("live-preview.split", json!({ "value": percent }), wait)?,
+        args.json,
+      )
+    }
+    CtlCommand::Selection(selection) => {
+      let (method, params) = selection_request(selection.command)?;
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Tools(tools) => match tools.command {
+      ToolsCommand::Install { names } => {
+        let mut installed = Vec::new();
+        for name in names {
+          installed.push(request_with_timeout(
+            "tools.install",
+            json!({ "name": name.as_str() }),
+            wait,
+            tool_timeout,
+          )?);
+        }
+        print_result(
+          "tools.install",
+          json!({ "installed": installed }),
+          args.json,
+        )
+      }
+      ToolsCommand::Texlive { action } => print_result(
+        "tools.texlive",
+        request_with_timeout(
+          "tools.texlive",
+          json!({ "action": action.as_str() }),
+          wait,
+          tool_timeout,
+        )?,
+        args.json,
+      ),
+      ToolsCommand::Status => {
+        let state = request("state", json!({}), wait)?;
+        let tools = state
+          .get("tools")
+          .cloned()
+          .unwrap_or_else(|| json!({ "busy": false, "message": "", "error": "" }));
+        let preferences = state.get("preferences").cloned().unwrap_or(Value::Null);
+        print_result(
+          "tools.status",
+          json!({ "tools": tools, "preferences": preferences }),
+          args.json,
+        )
+      }
+    },
+    CtlCommand::Settings { tab } => {
+      let (method, params) = match tab {
+        Some(tab) => ("settings.tab", json!({ "tab": tab.as_str() })),
+        None => ("panel", json!({ "name": "settings", "action": "on" })),
+      };
+      print_result(method, request(method, params, wait)?, args.json)
+    }
+    CtlCommand::Document(document) => match document.command {
+      DocumentCommand::CopyRaw => print_result(
+        "document.copy",
+        request("document.copy", json!({}), wait)?,
+        args.json,
+      ),
+      DocumentCommand::Stats => {
+        let state = request("state", json!({}), wait)?;
+        let stats = state.get("stats").cloned().unwrap_or(Value::Null);
+        print_result("document.stats", stats, args.json)
+      }
+    },
     CtlCommand::Heading { id } => print_result(
       "heading",
       request("heading", json!({ "id": id }), wait)?,
@@ -366,6 +669,372 @@ fn run_ctl(args: CtlArgs) -> Result<(), CliError> {
   Ok(())
 }
 
+fn editor_request(command: EditorCommand) -> Result<(&'static str, Value), CliError> {
+  Ok(match command {
+    EditorCommand::Open => ("editor.open", json!({})),
+    EditorCommand::Close => ("editor.close", json!({})),
+    EditorCommand::Toggle => ("editor.toggle", json!({})),
+    EditorCommand::Save => ("editor.save", json!({})),
+    EditorCommand::Reload { force } => ("editor.reload", json!({ "discard": force })),
+    EditorCommand::Discard => ("editor.discard", json!({})),
+    EditorCommand::Get => ("editor.get", json!({})),
+    EditorCommand::Set(input) => (
+      "editor.set",
+      json!({ "text": text_input(input, "source text")? }),
+    ),
+    EditorCommand::Reveal { line, column } => {
+      if line == 0 || column == 0 {
+        return Err("Line and column numbers start at 1.".into());
+      }
+      (
+        "editor.reveal",
+        json!({ "line": line - 1, "character": column - 1 }),
+      )
+    }
+    EditorCommand::Sync => ("editor.sync", json!({})),
+    EditorCommand::Undo => ("editor.undo", json!({})),
+    EditorCommand::Redo => ("editor.redo", json!({})),
+    EditorCommand::SelectAll => ("editor.select-all", json!({})),
+    EditorCommand::Select { from, to } => ("editor.select", json!({ "from": from, "to": to })),
+    EditorCommand::Copy => ("editor.copy", json!({})),
+    EditorCommand::Cut => ("editor.cut", json!({})),
+    EditorCommand::Paste => ("editor.paste", json!({})),
+    EditorCommand::Diagnostics => ("editor.diagnostics", json!({})),
+  })
+}
+
+fn explorer_request(command: ExplorerCommand) -> Result<(&'static str, Value), CliError> {
+  Ok(match command {
+    ExplorerCommand::List { path } => (
+      "explorer.list",
+      json!({ "path": path.map(|path| absolute_path(&path).map(|path| path.to_string_lossy().into_owned())).transpose()? }),
+    ),
+    ExplorerCommand::Cwd { path } => ("explorer.cwd", path_params(path)?),
+    ExplorerCommand::Expand { path } => ("explorer.expand", path_params(path)?),
+    ExplorerCommand::Collapse { path } => ("explorer.collapse", path_params(path)?),
+    ExplorerCommand::Select { path } => ("explorer.select", path_params(path)?),
+    ExplorerCommand::Read { path } => ("explorer.read", path_params(path)?),
+    ExplorerCommand::Create { path, kind } => {
+      let path = absolute_path(&path)?;
+      let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+        return Err("The new entry needs a file or folder name.".into());
+      };
+      if name.is_empty() {
+        return Err("The new entry needs a file or folder name.".into());
+      }
+      let extension = kind.extension();
+      let name = if !extension.is_empty() && !name.to_lowercase().ends_with(extension) {
+        format!("{name}{extension}")
+      } else {
+        name.to_string()
+      };
+      let Some(directory) = path.parent() else {
+        return Err("The new entry needs a parent folder.".into());
+      };
+      (
+        "explorer.create",
+        json!({
+          "directory": directory.to_string_lossy(),
+          "name": name,
+          "kind": kind.as_str(),
+        }),
+      )
+    }
+    ExplorerCommand::Rename { path, name } => {
+      if name.trim().is_empty() {
+        return Err("The new name must not be empty.".into());
+      }
+      let mut params = path_params(path)?;
+      params["name"] = Value::String(name);
+      ("explorer.rename", params)
+    }
+    ExplorerCommand::Delete { path, yes } => {
+      if !yes {
+        return Err("Deleting is permanent; pass --yes to confirm.".into());
+      }
+      let mut params = path_params(path)?;
+      params["force"] = Value::Bool(true);
+      ("explorer.delete", params)
+    }
+    ExplorerCommand::Refresh => ("refresh", json!({})),
+  })
+}
+
+fn path_params(path: PathBuf) -> Result<Value, CliError> {
+  Ok(json!({ "path": absolute_path(&path)?.to_string_lossy() }))
+}
+
+fn note_request(command: NoteCommand) -> Result<(&'static str, Value), CliError> {
+  Ok(match command {
+    NoteCommand::Get => ("note.get", json!({})),
+    NoteCommand::Set(input) => ("note.set", json!({ "text": text_input(input, "note")? })),
+    NoteCommand::Clear => ("note.set", json!({ "text": "" })),
+  })
+}
+
+fn menu_request(command: MenuCommand) -> Result<(&'static str, Value), CliError> {
+  Ok(match command {
+    MenuCommand::Open {
+      kind,
+      path,
+      x,
+      y,
+      directory,
+      document,
+    } => {
+      let mut params = json!({ "kind": kind.as_str() });
+      if matches!(kind, MenuTargetArg::Tab | MenuTargetArg::File) {
+        let Some(path) = path else {
+          return Err("A tab or file menu needs a path.".into());
+        };
+        params["path"] = Value::String(absolute_path(&path)?.to_string_lossy().into_owned());
+      } else if path.is_some() {
+        return Err("Only tab and file menus take a path.".into());
+      }
+      if (directory || document) && !matches!(kind, MenuTargetArg::File) {
+        return Err("--directory and --document only apply to file menus.".into());
+      }
+      if let Some(x) = x {
+        if !x.is_finite() {
+          return Err("--x must be a finite number.".into());
+        }
+        params["x"] = json!(x);
+      }
+      if let Some(y) = y {
+        if !y.is_finite() {
+          return Err("--y must be a finite number.".into());
+        }
+        params["y"] = json!(y);
+      }
+      if directory {
+        params["directory"] = Value::Bool(true);
+      }
+      if document {
+        params["document"] = Value::Bool(true);
+      }
+      ("menu.open", params)
+    }
+    MenuCommand::Activate { index } => ("menu.activate", json!({ "index": index })),
+    MenuCommand::Close => ("menu.close", json!({})),
+    MenuCommand::Get => ("menu.get", json!({})),
+  })
+}
+
+fn wait_request(command: WaitCommand) -> Result<(&'static str, Value), CliError> {
+  Ok(match command {
+    WaitCommand::Idle { timeout_ms } => ("wait.idle", json!({ "timeoutMs": timeout_ms })),
+    WaitCommand::Selector {
+      selector,
+      frame,
+      timeout_ms,
+    } => (
+      "wait.selector",
+      json!({
+        "selector": selector,
+        "frame": frame.as_str(),
+        "timeoutMs": timeout_ms,
+      }),
+    ),
+    WaitCommand::State {
+      path,
+      equals,
+      timeout_ms,
+    } => {
+      let equals = serde_json::from_str::<Value>(&equals).unwrap_or_else(|_| Value::String(equals));
+      (
+        "wait.state",
+        json!({ "path": path, "equals": equals, "timeoutMs": timeout_ms }),
+      )
+    }
+  })
+}
+
+fn input_request(command: InputCommand) -> Result<(&'static str, Value), CliError> {
+  Ok(match command {
+    InputCommand::Move { x, y } => ("input.move", json!({ "x": x, "y": y })),
+    InputCommand::Click {
+      x,
+      y,
+      button,
+      count,
+    } => {
+      if count == 0 || count > 3 {
+        return Err("--count must be between 1 and 3.".into());
+      }
+      (
+        "input.click",
+        json!({ "x": x, "y": y, "button": button.as_str(), "count": count }),
+      )
+    }
+    InputCommand::Drag {
+      x,
+      y,
+      to_x,
+      to_y,
+      button,
+    } => (
+      "input.drag",
+      json!({
+        "x": x,
+        "y": y,
+        "toX": to_x,
+        "toY": to_y,
+        "button": button.as_str(),
+      }),
+    ),
+    InputCommand::Scroll { x, y, dx, dy } => (
+      "input.scroll",
+      json!({ "x": x, "y": y, "dx": dx, "dy": dy }),
+    ),
+    InputCommand::Key { keys } => ("input.key", json!({ "keys": keys })),
+    InputCommand::Type(input) => ("input.type", json!({ "text": text_input(input, "text")? })),
+  })
+}
+
+fn dom_request(command: DomCommand, frame: DomFrameArg) -> Result<(&'static str, Value), CliError> {
+  let (method, mut params) = match command {
+    DomCommand::Query {
+      selector,
+      limit,
+      all,
+    } => {
+      let mut params = json!({ "includeHidden": all });
+      if let Some(selector) = selector {
+        params["selector"] = Value::String(selector);
+      }
+      if let Some(limit) = limit {
+        if limit == 0 || limit > 1000 {
+          return Err("--limit must be between 1 and 1000.".into());
+        }
+        params["limit"] = json!(limit);
+      }
+      ("dom.query", params)
+    }
+    DomCommand::Get { reference } => ("dom.get", json!({ "ref": reference })),
+    DomCommand::Focus { reference } => ("dom.focus", json!({ "ref": reference })),
+    DomCommand::Click { reference } => ("dom.click", json!({ "ref": reference })),
+    DomCommand::Type { reference, input } => (
+      "dom.type",
+      json!({ "ref": reference, "text": text_input(input, "text")? }),
+    ),
+    DomCommand::Ax => ("dom.ax", json!({})),
+  };
+  params["frame"] = Value::String(frame.as_str().into());
+  Ok((method, params))
+}
+
+fn screenshot_request(args: ScreenshotArgs) -> Result<(&'static str, Value), CliError> {
+  let mut params = json!({ "clipboard": args.clipboard });
+  if let Some(output) = args.output {
+    params["output"] = json!(absolute_path(&expand_home(&output))?.to_string_lossy());
+  }
+  match args.target.unwrap_or(ScreenshotTarget::Screen) {
+    ScreenshotTarget::Screen => {
+      params["target"] = Value::String("screen".into());
+    }
+    ScreenshotTarget::App => {
+      params["target"] = Value::String("app".into());
+    }
+    ScreenshotTarget::Element {
+      reference,
+      selector,
+      frame,
+    } => {
+      if reference.is_none() && selector.is_none() {
+        return Err("Element screenshots need a REF or --selector.".into());
+      }
+      params["target"] = Value::String("element".into());
+      params["frame"] = Value::String(frame.as_str().into());
+      if let Some(reference) = reference {
+        params["ref"] = Value::String(reference);
+      }
+      if let Some(selector) = selector {
+        params["selector"] = Value::String(selector);
+      }
+    }
+    ScreenshotTarget::Rect {
+      x,
+      y,
+      width,
+      height,
+    } => {
+      if !(x.is_finite() && y.is_finite()) || !(width.is_finite() && height.is_finite()) {
+        return Err("Screenshot coordinates must be finite numbers.".into());
+      }
+      if width <= 0.0 || height <= 0.0 {
+        return Err("Screenshot width and height must be positive.".into());
+      }
+      params["target"] = Value::String("rect".into());
+      params["x"] = json!(x);
+      params["y"] = json!(y);
+      params["width"] = json!(width);
+      params["height"] = json!(height);
+    }
+  }
+  Ok(("screenshot", params))
+}
+
+fn browser_request(command: BrowserCommand) -> Result<(&'static str, Value), CliError> {
+  Ok(match command {
+    BrowserCommand::Navigate { target } => ("browser.navigate", json!({ "target": target })),
+    BrowserCommand::Back => ("browser.back", json!({})),
+    BrowserCommand::Forward => ("browser.forward", json!({})),
+    BrowserCommand::Reload => ("browser.reload", json!({})),
+    BrowserCommand::Stop => ("browser.stop", json!({})),
+    BrowserCommand::Zoom { action } => ("browser.zoom", json!({ "action": action.as_str() })),
+    BrowserCommand::Window { url } => ("browser.window", json!({ "url": url })),
+    BrowserCommand::Quote { text, site } => (
+      "browser.quote",
+      json!({ "site": site.as_str(), "text": text }),
+    ),
+    BrowserCommand::Search { text } => ("browser.search", json!({ "text": text })),
+  })
+}
+
+fn selection_request(command: Option<SelectionCommand>) -> Result<(&'static str, Value), CliError> {
+  Ok(match command {
+    None | Some(SelectionCommand::Get) => ("selection.get", json!({})),
+    Some(SelectionCommand::Copy { kind }) => ("selection.copy", json!({ "kind": kind.as_str() })),
+    Some(SelectionCommand::Set { text }) => ("selection.set", json!({ "text": text })),
+    Some(SelectionCommand::Clear) => ("selection.clear", json!({})),
+  })
+}
+
+fn text_input(input: TextInputArgs, label: &str) -> Result<String, CliError> {
+  let sources = [input.text.is_some(), input.file.is_some(), input.stdin]
+    .into_iter()
+    .filter(|value| *value)
+    .count();
+  if sources != 1 {
+    return Err(format!("Provide {label} as TEXT, --file, or --stdin (exactly one).").into());
+  }
+  if let Some(text) = input.text {
+    return Ok(text);
+  }
+  if let Some(file) = input.file {
+    return std::fs::read_to_string(&file).map_err(|error| {
+      CliError::new(
+        "io-error",
+        format!("Could not read {}: {error}", file.display()),
+      )
+    });
+  }
+  read_stdin(label)
+}
+
+fn read_stdin(label: &str) -> Result<String, CliError> {
+  let mut value = String::new();
+  std::io::stdin()
+    .read_to_string(&mut value)
+    .map_err(|error| {
+      CliError::new(
+        "io-error",
+        format!("Could not read {label} from stdin: {error}"),
+      )
+    })?;
+  Ok(value)
+}
+
 fn tab_list_value(state: &Value) -> Value {
   let tabs = state
     .get("tabs")
@@ -390,7 +1059,17 @@ fn socket_override(socket: &Path) -> Result<PathBuf, CliError> {
 }
 
 fn request(method: &str, params: Value, wait: Duration) -> Result<Value, CliError> {
-  control::request(method, params, wait).map_err(CliError::from)
+  let timeout = Duration::from_millis(REQUEST_TIMEOUT_MS.load(Ordering::Relaxed));
+  request_with_timeout(method, params, wait, timeout)
+}
+
+fn request_with_timeout(
+  method: &str,
+  params: Value,
+  wait: Duration,
+  timeout: Duration,
+) -> Result<Value, CliError> {
+  control::request_with_timeout(method, params, wait, timeout).map_err(CliError::from)
 }
 
 /// Wait for the socket, then keep polling until the host UI reports ready.
@@ -508,6 +1187,17 @@ fn zoom_request(args: ZoomArgs) -> Result<Value, String> {
   Ok(params)
 }
 
+fn expand_home(path: &Path) -> PathBuf {
+  let mut components = path.components();
+  if matches!(components.next(), Some(std::path::Component::Normal(part)) if part == "~") {
+    if let Some(home) = std::env::var_os("HOME") {
+      let rest = components.as_path();
+      return Path::new(&home).join(rest);
+    }
+  }
+  path.to_path_buf()
+}
+
 fn absolute_path(path: &Path) -> Result<PathBuf, String> {
   std::path::absolute(path)
     .map_err(|error| format!("Could not resolve {}: {error}", path.display()))
@@ -546,6 +1236,7 @@ fn run_watch(args: WatchArgs, wait: Duration) -> Result<(), CliError> {
       } else {
         json!({ "events": args.events })
       },
+      timeout_ms: None,
     },
   )
   .map_err(|message| CliError::new("io-error", message))?;
@@ -849,6 +1540,297 @@ mod tests {
         ..
       }))
     ));
+  }
+
+  #[test]
+  fn parses_extended_control_commands() {
+    let cli =
+      Cli::try_parse_from(["papyri", "ctl", "editor", "reveal", "12", "--column", "3"]).unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command:
+        CtlCommand::Editor(EditorArgs {
+          command: EditorCommand::Reveal { line, column },
+        }),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected editor reveal");
+    };
+    let (method, params) = editor_request(EditorCommand::Reveal { line, column }).unwrap();
+    assert_eq!(method, "editor.reveal");
+    assert_eq!(params, json!({ "line": 11, "character": 2 }));
+
+    let (method, params) = editor_request(EditorCommand::Set(TextInputArgs {
+      text: Some("\\section{Hi}".into()),
+      file: None,
+      stdin: false,
+    }))
+    .unwrap();
+    assert_eq!(method, "editor.set");
+    assert_eq!(params, json!({ "text": "\\section{Hi}" }));
+
+    let cli = Cli::try_parse_from([
+      "papyri",
+      "ctl",
+      "explorer",
+      "create",
+      "/tmp/notes",
+      "--kind",
+      "latex",
+    ])
+    .unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command: CtlCommand::Explorer(ExplorerArgs { command }),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected explorer create");
+    };
+    let (method, params) = explorer_request(command).unwrap();
+    assert_eq!(method, "explorer.create");
+    assert_eq!(params["directory"], "/tmp");
+    assert_eq!(params["name"], "notes.tex");
+    assert_eq!(params["kind"], "latex");
+
+    let gone = explorer_request(ExplorerCommand::Delete {
+      path: PathBuf::from("/tmp/notes.tex"),
+      yes: false,
+    });
+    assert!(gone.is_err());
+    let (method, params) = explorer_request(ExplorerCommand::Delete {
+      path: PathBuf::from("/tmp/notes.tex"),
+      yes: true,
+    })
+    .unwrap();
+    assert_eq!(method, "explorer.delete");
+    assert_eq!(params["force"], true);
+
+    let cli = Cli::try_parse_from(["papyri", "ctl", "search", "--next"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Search(SearchArgs {
+          query: None,
+          next: true,
+          previous: false,
+        }),
+        ..
+      }))
+    ));
+
+    let cli = Cli::try_parse_from([
+      "papyri",
+      "ctl",
+      "menu",
+      "open",
+      "file",
+      "/tmp/notes.md",
+      "--x",
+      "12",
+      "--y",
+      "34",
+    ])
+    .unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command: CtlCommand::Menu(MenuArgs { command }),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected menu open");
+    };
+    let (method, params) = menu_request(command).unwrap();
+    assert_eq!(method, "menu.open");
+    assert_eq!(params["kind"], "file");
+    assert_eq!(params["x"], 12.0);
+    assert_eq!(params["y"], 34.0);
+    assert!(menu_request(MenuCommand::Open {
+      kind: MenuTargetArg::Tab,
+      path: None,
+      x: None,
+      y: None,
+      directory: false,
+      document: false,
+    })
+    .is_err());
+    let (method, params) = menu_request(MenuCommand::Activate { index: 3 }).unwrap();
+    assert_eq!(method, "menu.activate");
+    assert_eq!(params, json!({ "index": 3 }));
+
+    let cli = Cli::try_parse_from([
+      "papyri",
+      "ctl",
+      "screenshot",
+      "app",
+      "--output",
+      "/tmp/app.png",
+    ])
+    .unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command: CtlCommand::Screenshot(screenshot),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected screenshot");
+    };
+    let (method, params) = screenshot_request(screenshot).unwrap();
+    assert_eq!(method, "screenshot");
+    assert_eq!(params["target"], "app");
+    assert_eq!(params["output"], "/tmp/app.png");
+    assert_eq!(params["clipboard"], false);
+
+    let cli = Cli::try_parse_from(["papyri", "ctl", "dom", "type", "dom-1", "hello"]).unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command: CtlCommand::Dom(DomArgs { command, .. }),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected dom type");
+    };
+    let (method, params) = dom_request(command, DomFrameArg::Main).unwrap();
+    assert_eq!(method, "dom.type");
+    assert_eq!(params["ref"], "dom-1");
+    assert_eq!(params["text"], "hello");
+
+    let cli = Cli::try_parse_from([
+      "papyri", "ctl", "input", "click", "10", "20", "--button", "right", "--count", "2",
+    ])
+    .unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command: CtlCommand::Input(InputArgs { command }),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected input click");
+    };
+    let (method, params) = input_request(command).unwrap();
+    assert_eq!(method, "input.click");
+    assert_eq!(params["x"], 10);
+    assert_eq!(params["button"], "right");
+
+    let cli =
+      Cli::try_parse_from(["papyri", "ctl", "dom", "--frame", "preview", "query", "h1"]).unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command: CtlCommand::Dom(DomArgs { command, frame }),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected dom query");
+    };
+    let (_, params) = dom_request(command, frame).unwrap();
+    assert_eq!(params["frame"], "preview");
+
+    let cli = Cli::try_parse_from(["papyri", "ctl", "wait", "state", "busy", "false"]).unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command: CtlCommand::Wait(WaitArgs { command }),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected wait state");
+    };
+    let (method, params) = wait_request(command).unwrap();
+    assert_eq!(method, "wait.state");
+    assert_eq!(params["equals"], false);
+
+    let cli = Cli::try_parse_from([
+      "papyri",
+      "ctl",
+      "record",
+      "--output-dir",
+      "/tmp/frames",
+      "--count",
+      "2",
+    ])
+    .unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Record(RecordArgs { count: 2, .. }),
+        ..
+      }))
+    ));
+
+    let cli = Cli::try_parse_from([
+      "papyri",
+      "ctl",
+      "clipboard",
+      "get-image",
+      "--output",
+      "/tmp/clip.png",
+    ])
+    .unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Clipboard(ClipboardArgs {
+          command: ClipboardCommand::GetImage { output: Some(_) }
+        }),
+        ..
+      }))
+    ));
+
+    let cli =
+      Cli::try_parse_from(["papyri", "ctl", "window", "capture", "abc", "--clipboard"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Window(WindowArgs {
+          command: WindowCommand::Capture {
+            clipboard: true,
+            ..
+          }
+        }),
+        ..
+      }))
+    ));
+
+    let cli = Cli::try_parse_from(["papyri", "ctl", "window", "list"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Window(WindowArgs {
+          command: WindowCommand::List
+        }),
+        ..
+      }))
+    ));
+
+    let cli = Cli::try_parse_from(["papyri", "ctl", "pdf", "password", "--stdin"]).unwrap();
+    assert!(matches!(
+      cli.command,
+      Some(TopCommand::Ctl(CtlArgs {
+        command: CtlCommand::Pdf(PdfArgs {
+          command: PdfCommand::Password {
+            password: None,
+            stdin: true
+          }
+        }),
+        ..
+      }))
+    ));
+
+    let cli =
+      Cli::try_parse_from(["papyri", "ctl", "tools", "install", "tinymist", "typst"]).unwrap();
+    let Some(TopCommand::Ctl(CtlArgs {
+      command:
+        CtlCommand::Tools(ToolsArgs {
+          command: ToolsCommand::Install { names },
+        }),
+      ..
+    })) = cli.command
+    else {
+      panic!("expected tools install");
+    };
+    assert_eq!(
+      names.iter().map(|name| name.as_str()).collect::<Vec<_>>(),
+      ["tinymist", "typst"]
+    );
+
+    let cli =
+      Cli::try_parse_from(["papyri", "ctl", "settings", "compilers", "--timeout", "900"]).unwrap();
+    let Some(TopCommand::Ctl(CtlArgs { timeout, .. })) = cli.command else {
+      panic!("expected ctl");
+    };
+    assert_eq!(timeout, Some(900.0));
   }
 
   #[test]

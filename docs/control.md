@@ -26,6 +26,18 @@ papyri ctl fit-width on
 papyri ctl zoom set 120 --target document
 papyri ctl search "theorem"
 papyri ctl command next-tab
+papyri ctl editor open
+papyri ctl editor set --file draft.tex
+papyri ctl editor save
+papyri ctl explorer list
+papyri ctl note set "Check section 3"
+papyri ctl right notes
+papyri ctl menu open file notes.md
+papyri ctl menu activate 1
+papyri ctl dom query 'header button'
+papyri ctl screenshot element dom-1 --clipboard
+papyri ctl browser navigate "https://example.com"
+papyri ctl tools install tinymist texlab
 papyri ctl preferences set '{"theme":"latte","documentZoom":120}'
 papyri ctl socket                # Print the resolved socket path
 ```
@@ -204,6 +216,218 @@ returns a focused `{"tabs":[...]}` object. Documents with scripts enabled do not
 update the saved scroll bookmark, but a control-initiated scroll still resolves
 with the frame's resulting position so `papyri ctl scroll` can report success.
 
+`--timeout SECONDS` sets the response timeout for one request. The default is
+60 seconds; `tools` commands default to one hour so downloads and TeX Live
+installs can finish. The native layer accepts timeouts from 1 second to 24 hours.
+
+### Source editing
+
+| Method                                        | Parameters                   | Description                                        |
+| --------------------------------------------- | ---------------------------- | -------------------------------------------------- |
+| `editor.open`                                 | none                         | Open the source editor for the active document.    |
+| `editor.close`                                | none                         | Close the editor and keep the draft.               |
+| `editor.toggle`                               | none                         | Toggle the editor.                                 |
+| `editor.save`                                 | none                         | Save the active draft.                             |
+| `editor.reload`                               | optional `discard` boolean   | Reload from disk; `discard` skips confirmation.    |
+| `editor.discard`                              | none                         | Reload and discard unsaved changes.                |
+| `editor.get`                                  | none                         | Return `{path,text,dirty}`.                        |
+| `editor.set`                                  | `text`                       | Replace the whole draft text.                      |
+| `editor.reveal`                               | `line`, optional `character` | Reveal a zero-based source position.               |
+| `editor.sync`                                 | none                         | Reveal the current source position in the preview. |
+| `editor.undo` / `editor.redo`                 | none                         | Undo or redo the last source edit.                 |
+| `editor.select-all`                           | none                         | Select the whole document.                         |
+| `editor.select`                               | `from`, `to`                 | Select a zero-based character range.               |
+| `editor.copy` / `editor.cut` / `editor.paste` | none                         | Clipboard editing at the cursor or selection.      |
+
+`editor set` replaces the editor buffer without saving. It marks the draft dirty,
+updates the live preview, and leaves saving to `editor save`. The CLI accepts
+`editor set TEXT`, `editor set --file PATH`, or `editor set --stdin`; `editor
+reveal` takes one-based line and column numbers. Undo, redo, select-all, copy,
+cut, and paste are exposed directly so the source editor's native context menu
+is not required for automation.
+
+### Explorer
+
+| Method              | Parameters                  | Description                                        |
+| ------------------- | --------------------------- | -------------------------------------------------- |
+| `explorer.list`     | optional `path`             | Return `{path,entries}` for the folder.            |
+| `explorer.cwd`      | `path`                      | Set the explorer working directory.                |
+| `explorer.expand`   | `path`                      | Expand a folder and make it the working directory. |
+| `explorer.collapse` | `path`                      | Collapse a folder.                                 |
+| `explorer.select`   | `path`                      | Select an entry.                                   |
+| `explorer.create`   | `directory`, `name`, `kind` | Create `folder`, `markdown`, `typst`, or `latex`.  |
+| `explorer.rename`   | `path`, `name`              | Rename a file or folder.                           |
+| `explorer.delete`   | `path`, `force`             | Delete permanently; `force` must be `true`.        |
+
+The CLI's `explorer create PATH --kind TYPE` derives the parent folder and adds
+`.md`, `.typ`, or `.tex` when the name has no matching extension. Deleting
+requires `--yes`; the socket method requires `"force": true`.
+
+### Notes, trust, and selection
+
+| Method            | Parameters                       | Description                                         |
+| ----------------- | -------------------------------- | --------------------------------------------------- |
+| `note.get`        | none                             | Return `{path,text}` for the active document.       |
+| `note.set`        | `text`                           | Replace the active document's note.                 |
+| `trust`           | optional `enabled` boolean       | Enable or disable scripts for the Markdown tab.     |
+| `selection.get`   | none                             | Return `{text,source,preview}` for the selection.   |
+| `selection.copy`  | `kind` (`source`/`text`/`quote`) | Copy the selection in that form.                    |
+| `selection.set`   | `text`                           | Select the first visible occurrence in the preview. |
+| `selection.clear` | none                             | Clear the preview selection.                        |
+
+Enabling scripts through the socket is equivalent to clicking the trust control
+in the window. Only Markdown documents support it, and it stays limited to the
+active revision.
+
+### Screenshots and DOM inspection
+
+| Method       | Parameters                                                                                                                 | Description                                               |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `dom.query`  | optional `selector`, `limit` (1–1000), `includeHidden`                                                                     | Return visible matching nodes with stable `ref` values.   |
+| `dom.get`    | `ref`                                                                                                                      | Return text, HTML, attributes, rect, and computed styles. |
+| `dom.focus`  | `ref`                                                                                                                      | Focus a node.                                             |
+| `dom.click`  | `ref`                                                                                                                      | Focus and click a node.                                   |
+| `dom.type`   | `ref`, `text`                                                                                                              | Set an input/select/textarea/editable value.              |
+| `screenshot` | `target` (`screen`/`app`/`element`/`rect`), optional `output`, `clipboard`, `ref`, `selector`, `x`, `y`, `width`, `height` | Capture PNG pixels or copy them to the clipboard.         |
+
+```sh
+papyri ctl dom query 'header button' --json
+papyri ctl dom get dom-12 --json
+papyri ctl dom click dom-12
+papyri ctl dom type dom-20 'Needle'
+papyri ctl screenshot screen --output ~/shots/screen.png
+papyri ctl screenshot element dom-12 --clipboard
+papyri ctl dom --frame preview query 'h1'
+papyri ctl dom --frame browser query 'button'
+papyri ctl record --output-dir ~/shots/series --count 10 --interval-ms 300
+papyri ctl screenshot rect 100 80 640 480 --output ~/shots/region.png
+```
+
+`screen` captures the whole compositor output, including other windows and the
+native website panel. `app` captures the main app webview only; it includes the
+Markdown/PDF preview but excludes the separate native browser panel. `element`
+captures one main-document node using a DOM reference or `--selector`, cropped
+from a WebKit snapshot at device resolution. `rect` uses absolute physical
+screen pixels.
+
+Without `--output` or `--clipboard`, screenshots are written to
+`$XDG_CACHE_HOME/papyri/screenshots` (or `~/.cache/papyri/screenshots`) with
+mode `0600`. Clipboard images use `wl-copy` on Wayland or `xclip` on X11.
+Screen capture uses `grim` on Wayland or ImageMagick `import` on X11.
+
+DOM references are stable for the life of the current page. They are reset by
+a reload. `--frame preview` queries the sandboxed Markdown/PDF preview through
+its postMessage bridge; `--frame browser` queries the active website tab with
+an injected page helper. `element` screenshots work in all three frames:
+main-document nodes crop a WebKit snapshot, preview nodes are offset by the
+iframe bounds, and browser nodes crop the native browser surface. `dom.ax`
+returns a compact role/name/value tree for all three frames.
+
+### Native input, clipboard, windows, and waits
+
+| Method           | Parameters                                | Description                                               |
+| ---------------- | ----------------------------------------- | --------------------------------------------------------- |
+| `input.move`     | `x`, `y`                                  | Move the pointer to absolute screen coordinates.          |
+| `input.click`    | `x`, `y`, optional `button`, `count`      | Click, double-click, or triple-click.                     |
+| `input.drag`     | `x`, `y`, `toX`, `toY`, optional `button` | Press, drag, and release.                                 |
+| `input.scroll`   | `x`, `y`, optional `dx`, `dy`             | Scroll at a screen position.                              |
+| `input.key`      | `keys`                                    | Press a combination such as `ctrl+l` or `shift+tab`.      |
+| `input.type`     | `text`                                    | Type into the focused control.                            |
+| `clipboard.get`  | none                                      | Return clipboard text.                                    |
+| `clipboard.set`  | `text`                                    | Replace clipboard text.                                   |
+| `window.list`    | none                                      | List native windows with ids, titles, and geometry.       |
+| `window.focus`   | `id`                                      | Present and focus a native window.                        |
+| `window.capture` | `id`, optional `output`, `clipboard`      | Capture a native window as PNG.                           |
+| `wait.selector`  | `selector`, optional `frame`, `timeoutMs` | Wait until a selector matches.                            |
+| `wait.idle`      | optional `timeoutMs`                      | Wait until document, editor, browser, and tools are idle. |
+| `wait.state`     | `path`, `equals`, optional `timeoutMs`    | Wait until a dotted state path equals a JSON value.       |
+
+`input.*` uses XTest and therefore requires an X11 display; Papyri should run
+with `GDK_BACKEND=x11` on Wayland desktops. `window.capture` uses the native
+window surface, so it includes browser-panel webviews. The CLI equivalents are
+`input`, `clipboard`, `window`, and `wait`.
+
+```sh
+papyri ctl input click 400 300
+papyri ctl input key ctrl+l
+papyri ctl input type 'https://example.com'
+papyri ctl clipboard set --stdin
+papyri ctl clipboard get-image --output ~/clipboard.png
+papyri ctl clipboard set-image ~/clipboard.png
+papyri ctl window list --json
+papyri ctl wait selector 'h1' --frame preview
+papyri ctl wait state busy false
+papyri ctl wait idle --timeout-ms 10000
+```
+
+### Context menus and selection actions
+
+| Method          | Parameters                                                                                             | Description                                     |
+| --------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| `menu.open`     | `kind` (`app`/`document`/`tab`/`file`/`selection`), optional `path`, `x`, `y`, `directory`, `document` | Open a menu and expose its entries.             |
+| `menu.activate` | `index`                                                                                                | Run an entry by its zero-based index.           |
+| `menu.close`    | none                                                                                                   | Close the context menu or selection action pad. |
+
+`state.menu` mirrors the open menu: kind, title, position, target path, and an
+ordered list of `{index,id,label,shortcut?,separator?}` entries. This includes
+the application, document, tab, file/folder, and selection action-pad menus.
+`menu.open selection` opens the action pad for the current preview selection;
+use `selection.set TEXT` first when no text is selected.
+`menu.open file PATH` infers whether the target is a folder or document unless
+`directory`/`document` is supplied. Actions that only open dialogs in the UI
+(for example **New file…**) remain available, but the dedicated `explorer` and
+`settings` methods are usually better for automation.
+
+### Right panel and browser
+
+| Method             | Parameters                          | Description                                     |
+| ------------------ | ----------------------------------- | ----------------------------------------------- |
+| `right.tab`        | `tab` (`outline`, `notes`, site)    | Select and show a right-panel tab.              |
+| `browser.navigate` | `target`                            | Navigate to a URL, hostname, or search query.   |
+| `browser.back`     | none                                | Go back.                                        |
+| `browser.forward`  | none                                | Go forward.                                     |
+| `browser.reload`   | none                                | Reload the page.                                |
+| `browser.stop`     | none                                | Stop loading.                                   |
+| `browser.zoom`     | `action` (`in`/`out`/`reset`)       | Change the page zoom.                           |
+| `browser.window`   | optional `url`                      | Open the current or given page in a new window. |
+| `browser.quote`    | `site` (`chatgpt`/`gemini`), `text` | Send a quote to the site composer.              |
+| `browser.search`   | `text`                              | Search Wikipedia for the text.                  |
+
+Browser methods require the Linux app. `right.tab` accepts `outline`, `notes`,
+`chatgpt`, `wikipedia`, and `gemini`. Website pages can be inspected and driven
+with `dom --frame browser` (query/get/focus/click/type/ax); browser DOM
+references are scoped to the active page and reset on navigation.
+
+### Search, PDF, and live preview
+
+| Method              | Parameters                    | Description                                      |
+| ------------------- | ----------------------------- | ------------------------------------------------ |
+| `search.next`       | none                          | Scroll to the next match.                        |
+| `search.previous`   | none                          | Scroll to the previous match.                    |
+| `pdf.password`      | `password`                    | Unlock a password-protected PDF.                 |
+| `live-preview`      | optional `enabled` boolean    | Show, hide, or toggle the live preview.          |
+| `live-preview.zoom` | `action` (`in`/`out`/`reset`) | Zoom the Typst live preview or document preview. |
+| `live-preview.fit`  | none                          | Fit the live preview or document to width.       |
+
+Prefer `papyri ctl pdf password --stdin` on shared machines so the password does
+not appear in the process list. Search match counts appear in `state.search`.
+
+### Tools, settings, and documents
+
+| Method          | Parameters                                             | Description                                      |
+| --------------- | ------------------------------------------------------ | ------------------------------------------------ |
+| `tools.install` | `name` (`marksman`/`tinymist`/`texlab`/`typst`)        | Download or update a managed tool and select it. |
+| `tools.texlive` | `action` (`install`/`update`)                          | Install or update managed TeX Live.              |
+| `settings.tab`  | `tab` (`appearance`/`reading`/`documents`/`compilers`) | Open settings on that tab.                       |
+| `document.copy` | none                                                   | Copy the active document's raw source.           |
+
+`tools status` is CLI-only and prints the tool state plus configured paths.
+`document stats` is CLI-only and prints `state.stats`.
+
+`record --output-dir DIR --count N --interval-ms M [--target screen|app]`
+captures a numbered PNG frame series for observing animations, loading states,
+and menus. It is a frame series rather than an encoded video file.
+
 Decoration-less mode hides the one-line shell, explorer, right panel, and status
 bar so the preview fills the viewport. The command palette and all keyboard
 shortcuts remain available; `Esc` leaves the mode when no dialog or search is
@@ -241,8 +465,53 @@ is view state rather than a preference, so it is not persisted across restarts.
     "search": false,
     "split": false,
     "decorationless": false,
-    "query": ""
+    "query": "",
+    "rightTab": "outline"
   },
+  "editor": {
+    "available": true,
+    "open": false,
+    "path": "/home/me/notes.md",
+    "language": "markdown",
+    "dirty": false,
+    "busy": false,
+    "readOnly": false,
+    "status": "",
+    "error": null,
+    "cursor": null,
+    "selection": null,
+    "diagnostics": { "errors": 0, "warnings": 0, "information": 0, "hints": 0 }
+  },
+  "explorer": {
+    "workingDirectory": "/home/me",
+    "selected": null,
+    "expanded": []
+  },
+  "search": { "open": false, "query": "", "matches": null },
+  "note": { "path": "/home/me/notes.md", "text": "" },
+  "trust": { "supported": true, "enabled": false },
+  "browser": null,
+  "livePreview": { "available": false, "visible": false },
+  "tools": { "busy": false, "message": "", "error": "" },
+  "stats": {
+    "words": 120,
+    "characters": 740,
+    "minutes": 1,
+    "bytes": null,
+    "pages": null
+  },
+  "selection": null,
+  "menu": {
+    "open": false,
+    "kind": null,
+    "title": "",
+    "x": 0,
+    "y": 0,
+    "path": null,
+    "directory": null,
+    "items": []
+  },
+  "recent": { "files": [], "folders": [], "commands": [] },
   "preferences": {
     "theme": "mocha",
     "documentZoom": 100,
@@ -260,7 +529,12 @@ is view state rather than a preference, so it is not persisted across restarts.
 
 `kind` is `markdown`, `pdf`, `typst-source`, or `latex-source`. A Typst or LaTeX
 tab uses `pdf` when compilation succeeded and `*-source` when the source is
-shown after a compilation failure.
+shown after a compilation failure. `pdf.locked` is true while a protected PDF
+waits for `pdf.password`. `editor.cursor` and `editor.selection` use zero-based
+line and character positions; selection text is capped at 100 kB. The editor
+snapshot also includes diagnostic counts by severity; `editor.diagnostics`
+returns the full language-server list. `browser` is
+the live `BrowserState` in the Linux app and null elsewhere.
 
 ### Preferences
 
@@ -287,12 +561,15 @@ papyri ctl preferences set '{"latexEngine":"xelatex","latexPaths":{"xelatex":"/o
 
 ```sh
 papyri ctl watch
-papyri ctl watch --events state,headings
+papyri ctl watch --events state,headings,browser,selection
 ```
 
 Each line is one JSON object. `state` is emitted after the visible state changes
-(at most about ten times per second), and `headings` when the active document's
-outline changes. The initial `state` is printed unless `--no-initial` is used.
+(at most about ten times per second) and now carries editor, explorer, search,
+note, trust, browser, live-preview, tools, statistics, selection, menu, and
+recent state. `headings` follows the active document's outline, `browser` follows the
+embedded browser state, and `selection` follows the preview's selected word and
+character counts. The initial `state` is printed unless `--no-initial` is used.
 Events are not replayed: use `state` for a one-shot snapshot and `watch` for
 changes.
 
@@ -388,10 +665,20 @@ without adding write access to the viewer.
 
 The socket is a same-user control channel. Any process running as your user can
 send these commands, just as it could simulate keystrokes or clicks. It is not a
-privilege boundary and does not grant the control client new filesystem access
-beyond opening documents the app already allows. The socket is not reachable over
-the network. Enabling scripts for a document remains a separate, per-tab action;
-opening a document through the control API never enables document scripts.
+privilege boundary and does not grant the control client filesystem access
+beyond what the app already allows. The socket is not reachable over the
+network. `editor`, `explorer`, `note`, `trust`, and `tools` methods act with the
+same permissions as the corresponding UI controls. Opening a document through
+`open` never enables document scripts; `trust` must be sent explicitly, and
+deleting a file requires `"force": true` (`--yes` in the CLI).
+
+`dom.click` and `dom.type` can activate any main-window control, including
+trust and file actions. `screenshot screen` captures the entire desktop, not
+just Papyri, and may include other applications. Screenshot files are created
+with mode `0600`; clipboard images are readable by any client of the same
+clipboard session. `input.*` injects real mouse and keyboard events into the
+X11 session, so it can operate other applications and native dialogs too. Treat the control socket and screenshot output as sensitive
+as the desktop itself.
 
 The socket carries absolute paths and document headings in `state` events. Keep
 `$XDG_RUNTIME_DIR` and any overridden socket directory private.

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-manage-texlive"
+description = "Enables the manage_texlive command without any pre-configured scope."
+commands.allow = ["manage_texlive"]
+
+[[permission]]
+identifier = "deny-manage-texlive"
+description = "Denies the manage_texlive command without any pre-configured scope."
+commands.deny = ["manage_texlive"]
