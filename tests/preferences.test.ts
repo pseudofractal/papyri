@@ -1,7 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { defaults, mergePreferences } from '../src/lib/preferences';
+import { defaults, mergePreferences, withoutConfiguredPreferences } from '../src/lib/preferences';
 
 describe('preference updates', () => {
+  it('persists preference objects containing reactive proxies', () => {
+    const next = {
+      ...structuredClone(defaults),
+      languageServerPaths: new Proxy({ ...defaults.languageServerPaths }, {}),
+    };
+    expect(withoutConfiguredPreferences(next, defaults, {})).toEqual(defaults);
+  });
+
+  it('preserves saved values under declarative overrides while saving other edits', () => {
+    const saved = mergePreferences(defaults, {
+      theme: 'latte',
+      languageServerPaths: { typst: '/old' },
+    });
+    const configured = { theme: 'mocha', languageServerPaths: { typst: '/nix/store/tinymist' } };
+    const current = mergePreferences(mergePreferences(saved, configured), {
+      network: true,
+      languageServerPaths: { markdown: '/marksman' },
+    });
+    const persisted = withoutConfiguredPreferences(current, saved, configured);
+    expect(persisted).toMatchObject({
+      theme: 'latte',
+      network: true,
+      languageServerPaths: { typst: '/old', markdown: '/marksman' },
+    });
+    expect(current.theme).toBe('mocha');
+  });
+
   it('merges validated settings without mutating the current object', () => {
     const current = structuredClone(defaults);
     const next = mergePreferences(current, {

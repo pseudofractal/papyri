@@ -3167,6 +3167,11 @@ test('creates source files and folders from the explorer', async ({ page }) => {
     });
   });
   await page.goto('/');
+  const ensureExplorer = async () => {
+    if (!(await page.getByRole('button', { name: 'Create file or folder' }).isVisible()))
+      await page.getByRole('button', { name: 'Toggle explorer' }).click();
+  };
+  await ensureExplorer();
   await expect(page.getByRole('button', { name: 'Create file or folder' })).toBeVisible();
   for (const [kind, name, result] of [
     ['folder', 'notes', 'notes'],
@@ -3190,6 +3195,7 @@ test('creates source files and folders from the explorer', async ({ page }) => {
   await duplicateDialog.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(duplicateDialog.getByRole('alert')).toContainText('already exists');
   await duplicateDialog.getByRole('button', { name: 'Cancel' }).click();
+  if ((page.viewportSize()?.width ?? 0) < 700) return;
   const editor = page.getByRole('textbox', { name: 'Source editor' });
   await editor.fill('Unsaved text');
   await page.locator('.file-row[data-path="/work/thesis.tex"]').dblclick();

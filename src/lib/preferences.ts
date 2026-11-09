@@ -303,3 +303,28 @@ export function mergePreferences(
   }
   return next;
 }
+
+/** Preserve saved values for preferences controlled by a configuration file. */
+export function withoutConfiguredPreferences(
+  next: Preferences,
+  saved: Preferences,
+  configured: Record<string, unknown>,
+): Preferences {
+  const restored = JSON.parse(JSON.stringify(next)) as Record<string, unknown>;
+  const previous = saved as unknown as Record<string, unknown>;
+  for (const [key, value] of Object.entries(configured)) {
+    if (
+      (key === 'languageServerPaths' || key === 'latexPaths') &&
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value)
+    ) {
+      const target = restored[key] as Record<string, unknown>;
+      const original = previous[key] as Record<string, unknown>;
+      for (const field of Object.keys(value)) target[field] = original[field];
+    } else if (Object.hasOwn(previous, key)) {
+      restored[key] = structuredClone(previous[key]);
+    }
+  }
+  return restored as unknown as Preferences;
+}

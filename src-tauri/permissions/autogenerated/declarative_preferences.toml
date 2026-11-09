@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-declarative-preferences"
+description = "Enables the declarative_preferences command without any pre-configured scope."
+commands.allow = ["declarative_preferences"]
+
+[[permission]]
+identifier = "deny-declarative-preferences"
+description = "Denies the declarative_preferences command without any pre-configured scope."
+commands.deny = ["declarative_preferences"]

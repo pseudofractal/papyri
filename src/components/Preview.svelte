@@ -278,7 +278,10 @@
     isTypst(tab.path) ? 'typst' : isLatex(tab.path) ? 'latex' : undefined,
   );
   const buildFailure = $derived(
-    buildView && buildLanguage && tab.compilationError
+    buildView &&
+      buildLanguage &&
+      tab.compilationError &&
+      /compilation failed/i.test(tab.compilationError)
       ? parseBuildFailure(tab.compilationError, buildLanguage, tab.path)
       : null,
   );

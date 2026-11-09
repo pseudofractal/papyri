@@ -194,6 +194,16 @@ with tempfile.TemporaryDirectory(prefix="papyri-lsp-corpus-") as directory:
             "#link(",
         ]
     ]
+    for i in range(60):
+        (root / f"module-{i:02}.typ").write_text(f"#let item = {i}\n")
+        (root / f"image-{i:02}.svg").write_text('<svg xmlns="http://www.w3.org/2000/svg"/>\n')
+    imports = "\n".join(
+        f'#import "module-{i:02}.typ" as module{i:02}' for i in range(60)
+    )
+    typst.extend(
+        ("example.typ", "typst", text)
+        for text in ['#image("', '#read("', imports + "\n#module"]
+    )
     collect("tinymist", ["tinymist"], root, typst)
     for i in range(60):
         (root / f"chapter-{i:02}.tex").write_text("Example.\n")

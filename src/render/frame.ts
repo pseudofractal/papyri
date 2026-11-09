@@ -58,15 +58,39 @@ export function sanitize(html: string) {
     ALLOW_DATA_ATTR: true,
   });
 }
+
+/** Preserve HTML numbering when drawing markers outside WebKit's selection boxes. */
+function installOrderedListMarkers() {
+  for (const list of root.querySelectorAll<HTMLOListElement>('ol')) {
+    const items = [...list.children].filter(
+      (element): element is HTMLLIElement => element instanceof HTMLLIElement,
+    );
+    const start = Number.parseInt(list.getAttribute('start') ?? '', 10);
+    let number = Number.isNaN(start) ? (list.reversed ? items.length : 1) : list.start;
+    const step = list.reversed ? -1 : 1;
+    for (const item of items) {
+      const value = Number.parseInt(item.getAttribute('value') ?? '', 10);
+      if (!Number.isNaN(value)) number = item.value;
+      item.dataset.listMarker = `${number}.`;
+      number += step;
+    }
+  }
+}
 let mathOverflowFrame = 0;
 let searchIndex = 0;
+const MATH_OVERFLOW_TOLERANCE_PX = 1;
 const domInspector = createDomInspector(document.body);
 
 /** Keep overflow only on inline math wider than the reading column. */
 function updateMathOverflow() {
   mathOverflowFrame = 0;
-  for (const element of root.querySelectorAll<HTMLElement>('.math')) {
-    element.classList.toggle('scrollable', element.scrollWidth > element.clientWidth + 1);
+  // Read all widths before changing overflow, which can invalidate layout.
+  const measurements = [...root.querySelectorAll<HTMLElement>('.math-content')].map((element) => ({
+    element,
+    overflowing: element.scrollWidth > element.clientWidth + MATH_OVERFLOW_TOLERANCE_PX,
+  }));
+  for (const { element, overflowing } of measurements) {
+    element.classList.toggle('scrollable', overflowing);
   }
 }
 
@@ -124,6 +148,7 @@ function applyPresentation(presentation: Record<string, unknown>) {
 applyPresentation(payload);
 root.innerHTML = payload.trusted ? payload.html : sanitize(payload.html);
 resolveReferenceTargets(root);
+installOrderedListMarkers();
 updateMathOverflow();
 document.fonts?.ready.then(updateMathOverflow);
 
