@@ -23,6 +23,11 @@ async function openCommandPalette(page: Page) {
   await expect(page.getByRole('dialog', { name: 'Command palette' })).toBeVisible();
 }
 
+async function ensureExplorer(page: Page) {
+  if (!(await page.getByRole('complementary', { name: 'File explorer' }).isVisible()))
+    await page.getByRole('button', { name: 'Toggle explorer' }).click();
+}
+
 async function toggleTheme(page: Page) {
   const current = await page.locator('.app-shell').getAttribute('data-theme');
   const command = current === 'latte' ? 'Use dark theme' : 'Use light theme';
@@ -117,6 +122,7 @@ test('uses Catppuccin file icons in tabs and the command palette', async ({ page
     },
   ]);
   const tabs = page.getByRole('group', { name: 'Open documents' }).locator('.tab-select');
+  await ensureExplorer(page);
   await page.locator('.file-row').filter({ hasText: 'paper.tex' }).click();
   await expect(tabs).toHaveCount(2);
   const markdownTab = tabs.filter({ hasText: 'notes.md' });
@@ -2905,9 +2911,9 @@ test('completes LaTeX commands inside Markdown math', async ({ page }) => {
   await page.keyboard.press('Control+Space');
   const menu = page.locator('.cm-tooltip-autocomplete');
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole('option', { name: /^\\frac\{\}\{\}/ })).toBeVisible();
-  await page.waitForTimeout(100);
-  await page.keyboard.press('Enter');
+  const fraction = menu.getByRole('option', { name: /^\\frac\{\}\{\}/ });
+  await expect(fraction).toBeVisible();
+  await fraction.click();
   await page.keyboard.type('1');
   await page.keyboard.press('Tab');
   await page.keyboard.type('2');
@@ -3089,7 +3095,9 @@ test('recompiles LaTeX drafts while retaining the previous PDF', async ({ page }
   await expect(page.getByText('Compiling · Stale')).toHaveCount(0);
   await expect(frame).not.toHaveAttribute('data-old-pdf', 'yes');
   await page.getByLabel('Live', { exact: true }).check();
-  await editor.fill('Draft two');
+  await editor.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.insertText('Draft two');
   await expect
     .poll(() =>
       page.evaluate(() => (window as unknown as { compileRequests: string[] }).compileRequests),
@@ -3167,11 +3175,7 @@ test('creates source files and folders from the explorer', async ({ page }) => {
     });
   });
   await page.goto('/');
-  const ensureExplorer = async () => {
-    if (!(await page.getByRole('button', { name: 'Create file or folder' }).isVisible()))
-      await page.getByRole('button', { name: 'Toggle explorer' }).click();
-  };
-  await ensureExplorer();
+  await ensureExplorer(page);
   await expect(page.getByRole('button', { name: 'Create file or folder' })).toBeVisible();
   for (const [kind, name, result] of [
     ['folder', 'notes', 'notes'],
@@ -3185,9 +3189,10 @@ test('creates source files and folders from the explorer', async ({ page }) => {
     await dialog.getByLabel('Name').fill(name);
     await dialog.getByRole('button', { name: 'Create', exact: true }).click();
     await expect(dialog).toHaveCount(0);
-    await expect(page.locator('.file-row').filter({ hasText: result })).toBeVisible();
     if (kind !== 'folder')
       await expect(page.getByRole('textbox', { name: 'Source editor' })).toBeVisible();
+    await ensureExplorer(page);
+    await expect(page.locator('.file-row').filter({ hasText: result })).toBeVisible();
   }
   await page.getByRole('button', { name: 'Create file or folder' }).click();
   const duplicateDialog = page.getByRole('dialog', { name: 'Create new' });
@@ -3283,6 +3288,7 @@ test('remembers expanded folders and the working directory separately from the t
   await page.goto('/');
   const chapters = page.locator('.file-row[data-path="/work/chapters"]');
   const notes = page.locator('.file-row[data-path="/work/chapters/notes"]');
+  await ensureExplorer(page);
   await chapters.click();
   await notes.click();
   await expect(notes).toHaveClass(/working/);
@@ -3296,6 +3302,7 @@ test('remembers expanded folders and the working directory separately from the t
     .getByRole('button', { name: 'Cancel' })
     .click();
   await page.reload();
+  await ensureExplorer(page);
   await expect(chapters).toHaveAttribute('aria-expanded', 'true');
   await expect(notes).toHaveAttribute('aria-expanded', 'true');
   await expect(notes).toHaveClass(/working/);
