@@ -21,6 +21,7 @@ describe('preference updates', () => {
       codeFont: "'JetBrains Mono', monospace",
       mathFont: "'STIX Two Math', serif",
       typstPath: '/opt/typst',
+      languageServerPaths: { markdown: '/opt/marksman' },
       latexEngine: 'xelatex',
       latexPaths: { xelatex: '/opt/xelatex' },
     });
@@ -41,10 +42,20 @@ describe('preference updates', () => {
       codeFont: "'JetBrains Mono', monospace",
       mathFont: "'STIX Two Math', serif",
       typstPath: '/opt/typst',
+      languageServerPaths: { markdown: '/opt/marksman', typst: '', latex: '' },
       latexEngine: 'xelatex',
       latexPaths: { lualatex: '', pdflatex: '', xelatex: '/opt/xelatex' },
     });
     expect(current).toEqual(defaults);
+  });
+
+  it('rejects unknown language servers and invalid paths', () => {
+    expect(() =>
+      mergePreferences(structuredClone(defaults), { languageServerPaths: { rust: '/bin/server' } }),
+    ).toThrow('Invalid language server');
+    expect(() =>
+      mergePreferences(structuredClone(defaults), { languageServerPaths: { typst: 42 } }),
+    ).toThrow('Invalid language server');
   });
 
   it('clamps zooms, sidebar width, and palette bounds to their supported ranges', () => {

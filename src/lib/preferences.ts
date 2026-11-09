@@ -19,6 +19,7 @@ import {
 } from './view';
 import type { Delimiter, Preferences } from './types';
 export const defaults: Preferences = {
+  languageServerPaths: { markdown: '', typst: '', latex: '' },
   typstPath: '',
   latexEngine: 'lualatex',
   latexPaths: { lualatex: '', pdflatex: '', xelatex: '' },
@@ -120,6 +121,14 @@ export function loadPreferences(): Preferences {
     const stored = JSON.parse(localStorage.getItem('papyri.preferences') || 'null');
     if (!stored) return structuredClone(defaults);
     return {
+      languageServerPaths: Object.fromEntries(
+        Object.keys(defaults.languageServerPaths).map((language) => [
+          language,
+          typeof stored.languageServerPaths?.[language] === 'string'
+            ? stored.languageServerPaths[language]
+            : '',
+        ]),
+      ) as Preferences['languageServerPaths'],
       typstPath: typeof stored.typstPath === 'string' ? stored.typstPath : '',
       latexEngine: ['lualatex', 'pdflatex', 'xelatex'].includes(stored.latexEngine)
         ? stored.latexEngine
@@ -253,6 +262,16 @@ export function mergePreferences(
       case 'mathFont':
         next.mathFont = validateFontFamily(value, 'mathFont', true);
         break;
+      case 'languageServerPaths': {
+        if (!value || typeof value !== 'object' || Array.isArray(value))
+          throw new Error('`languageServerPaths` must be an object.');
+        for (const [language, path] of Object.entries(value)) {
+          if (!Object.hasOwn(next.languageServerPaths, language) || typeof path !== 'string')
+            throw new Error(`Invalid language server path for ${language}.`);
+          next.languageServerPaths[language as keyof Preferences['languageServerPaths']] = path;
+        }
+        break;
+      }
       case 'typstPath':
         if (typeof value !== 'string') throw new Error('`typstPath` must be a string.');
         next.typstPath = value;

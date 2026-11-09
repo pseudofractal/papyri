@@ -41,6 +41,7 @@
     SpellCheck,
   } from '@lucide/svelte';
   import { openDialog } from '../lib/dialog';
+  import FileIcon from './FileIcon.svelte';
   import {
     scanDocuments,
     searchContents,
@@ -49,7 +50,15 @@
     type PaletteCommand,
     type ContentMatch,
   } from '../lib/palette';
-  import { basename, dirname, isLatex, isMarkdown, isPdf, isTypst } from '../lib/paths';
+  import {
+    basename,
+    dirname,
+    displayPath,
+    isLatex,
+    isMarkdown,
+    isPdf,
+    isTypst,
+  } from '../lib/paths';
   import {
     buildSpellingDictionary,
     suggestSpelling,
@@ -303,7 +312,9 @@
         matches.push({
           id: folder.path,
           label: basename(folder.path),
-          detail: folder.lastFile ? `${folder.path} · ${basename(folder.lastFile)}` : folder.path,
+          detail: folder.lastFile
+            ? `${displayPath(folder.path)} · ${basename(folder.lastFile)}`
+            : displayPath(folder.path),
           right: 'Recent',
           kind: 'folder',
           lastFile: folder.lastFile,
@@ -334,7 +345,7 @@
             matches.push({
               id: path,
               label: basename(path),
-              detail: path,
+              detail: displayPath(path),
               right: fileKind(path),
               kind: 'file',
               score: 1020 - index,
@@ -361,7 +372,7 @@
           matches.push({
             id: path,
             label: basename(path),
-            detail: path,
+            detail: displayPath(path),
             right: 'Tab',
             kind: 'tab',
             score,
@@ -671,7 +682,13 @@
           onclick={() => choose(result)}
         >
           <span class="palette-result-icon" data-kind={result.kind}
-            ><Icon size={17} aria-hidden="true" /></span
+            >{#if result.kind === 'file' || result.kind === 'tab'}
+              <FileIcon name={basename(result.id)} />
+            {:else if result.kind === 'folder'}
+              <FileIcon name={basename(result.id)} directory expanded />
+            {:else}
+              <Icon size={17} aria-hidden="true" />
+            {/if}</span
           >
           <span class="palette-result-text"
             ><span>{result.label}</span>{#if result.detail && result.detail !== result.label}<small

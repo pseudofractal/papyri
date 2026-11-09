@@ -34,6 +34,24 @@ function memorySource(): { source: Source; files: Map<string, FileData> } {
   };
 }
 describe('workspace navigation and live updates', () => {
+  it('tracks a pending document until it finishes or navigation changes', async () => {
+    const { source } = memorySource();
+    const read = source.read;
+    let finish!: (file: FileData) => void;
+    source.read = (path) =>
+      path === '/slow.typ' ? new Promise((resolve) => (finish = resolve)) : read(path);
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    const pending = workspace.open('/slow.typ');
+    expect(workspace.busy).toBe(true);
+    expect(workspace.openingPath).toBe('/slow.typ');
+    await workspace.open('/a.md');
+    expect(workspace.busy).toBe(false);
+    finish({ text: 'late', stamp: '1' });
+    await pending;
+    expect(workspace.active).toBe('/a.md');
+    expect(workspace.busy).toBe(false);
+  });
   it('keeps recently opened files in order and clears them when the source changes', async () => {
     const workspace = new Workspace();
     workspace.changeSource(memorySource().source);
@@ -371,4 +389,22 @@ it('opens PDF and Typst tabs, refreshes binary previews, and retains them on com
   await workspace.open('/unsupported.txt');
   expect(workspace.error).toContain('Markdown, PDF, Typst, or LaTeX');
   expect(workspace.active).toBe('/paper.typ');
+});
+
+it('honors guards before closing tabs or switching sources', async () => {
+  const first = memorySource().source;
+  const second = memorySource().source;
+  const workspace = new Workspace();
+  workspace.changeSource(first);
+  await workspace.open('/a.md');
+  workspace.canClose = () => false;
+  workspace.close('/a.md');
+  expect(workspace.active).toBe('/a.md');
+  workspace.canChangeSource = () => false;
+  await workspace.selectSource(second);
+  expect(workspace.source).toBe(first);
+  expect(workspace.active).toBe('/a.md');
+  workspace.canClose = () => true;
+  workspace.close('/a.md');
+  expect(workspace.active).toBe('');
 });

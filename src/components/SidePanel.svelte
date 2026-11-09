@@ -226,6 +226,10 @@
     if (noteTimer) clearTimeout(noteTimer);
     noteTimer = setTimeout(() => (noteSaved = false), 1400);
   }
+  /** Replace the visible note from an external controller. */
+  export function setNote(value: string) {
+    updateNote(value);
+  }
   function clearNote() {
     updateNote('');
   }
