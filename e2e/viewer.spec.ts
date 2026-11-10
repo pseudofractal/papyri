@@ -1818,21 +1818,22 @@ $$
     selection.addRange(range);
   });
   const block = frame.locator('.math-block');
+  const display = frame.locator('.katex-display');
   const formula = block.locator('.katex');
   await expect(formula).toHaveClass(/selection-highlight/);
-  const styles = await block.evaluate((element) => {
+  const styles = await display.evaluate((element) => {
     const katex = element.querySelector('.katex')!;
     return {
-      blockBackground: getComputedStyle(element).backgroundColor,
-      blockWidth: element.getBoundingClientRect().width,
+      displayBackground: getComputedStyle(element).backgroundColor,
+      displayWidth: element.getBoundingClientRect().width,
       katexBackground: getComputedStyle(katex).backgroundColor,
       katexWidth: katex.getBoundingClientRect().width,
       userSelect: getComputedStyle(katex).userSelect,
     };
   });
-  expect(styles.blockBackground).toBe('rgba(203, 166, 247, 0.26)');
+  expect(styles.displayBackground).toBe('rgba(203, 166, 247, 0.26)');
   expect(styles.katexBackground).toBe('rgba(0, 0, 0, 0)');
-  expect(styles.katexWidth).toBeGreaterThan(styles.blockWidth / 2);
+  expect(styles.katexWidth).toBeGreaterThan(styles.displayWidth / 2);
   expect(styles.userSelect).toBe('none');
 });
 

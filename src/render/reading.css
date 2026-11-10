@@ -44,7 +44,7 @@ body {
 .katex.selection-highlight {
   background: transparent;
 }
-.math-block:has(.katex.selection-highlight) {
+.katex-display:has(.katex.selection-highlight) {
   background: var(--selection);
   border-radius: 2px;
 }
