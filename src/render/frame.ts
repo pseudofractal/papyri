@@ -800,14 +800,22 @@ window.addEventListener('message', (event) => {
     });
   }
 });
-window.addEventListener('scroll', () => notifyHost({ type: 'scroll', y: window.scrollY }), {
-  passive: true,
-});
+function notifyScrollPosition() {
+  notifyHost({
+    type: 'scroll',
+    y: window.scrollY,
+    max: Math.max(0, document.documentElement.scrollHeight - window.innerHeight),
+  });
+}
+window.addEventListener('scroll', notifyScrollPosition, { passive: true });
+window.addEventListener('resize', notifyScrollPosition, { passive: true });
 window.addEventListener('resize', scheduleMathOverflowUpdate, { passive: true });
+window.addEventListener('load', notifyScrollPosition);
 // Hidden loading frames can suspend animation callbacks. Styles and DOM are ready here.
 setTimeout(() => {
   scrollWindowTo(0, payload.scroll);
   notifyHost({ type: 'ready' });
+  requestAnimationFrame(notifyScrollPosition);
 });
 
 window.addEventListener('keydown', (event) => {

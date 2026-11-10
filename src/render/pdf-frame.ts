@@ -197,12 +197,14 @@ eventBus.on('pagesinit', () => {
   if (pendingQuery) search(pendingQuery);
   if (pendingAnchor) navigate(pendingAnchor);
   send({ type: 'ready' });
+  requestAnimationFrame(notifyScrollPosition);
 });
 let firstPageRendered = false;
 eventBus.on('pagerendered', ({ error }: { error?: unknown }) => {
   if (!error && !firstPageRendered) {
     firstPageRendered = true;
     send({ type: 'pdf-rendered' });
+    notifyScrollPosition();
   }
 });
 eventBus.on('pagechanging', ({ pageNumber }: { pageNumber: number }) => {
@@ -235,11 +237,17 @@ passwordInput.addEventListener('keydown', (event) => {
     unlockPdf();
   }
 });
-container.addEventListener('scroll', () => send({ type: 'scroll', y: container.scrollTop }), {
-  passive: true,
-});
+function notifyScrollPosition() {
+  send({
+    type: 'scroll',
+    y: container.scrollTop,
+    max: Math.max(0, container.scrollHeight - container.clientHeight),
+  });
+}
+container.addEventListener('scroll', notifyScrollPosition, { passive: true });
 new ResizeObserver(() => {
   if (payload.fitWidth) presentation();
+  notifyScrollPosition();
 }).observe(container);
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {

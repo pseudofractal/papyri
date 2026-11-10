@@ -43,6 +43,7 @@
     onlink,
     onheadings,
     onscroll,
+    onscrollprogress,
     oncommand,
     onpdfscale,
     onpdfpage,
@@ -81,6 +82,7 @@
     onlink: (href: string) => void;
     onheadings: (headings: Heading[]) => void;
     onscroll: (path: string, y: number) => void;
+    onscrollprogress?: (path: string, progress: number) => void;
     oncommand: (command: ViewCommand) => void;
     onpdfscale?: (value: number) => void;
     onpdfpage?: (path: string, page: number, total: number) => void;
@@ -810,8 +812,15 @@
     }
     if (data.type === 'navigate' && typeof data.href === 'string' && data.href.length < 8192)
       onlink(data.href);
-    if (data.type === 'scroll' && Number.isFinite(data.y))
-      onscroll(tab.path, Math.max(0, Math.min(data.y, MAX_SCROLL_POSITION)));
+    if (data.type === 'scroll' && Number.isFinite(data.y)) {
+      const y = Math.max(0, Math.min(data.y, MAX_SCROLL_POSITION));
+      onscroll(tab.path, y);
+      if (Number.isFinite(data.max) && data.max >= 0)
+        onscrollprogress?.(
+          tab.path,
+          data.max > 1 ? Math.max(0, Math.min(1, data.y / data.max)) : 1,
+        );
+    }
   }
   // WebKitGTK retargets wheel events over an iframe to the host without scrolling
   // the frame. Forward the delta using positions relative to the frame viewport.

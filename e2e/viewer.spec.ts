@@ -2058,6 +2058,62 @@ test('shows selected word and character counts in the status bar', async ({ page
   await expect(status).toContainText('26 characters');
 });
 
+test('aligns the compact status bar and exposes reading progress', async ({ page }) => {
+  await page.goto('/');
+  const body = Array.from(
+    { length: 70 },
+    (_, index) => `Paragraph ${index} ${'word '.repeat(12)}`,
+  ).join('\n\n');
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile(`# Long document\n\n${body}`, 'long.md'));
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Long document' })).toBeVisible();
+  const bar = page.locator('.status-bar');
+  await expect(bar).toHaveCSS('height', '28px');
+  await expect(page.locator('.status-cadence')).toHaveText('Snapshot');
+
+  const geometry = await bar.evaluate((element) => {
+    const measure = (selector: string) => {
+      const node = element.querySelector(selector)!;
+      const rect = node.getBoundingClientRect();
+      return { center: rect.top + rect.height / 2 };
+    };
+    const barRect = element.getBoundingClientRect();
+    const statsRect = element.querySelector('.status-stats')!.getBoundingClientRect();
+    return {
+      barCenter: barRect.top + barRect.height / 2,
+      barCenterX: barRect.left + barRect.width / 2,
+      interval: measure('.status-interval'),
+      stats: measure('.status-stats'),
+      fitText: measure('.status-fit span'),
+      fitIcon: measure('.status-fit svg'),
+      zoomReset: measure('.zoom-reset'),
+      statsCenterX: statsRect.left + statsRect.width / 2,
+    };
+  });
+  const centerTolerance = test.info().project.name === 'mobile' ? 2.5 : 0.5;
+  for (const item of [geometry.interval, geometry.stats, geometry.zoomReset])
+    expect(Math.abs(item.center - geometry.barCenter)).toBeLessThanOrEqual(centerTolerance);
+  if (await page.locator('.status-fit span').isVisible()) {
+    expect(Math.abs(geometry.fitText.center - geometry.barCenter)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(geometry.fitIcon.center - geometry.fitText.center)).toBeLessThanOrEqual(1);
+  }
+  expect(Math.abs(geometry.statsCenterX - geometry.barCenterX)).toBeLessThanOrEqual(1);
+
+  await expect(page.locator('.status-ring')).toHaveText('');
+  await expect(page.locator('.status-progress-value')).toHaveCSS('opacity', '0');
+  await frame
+    .locator('body')
+    .evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect
+    .poll(() => page.locator('.status-progress').getAttribute('aria-label'))
+    .toContain('100%');
+  await page.locator('.status-progress').hover();
+  await expect(page.locator('.status-progress-value')).toHaveCSS('opacity', '1');
+  await expect(page.locator('.status-progress-value')).toHaveText('100%');
+});
+
 test('renders lists and block structure in the action-pad preview', async ({ page }) => {
   await page.goto('/');
   const markdown = [

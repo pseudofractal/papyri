@@ -701,6 +701,21 @@
         ? `${workspace.source.label} · Live · checks every 2s`
         : 'Snapshot · import again to update',
   );
+  let activeScrollProgress = $state<{ path: string; value: number }>({ path: '', value: 0 });
+  const documentProgress = $derived(
+    activeScrollProgress.path === workspace.active ? activeScrollProgress.value : 0,
+  );
+  const progressPercent = $derived(Math.round(documentProgress * 100));
+  const refreshLabel = $derived(
+    workspace.busy
+      ? 'Opening…'
+      : workspace.source?.live
+        ? '2s'
+        : workspace.source
+          ? 'Snapshot'
+          : '—',
+  );
+  const showProgress = $derived(!!workspace.active && !editorVisible && !workspace.busy);
   $effect(() => {
     if (!browserAvailable() || (outline && isSiteTab(rightTab))) return;
     void browserSetVisible(false).catch(() => {});
@@ -3674,6 +3689,10 @@
                     onlink={(href) => follow(href, workspace.activeTab!.path)}
                     oncommand={viewCommand}
                     onscroll={(path, y) => workspace.setScroll(path, y)}
+                    onscrollprogress={(path, progress) => {
+                      if (path === workspace.active)
+                        activeScrollProgress = { path, value: Math.max(0, Math.min(1, progress)) };
+                    }}
                     onrendererror={(path, error) => void workspace.showSource(path, error)}
                     onbuildjump={(line) => void openEditorAt(Math.max(0, line - 1))}
                     onbuildretry={() => void workspace.refresh()}
@@ -3761,25 +3780,65 @@
       </main>
     </div>
     <footer class="status-bar">
-      <div class="status-live">
-        <span class="status-dot" class:live={workspace.source?.live}></span><span>{liveStatus}</span
-        >
+      <div class="status-left">
+        <span class="status-cadence" title={liveStatus}>
+          <span
+            class="status-dot"
+            class:live={!workspace.busy && workspace.source?.live}
+            class:busy={workspace.busy}
+            class:snapshot={!workspace.busy && !workspace.source?.live}
+          ></span>
+          <span class="status-interval">{refreshLabel}</span>
+        </span>
+        {#if showProgress}<span
+            class="status-progress"
+            role="img"
+            aria-label={`Reading progress ${progressPercent}%`}
+            title={`${progressPercent}% read`}
+            style:--read-progress="{progressPercent}%"
+            ><span class="status-ring" aria-hidden="true"></span><span class="status-progress-value"
+              >{progressPercent}%</span
+            ></span
+          >{/if}
       </div>
-      <div class="status-spacer"></div>
       <div class="status-stats" class:selection={!!selectionStats}>
         {#if selectionStats}<span>{selectionStats.words.toLocaleString()} words selected</span><span
-            >{selectionStats.characters.toLocaleString()} characters selected</span
+            class="status-separator"
+            aria-hidden="true">·</span
+          ><span>{selectionStats.characters.toLocaleString()} characters selected</span
           >{:else if documentStats?.words !== null && documentStats?.words !== undefined}<span
-            >{documentStats.words.toLocaleString()} words</span
-          ><span>{documentStats.characters.toLocaleString()} characters</span><span
-            >{documentStats.minutes} min read</span
+            >{documentStats.words.toLocaleString()}
+            <span class="metric-long">words</span><span class="metric-short">w</span></span
+          ><span class="status-separator" aria-hidden="true">·</span><span
+            >{documentStats.characters.toLocaleString()}
+            <span class="metric-long">characters</span><span class="metric-short">chars</span></span
+          ><span class="status-separator read-time-separator" aria-hidden="true">·</span><span
+            class="read-time">{documentStats.minutes} min read</span
           >{:else if documentStats?.bytes !== null && documentStats?.bytes !== undefined}<span
             >{(documentStats.bytes / 1024).toFixed(1)} KiB</span
-          ><span
+          ><span class="status-separator" aria-hidden="true">·</span><span
             >{documentStats.pages
               ? `PDF · page ${pdfPage.page} / ${documentStats.pages}`
               : 'PDF'}</span
           >{:else}<span>No document</span>{/if}
+      </div>
+      <div class="status-controls">
+        <button
+          class="status-fit"
+          class:enabled={preferences.fitWidth}
+          aria-label="Fit document to width"
+          aria-pressed={preferences.fitWidth}
+          title="Fit document to width (Ctrl =)"
+          onclick={() => viewCommand({ target: 'document', action: 'fit-width' })}
+          ><Maximize2 size={10} /><span>Fit</span></button
+        >
+        <ZoomControls
+          label="document"
+          value={pagedDocument ? preferences.pdfZoom : preferences.documentZoom}
+          minimum={pagedDocument ? MIN_PDF_ZOOM : MIN_ZOOM}
+          maximum={pagedDocument ? MAX_PDF_ZOOM : MAX_ZOOM}
+          onchange={(action) => zoom({ target: 'document', action })}
+        />
         <button
           class="status-help"
           aria-label="Keyboard shortcuts and help"
@@ -3787,23 +3846,6 @@
           onclick={() => (help = true)}><CircleHelp size={13} /></button
         >
       </div>
-      <span class="status-gap"></span>
-      <button
-        class="status-fit"
-        class:enabled={preferences.fitWidth}
-        aria-label="Fit document to width"
-        aria-pressed={preferences.fitWidth}
-        title="Fit document to width (Ctrl =)"
-        onclick={() => viewCommand({ target: 'document', action: 'fit-width' })}
-        ><Maximize2 size={14} /><span>Fit</span></button
-      >
-      <ZoomControls
-        label="document"
-        value={pagedDocument ? preferences.pdfZoom : preferences.documentZoom}
-        minimum={pagedDocument ? MIN_PDF_ZOOM : MIN_ZOOM}
-        maximum={pagedDocument ? MAX_PDF_ZOOM : MAX_ZOOM}
-        onchange={(action) => zoom({ target: 'document', action })}
-      />
     </footer>
   </div>
   {#if outline}<SidePanel
