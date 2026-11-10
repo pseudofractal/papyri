@@ -4,6 +4,11 @@ import type { LanguageFn } from 'highlight.js';
 import type { Rendered } from '../lib/types';
 import type { BuildDiagnostic, BuildFailure } from '../lib/build-diagnostics';
 import { explainBuildMessage } from '../lib/build-diagnostics';
+import {
+  LUCIDE_ARROW_UP_RIGHT_MARKUP,
+  LUCIDE_WARNING_MARKUP,
+  LUCIDE_X_MARKUP,
+} from '../lib/lucide-svg';
 import { basename } from '../lib/paths';
 import { MAX_DOCUMENT_BYTES } from '../lib/limits';
 
@@ -44,10 +49,10 @@ function diagnosticLocation(diagnostic: BuildDiagnostic): string {
 function diagnosticCard(diagnostic: BuildDiagnostic): string {
   const position = diagnosticLocation(diagnostic);
   const openIcon = diagnostic.line
-    ? `<button type="button" class="build-diagnostic-link-icon" data-build-jump="${diagnostic.line}" aria-label="Open line ${diagnostic.line}" title="Open line ${diagnostic.line}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 11.5 11.5 4.5M5.5 4.5h6v6"/></svg></button>`
+    ? `<button type="button" class="build-diagnostic-link-icon" data-build-jump="${diagnostic.line}" aria-label="Open line ${diagnostic.line}" title="Open line ${diagnostic.line}"><svg viewBox="0 0 24 24" aria-hidden="true">${LUCIDE_ARROW_UP_RIGHT_MARKUP}</svg></button>`
     : '';
   return `<div class="build-inline-diagnostic ${diagnostic.severity}" role="note">
-    <span class="build-diagnostic-mark" aria-hidden="true"><svg viewBox="0 0 24 24">${diagnostic.severity === 'error' ? '<path d="M7 7l10 10M17 7 7 17"/>' : '<path d="M12 7v6M12 16.5v.1"/>'}</svg></span>
+    <span class="build-diagnostic-mark" aria-hidden="true"><svg viewBox="0 0 24 24">${diagnostic.severity === 'error' ? LUCIDE_X_MARKUP : LUCIDE_WARNING_MARKUP}</svg></span>
     <div class="build-diagnostic-head">
       <strong>${escapeHtml(diagnostic.message)}</strong>
       <span class="build-diagnostic-location">${position}</span>

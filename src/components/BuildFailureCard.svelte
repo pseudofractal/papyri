@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { TriangleAlert, X, ArrowUpRight } from '@lucide/svelte';
   import { explainBuildMessage, type BuildFailure } from '../lib/build-diagnostics';
 
   let {
@@ -26,9 +27,9 @@
 <section class="build-failure" class:warning aria-label="Compile error">
   <span class="build-failure-mark" aria-hidden="true">
     {#if warning}
-      <svg viewBox="0 0 24 24"><path d="M12 7v6M12 16.5v.1" /></svg>
+      <TriangleAlert size={11} strokeWidth={2.4} aria-hidden="true" />
     {:else}
-      <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17" /></svg>
+      <X size={11} strokeWidth={2.4} aria-hidden="true" />
     {/if}
   </span>
   <div class="build-failure-body">
@@ -43,9 +44,7 @@
           title="Open line {primary.line}"
           onclick={() => onjump?.(primary.line, primary.column ?? 1)}
         >
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M4.5 11.5 11.5 4.5M5.5 4.5h6v6" />
-          </svg>
+          <ArrowUpRight size={11} strokeWidth={1.8} aria-hidden="true" />
         </button>
       {/if}
     </div>
@@ -90,15 +89,6 @@
     color: var(--color-base-100);
     line-height: 0;
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error) 14%, transparent);
-  }
-  .build-failure-mark svg {
-    display: block;
-    width: 11px;
-    height: 11px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2.4;
-    stroke-linecap: round;
   }
   .warning .build-failure-mark {
     background: var(--color-warning);
@@ -153,16 +143,6 @@
   .warning .build-failure-open {
     border-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
     color: var(--color-warning);
-  }
-  .build-failure-open svg {
-    display: block;
-    width: 11px;
-    height: 11px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.8;
-    stroke-linecap: round;
-    stroke-linejoin: round;
   }
   .build-failure-explanation {
     margin: 2px 0 0;
