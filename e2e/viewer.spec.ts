@@ -111,6 +111,19 @@ test('loads the diagram runtime only on demand and retries a failed load', async
   expect(requests).toBe(2);
 });
 
+test('shows source editing controls only while a document is open', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Close welcome.md' }).click();
+  const editSource = page.getByRole('button', { name: 'Edit source' });
+  await expect(editSource).toHaveCount(0);
+  await page
+    .getByLabel('Import selected files', { exact: true })
+    .setInputFiles(markdownFile('# Notes\n', 'notes.md'));
+  await expect(editSource).toBeVisible();
+  await page.getByRole('button', { name: 'Close notes.md' }).click();
+  await expect(editSource).toHaveCount(0);
+});
+
 test('uses Catppuccin file icons in tabs and the command palette', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Import selected files', { exact: true }).setInputFiles([

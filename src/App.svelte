@@ -3253,20 +3253,17 @@
       </div>
       <span class="header-spacer"></span>
       <div class="view-actions">
-        <button
-          class="icon-button"
-          class:enabled={editorVisible}
-          aria-label={editorVisible ? 'Show preview' : 'Edit source'}
-          title={editorVisible ? 'Show preview' : 'Edit source'}
-          disabled={!workspace.active ||
-            isPdf(workspace.active) ||
-            !workspace.source?.write ||
-            editorBusy}
-          onclick={() => {
-            if (editorVisible) editing = false;
-            else void openEditor();
-          }}><Code size={17} /></button
-        >
+        {#if workspace.active}<button
+            class="icon-button"
+            class:enabled={editorVisible}
+            aria-label={editorVisible ? 'Show preview' : 'Edit source'}
+            title={editorVisible ? 'Show preview' : 'Edit source'}
+            disabled={isPdf(workspace.active) || !workspace.source?.write || editorBusy}
+            onclick={() => {
+              if (editorVisible) editing = false;
+              else void openEditor();
+            }}><Code size={17} /></button
+          >{/if}
         {#if editorVisible}<button
             class="icon-button"
             aria-label="Save source"
