@@ -119,7 +119,7 @@ li code {
 }
 p code.selection-highlight,
 li code.selection-highlight {
-  background: var(--selection);
+  background: transparent;
 }
 table {
   border-collapse: collapse;
