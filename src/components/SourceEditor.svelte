@@ -614,7 +614,7 @@
     --editor-syntax-rosewater: #f5e0dc;
     --editor-syntax-comment: #9399b2;
     --editor-syntax-red: #f38ba8;
-    --editor-selection: rgb(203 166 247 / 26%);
+    --editor-selection: rgb(203 166 247 / 40%);
     display: flex;
     flex: 1;
     min-width: 0;
@@ -632,7 +632,7 @@
     --editor-syntax-rosewater: #dc8a78;
     --editor-syntax-comment: #6c6f85;
     --editor-syntax-red: #d20f39;
-    --editor-selection: rgb(136 57 239 / 18%);
+    --editor-selection: rgb(136 57 239 / 30%);
   }
   .editor-content {
     flex: 1;
@@ -653,7 +653,10 @@
     color: var(--muted);
     border-color: var(--line);
   }
-  .editor-content :global(.cm-activeLine),
+  .editor-content :global(.cm-activeLine) {
+    /* Keep the cursor line visible without hiding the selection layer painted behind it. */
+    background: color-mix(in srgb, var(--color-neutral) 30%, transparent);
+  }
   .editor-content :global(.cm-activeLineGutter) {
     background: var(--color-neutral);
   }

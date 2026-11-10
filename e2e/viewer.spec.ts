@@ -2689,6 +2689,7 @@ test('uses theme-aware Catppuccin selection colors in the source editor', async 
   await page.getByRole('button', { name: 'Edit source' }).click();
   const editor = page.getByRole('textbox', { name: 'Source editor' });
   const backgrounds: string[] = [];
+  const activeLineBackgrounds: string[] = [];
   for (const theme of ['mocha', 'latte']) {
     await expect(page.locator('.app-shell')).toHaveAttribute('data-theme', theme);
     await editor.click();
@@ -2698,9 +2699,16 @@ test('uses theme-aware Catppuccin selection colors in the source editor', async 
     backgrounds.push(
       await selection.evaluate((element) => getComputedStyle(element).backgroundColor),
     );
+    activeLineBackgrounds.push(
+      await page
+        .locator('.cm-activeLine')
+        .first()
+        .evaluate((element) => getComputedStyle(element).backgroundColor),
+    );
     if (theme === 'mocha') await toggleTheme(page);
   }
-  expect(backgrounds).toEqual(['rgba(203, 166, 247, 0.26)', 'rgba(136, 57, 239, 0.18)']);
+  expect(backgrounds).toEqual(['rgba(203, 166, 247, 0.4)', 'rgba(136, 57, 239, 0.3)']);
+  for (const background of activeLineBackgrounds) expect(background).toMatch(/0\.3\)$/);
 });
 
 test('edits source, retains a draft across preview mode, and saves the captured version', async ({
