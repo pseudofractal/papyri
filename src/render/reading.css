@@ -13,6 +13,7 @@
   --checker-a: #181825;
   --checker-b: #1e1e2e;
   --selection: rgb(203 166 247 / 26%);
+  --selection-solid: #4b4162;
 }
 :root[data-theme='latte'] {
   color: #4c4f69;
@@ -25,6 +26,7 @@
   --checker-a: #e6e9ef;
   --checker-b: #dce0e8;
   --selection: rgb(136 57 239 / 18%);
+  --selection-solid: #dcd0f4;
 }
 body {
   margin: 0;
@@ -119,7 +121,7 @@ li code {
 }
 p code.selection-highlight,
 li code.selection-highlight {
-  background: transparent;
+  background: var(--selection-solid);
 }
 table {
   border-collapse: collapse;

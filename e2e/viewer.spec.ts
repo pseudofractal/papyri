@@ -2001,7 +2001,7 @@ test('keeps inline code selection aligned with the surrounding text', async ({ p
     });
   await expect(code).toHaveClass(/selection-highlight/);
   expect(await code.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
-    'rgba(0, 0, 0, 0)',
+    'rgb(75, 65, 98)',
   );
   await frame.locator('body').evaluate(() => window.getSelection()!.removeAllRanges());
   await expect(code).not.toHaveClass(/selection-highlight/);
