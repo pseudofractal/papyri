@@ -1981,6 +1981,35 @@ Text before \(${wideExpression}\) and after.`,
   }
 });
 
+test('keeps inline code selection aligned with the surrounding text', async ({ page }) => {
+  await page.goto('/');
+  await page
+    .getByLabel('Import selected files')
+    .setInputFiles(markdownFile('# Code\n\nBefore `code` after.\n', 'inline-code.md'));
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Code' })).toBeVisible();
+  const code = frame.locator('p code').first();
+  await frame
+    .locator('p')
+    .first()
+    .evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const selection = window.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+  await expect(code).toHaveClass(/selection-highlight/);
+  expect(await code.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+    'rgba(203, 166, 247, 0.26)',
+  );
+  await frame.locator('body').evaluate(() => window.getSelection()!.removeAllRanges());
+  await expect(code).not.toHaveClass(/selection-highlight/);
+  expect(await code.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(
+    'rgb(24, 24, 37)',
+  );
+});
+
 test('shows selected word and character counts in the status bar', async ({ page }) => {
   await page.goto('/');
   await page

@@ -117,6 +117,10 @@ li code {
   padding: 0.2em 0.4em;
   border-radius: 4px;
 }
+p code.selection-highlight,
+li code.selection-highlight {
+  background: var(--selection);
+}
 table {
   border-collapse: collapse;
   width: 100%;

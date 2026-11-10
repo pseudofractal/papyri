@@ -269,8 +269,10 @@ let selectionHighlightFrame = 0;
 function updateMathSelectionHighlight() {
   const selection = window.getSelection();
   const highlighted = root.querySelectorAll('.katex.selection-highlight');
+  const codes = root.querySelectorAll<HTMLElement>('p code, li code');
   if (!selection || selection.isCollapsed) {
     for (const element of highlighted) element.classList.remove('selection-highlight');
+    for (const element of codes) element.classList.remove('selection-highlight');
     return;
   }
   const range = selection.getRangeAt(0);
@@ -281,6 +283,8 @@ function updateMathSelectionHighlight() {
   for (const element of highlighted)
     if (!next.has(element)) element.classList.remove('selection-highlight');
   for (const element of next) element.classList.add('selection-highlight');
+  for (const element of codes)
+    element.classList.toggle('selection-highlight', range.intersectsNode(element));
 }
 
 function scheduleMathSelectionHighlight() {
