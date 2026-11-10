@@ -1793,16 +1793,14 @@ Inline math: \(e^{i\pi} + 1 = 0\) with text.
   ).toBe('rgba(0, 0, 0, 0)');
 });
 
-test('paints display math selection per formula chunk instead of a full-width band', async ({
-  page,
-}) => {
+test('paints display math selection inside the formula bounds', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Import selected files').setInputFiles(
     markdownFile(
       String.raw`# Display math
 
 $$
-\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}
+\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi} \tag{1}
 $$
 `,
       'display-math.md',
@@ -1818,20 +1816,25 @@ $$
     selection.addRange(range);
   });
   const block = frame.locator('.math-block');
-  const formula = block.locator('.katex');
-  await expect(formula).toHaveClass(/selection-highlight/);
+  await expect(block).toHaveClass(/math-selection/);
   const sizes = await block.evaluate((element) => {
     const katex = element.querySelector('.katex')!;
     const base = element.querySelector('.katex-base')!;
+    const cover = getComputedStyle(element, '::before');
+    const tag = element.querySelector('.katex-tag')!;
     return {
       blockWidth: element.getBoundingClientRect().width,
+      coverWidth: parseFloat(cover.width),
       baseWidth: base.getBoundingClientRect().width,
+      coverBackground: cover.backgroundColor,
+      tagBackground: getComputedStyle(tag).backgroundColor,
       katexBackground: getComputedStyle(katex).backgroundColor,
-      baseBackground: getComputedStyle(base).backgroundColor,
     };
   });
-  expect(sizes.baseWidth).toBeLessThan(sizes.blockWidth / 2);
-  expect(sizes.baseBackground).not.toBe('rgba(0, 0, 0, 0)');
+  expect(sizes.coverWidth).toBeGreaterThanOrEqual(sizes.baseWidth);
+  expect(sizes.coverWidth).toBeLessThan(sizes.blockWidth / 2);
+  expect(sizes.coverBackground).not.toBe('rgba(0, 0, 0, 0)');
+  expect(sizes.tagBackground).not.toBe('rgba(0, 0, 0, 0)');
   expect(sizes.katexBackground).toBe('rgba(0, 0, 0, 0)');
 });
 

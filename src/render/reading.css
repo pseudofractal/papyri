@@ -44,16 +44,31 @@ body {
 .katex.selection-highlight {
   background: transparent;
 }
-.katex-display .katex.selection-highlight .katex-base,
-.katex-display .katex.selection-highlight .katex-tag {
+.math-block.math-selection {
+  position: relative;
+}
+.math-block.math-selection::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: var(--math-selection-left, 0);
+  top: var(--math-selection-top, 0);
+  width: var(--math-selection-width, 0);
+  height: var(--math-selection-height, 0);
   background: var(--selection);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.math-block.math-selection > .katex-display {
+  position: relative;
+  z-index: 1;
+}
+.math-block.math-selection .katex-tag {
+  background: var(--selection);
+  border-radius: 2px;
 }
 .math:has(.katex.selection-highlight)::selection,
 .math:has(.katex.selection-highlight) ::selection {
-  background: transparent;
-}
-.katex.selection-highlight::selection,
-.katex.selection-highlight ::selection {
   background: transparent;
 }
 main {
