@@ -265,48 +265,10 @@ function selectionPreview(selection: Selection): string {
 }
 
 let selectionHighlightFrame = 0;
-const mathSelectionProperties = [
-  '--math-selection-left',
-  '--math-selection-top',
-  '--math-selection-width',
-  '--math-selection-height',
-] as const;
-
-function clearMathBlockSelections() {
-  for (const block of root.querySelectorAll<HTMLElement>('.math-block.math-selection')) {
-    block.classList.remove('math-selection');
-    for (const property of mathSelectionProperties) block.style.removeProperty(property);
-  }
-}
-
-/** Cover the selected display formula with one box instead of per-glyph artifacts. */
-function positionMathBlockSelection(block: HTMLElement, katex: Element) {
-  const chunks = [...katex.querySelectorAll('.katex-base')];
-  if (!chunks.length) return;
-  const bounds = block.getBoundingClientRect();
-  let left = Number.POSITIVE_INFINITY;
-  let top = Number.POSITIVE_INFINITY;
-  let right = Number.NEGATIVE_INFINITY;
-  let bottom = Number.NEGATIVE_INFINITY;
-  for (const chunk of chunks) {
-    const rect = chunk.getBoundingClientRect();
-    left = Math.min(left, rect.left);
-    top = Math.min(top, rect.top);
-    right = Math.max(right, rect.right);
-    bottom = Math.max(bottom, rect.bottom);
-  }
-  if (![left, top, right, bottom].every(Number.isFinite)) return;
-  block.style.setProperty('--math-selection-left', `${left - bounds.left + block.scrollLeft}px`);
-  block.style.setProperty('--math-selection-top', `${top - bounds.top + block.scrollTop}px`);
-  block.style.setProperty('--math-selection-width', `${right - left}px`);
-  block.style.setProperty('--math-selection-height', `${bottom - top}px`);
-  block.classList.add('math-selection');
-}
 
 function updateMathSelectionHighlight() {
   const selection = window.getSelection();
   const highlighted = root.querySelectorAll('.katex.selection-highlight');
-  clearMathBlockSelections();
   if (!selection || selection.isCollapsed) {
     for (const element of highlighted) element.classList.remove('selection-highlight');
     return;
@@ -318,16 +280,7 @@ function updateMathSelectionHighlight() {
   }
   for (const element of highlighted)
     if (!next.has(element)) element.classList.remove('selection-highlight');
-  const blocks = new Set<HTMLElement>();
-  for (const element of next) {
-    element.classList.add('selection-highlight');
-    const block = element.closest<HTMLElement>('.math-block');
-    if (block) blocks.add(block);
-  }
-  for (const block of blocks) {
-    const katex = block.querySelector('.katex.selection-highlight');
-    if (katex) positionMathBlockSelection(block, katex);
-  }
+  for (const element of next) element.classList.add('selection-highlight');
 }
 
 function scheduleMathSelectionHighlight() {
@@ -339,7 +292,6 @@ function scheduleMathSelectionHighlight() {
 }
 
 document.addEventListener('selectionchange', scheduleMathSelectionHighlight);
-window.addEventListener('resize', scheduleMathSelectionHighlight);
 
 let lastSelectionStats = '';
 let selectionStatsTimer: ReturnType<typeof setTimeout> | undefined;

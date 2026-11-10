@@ -1793,7 +1793,9 @@ Inline math: \(e^{i\pi} + 1 = 0\) with text.
   ).toBe('rgba(0, 0, 0, 0)');
 });
 
-test('paints display math selection inside the formula bounds', async ({ page }) => {
+test('highlights display math across its block without native glyph artifacts', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.getByLabel('Import selected files').setInputFiles(
     markdownFile(
@@ -1816,26 +1818,22 @@ $$
     selection.addRange(range);
   });
   const block = frame.locator('.math-block');
-  await expect(block).toHaveClass(/math-selection/);
-  const sizes = await block.evaluate((element) => {
+  const formula = block.locator('.katex');
+  await expect(formula).toHaveClass(/selection-highlight/);
+  const styles = await block.evaluate((element) => {
     const katex = element.querySelector('.katex')!;
-    const base = element.querySelector('.katex-base')!;
-    const cover = getComputedStyle(element, '::before');
-    const tag = element.querySelector('.katex-tag')!;
     return {
+      blockBackground: getComputedStyle(element).backgroundColor,
       blockWidth: element.getBoundingClientRect().width,
-      coverWidth: parseFloat(cover.width),
-      baseWidth: base.getBoundingClientRect().width,
-      coverBackground: cover.backgroundColor,
-      tagBackground: getComputedStyle(tag).backgroundColor,
       katexBackground: getComputedStyle(katex).backgroundColor,
+      katexWidth: katex.getBoundingClientRect().width,
+      userSelect: getComputedStyle(katex).userSelect,
     };
   });
-  expect(sizes.coverWidth).toBeGreaterThanOrEqual(sizes.baseWidth);
-  expect(sizes.coverWidth).toBeLessThan(sizes.blockWidth / 2);
-  expect(sizes.coverBackground).not.toBe('rgba(0, 0, 0, 0)');
-  expect(sizes.tagBackground).not.toBe('rgba(0, 0, 0, 0)');
-  expect(sizes.katexBackground).toBe('rgba(0, 0, 0, 0)');
+  expect(styles.blockBackground).toBe('rgba(203, 166, 247, 0.26)');
+  expect(styles.katexBackground).toBe('rgba(0, 0, 0, 0)');
+  expect(styles.katexWidth).toBeGreaterThan(styles.blockWidth / 2);
+  expect(styles.userSelect).toBe('none');
 });
 
 test('preserves ordered-list numbering and leaves room for multi-digit markers', async ({
