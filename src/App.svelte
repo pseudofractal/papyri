@@ -258,6 +258,11 @@
   let paletteOpen = $state(false);
   let decorationless = $state(startsDecorationless);
   let query = $state('');
+  $effect(() => {
+    if (workspace.active) return;
+    searchOpen = false;
+    query = '';
+  });
   let pathInput = $derived(displayPath(workspace.directory));
   let headings = $state<Heading[]>([]);
   let headingsPath = $state('');
@@ -2435,11 +2440,12 @@
       else toggleExplorer();
     }
     if (key === 'f') {
+      if (!workspace.active) return;
       searchOpen = true;
       setTimeout(() => searchInput?.focus());
     }
     if (key === 'w') workspace.close(workspace.active);
-    if (key === '\\') split();
+    if (key === '\\' && workspace.active) split();
     if (key === ',') settings = !settings;
   }
   function editorControlState(): ControlEditorState {
@@ -3277,37 +3283,37 @@
             disabled={editorBusy}
             onclick={() => void reloadEditor()}><RefreshCw size={17} /></button
           >{/if}
-        <button
-          class="icon-button"
-          class:enabled={searchOpen}
-          aria-label="Search document"
-          title="Find in document (Ctrl F)"
-          onclick={() => {
-            searchOpen = !searchOpen;
-            if (!searchOpen) query = '';
-          }}><Search size={17} /></button
-        ><button
-          class="icon-button"
-          class:enabled={!!workspace.secondary}
-          aria-label="Toggle split view"
-          title="Toggle split view (Ctrl \\)"
-          onclick={split}><Columns2 size={17} /></button
-        ><button
-          class="copy-raw"
-          class:copied={copyState === 'copied'}
-          class:failed={copyState === 'error'}
-          aria-label="Copy raw content of the active document"
-          title="Copy raw content of the active document"
-          disabled={!canCopyRaw}
-          onclick={copyRawDocument}
-          >{#if copyState === 'copied'}<Check size={14} />{:else}<Copy size={14} />{/if}<span
-            >{copyState === 'copied'
-              ? 'Copied'
-              : copyState === 'error'
-                ? 'Copy failed'
-                : 'Copy raw'}</span
-          ></button
-        ><button
+        {#if workspace.active}<button
+            class="icon-button"
+            class:enabled={searchOpen}
+            aria-label="Search document"
+            title="Find in document (Ctrl F)"
+            onclick={() => {
+              searchOpen = !searchOpen;
+              if (!searchOpen) query = '';
+            }}><Search size={17} /></button
+          ><button
+            class="icon-button"
+            class:enabled={!!workspace.secondary}
+            aria-label="Toggle split view"
+            title="Toggle split view (Ctrl \\)"
+            onclick={split}><Columns2 size={17} /></button
+          ><button
+            class="copy-raw"
+            class:copied={copyState === 'copied'}
+            class:failed={copyState === 'error'}
+            aria-label="Copy raw content of the active document"
+            title="Copy raw content of the active document"
+            disabled={!canCopyRaw}
+            onclick={copyRawDocument}
+            >{#if copyState === 'copied'}<Check size={14} />{:else}<Copy size={14} />{/if}<span
+              >{copyState === 'copied'
+                ? 'Copied'
+                : copyState === 'error'
+                  ? 'Copy failed'
+                  : 'Copy raw'}</span
+            ></button
+          >{/if}<button
           class="icon-button"
           aria-label="Settings"
           title="Settings (Ctrl ,)"

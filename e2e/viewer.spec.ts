@@ -111,17 +111,40 @@ test('loads the diagram runtime only on demand and retries a failed load', async
   expect(requests).toBe(2);
 });
 
-test('shows source editing controls only while a document is open', async ({ page }) => {
+test('shows document toolbar controls only while a document is open', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Close welcome.md' }).click();
   const editSource = page.getByRole('button', { name: 'Edit source' });
+  const documentActions = [
+    page.getByRole('button', { name: 'Search document' }),
+    page.getByRole('button', { name: 'Toggle split view' }),
+  ];
+  const copyRaw = page.getByRole('button', { name: 'Copy raw content of the active document' });
+  const narrow = (page.viewportSize()?.width ?? 0) <= 760;
+  const expectCopyRaw = async (visible: boolean) => {
+    if (narrow) await expect(copyRaw).toBeHidden();
+    else if (visible) await expect(copyRaw).toBeVisible();
+    else await expect(copyRaw).toHaveCount(0);
+  };
+  const searchInput = page.getByRole('textbox', { name: 'Find in document', exact: true });
   await expect(editSource).toHaveCount(0);
+  for (const action of documentActions) await expect(action).toHaveCount(0);
+  await expectCopyRaw(false);
+  await page.keyboard.press('Control+f');
+  await expect(searchInput).toHaveCount(0);
   await page
     .getByLabel('Import selected files', { exact: true })
     .setInputFiles(markdownFile('# Notes\n', 'notes.md'));
   await expect(editSource).toBeVisible();
+  for (const action of documentActions) await expect(action).toBeVisible();
+  await expectCopyRaw(true);
+  await documentActions[0].click();
+  await expect(searchInput).toBeVisible();
   await page.getByRole('button', { name: 'Close notes.md' }).click();
   await expect(editSource).toHaveCount(0);
+  for (const action of documentActions) await expect(action).toHaveCount(0);
+  await expectCopyRaw(false);
+  await expect(searchInput).toHaveCount(0);
 });
 
 test('uses Catppuccin file icons in tabs and the command palette', async ({ page }) => {
