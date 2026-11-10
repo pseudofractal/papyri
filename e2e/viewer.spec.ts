@@ -1793,6 +1793,48 @@ Inline math: \(e^{i\pi} + 1 = 0\) with text.
   ).toBe('rgba(0, 0, 0, 0)');
 });
 
+test('paints display math selection per formula chunk instead of a full-width band', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByLabel('Import selected files').setInputFiles(
+    markdownFile(
+      String.raw`# Display math
+
+$$
+\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}
+$$
+`,
+      'display-math.md',
+    ),
+  );
+  const frame = page.frameLocator('iframe');
+  await expect(frame.getByRole('heading', { name: 'Display math' })).toBeVisible();
+  await frame.locator('main').evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+  const block = frame.locator('.math-block');
+  const formula = block.locator('.katex');
+  await expect(formula).toHaveClass(/selection-highlight/);
+  const sizes = await block.evaluate((element) => {
+    const katex = element.querySelector('.katex')!;
+    const base = element.querySelector('.katex-base')!;
+    return {
+      blockWidth: element.getBoundingClientRect().width,
+      baseWidth: base.getBoundingClientRect().width,
+      katexBackground: getComputedStyle(katex).backgroundColor,
+      baseBackground: getComputedStyle(base).backgroundColor,
+    };
+  });
+  expect(sizes.baseWidth).toBeLessThan(sizes.blockWidth / 2);
+  expect(sizes.baseBackground).not.toBe('rgba(0, 0, 0, 0)');
+  expect(sizes.katexBackground).toBe('rgba(0, 0, 0, 0)');
+});
+
 test('preserves ordered-list numbering and leaves room for multi-digit markers', async ({
   page,
 }) => {
@@ -1867,7 +1909,7 @@ test('preserves ordered-list numbering and leaves room for multi-digit markers',
   ).toBe('none');
 });
 
-test('keeps the selection cover outside wrapped and scrolling inline math', async ({ page }) => {
+test('keeps wrapped inline math inside one selection box', async ({ page }) => {
   await page.goto('/');
   const wideExpression = String.raw`\begin{bmatrix}${Array.from({ length: 60 }, (_, index) => `x_{${index}}`).join(' & ')}\end{bmatrix}`;
   await page.getByLabel('Import selected files').setInputFiles(
@@ -1904,27 +1946,29 @@ Text before \(${wideExpression}\) and after.`,
         selection.addRange(range);
       });
       await expect(math.locator('.katex')).toHaveClass(/selection-highlight/);
-      const cover = await math.evaluate((element) => {
+      const box = await math.evaluate((element) => {
         const style = getComputedStyle(element);
-        const cap = getComputedStyle(element, '::before');
+        const before = getComputedStyle(element, '::before');
+        const after = getComputedStyle(element, '::after');
         const textLine = element.parentElement!.getBoundingClientRect();
         const mathBounds = element.getBoundingClientRect();
         return {
-          overflow: style.overflow,
           background: style.backgroundColor,
-          capBackground: cap.backgroundColor,
-          capHeight: parseFloat(cap.height),
-          capTop: parseFloat(cap.top),
-          leading: (parseFloat(style.lineHeight) - parseFloat(style.fontSize)) / 2,
+          beforeBackground: before.backgroundColor,
+          beforeContent: before.content,
+          afterBackground: after.backgroundColor,
+          afterContent: after.content,
+          userSelect: getComputedStyle(element.querySelector('.katex')!).userSelect,
           wrapped: mathBounds.top > textLine.top,
         };
       });
-      expect(cover.wrapped).toBe(true);
-      expect(cover.overflow).toBe('visible');
-      expect(cover.capBackground).toBe(cover.background);
-      expect(cover.background).not.toBe('rgba(0, 0, 0, 0)');
-      expect(cover.capHeight).toBeCloseTo(cover.leading, 1);
-      expect(cover.capTop).toBeCloseTo(-cover.leading, 1);
+      expect(box.wrapped).toBe(true);
+      expect(box.background).not.toBe('rgba(0, 0, 0, 0)');
+      expect(box.beforeContent).toBe('none');
+      expect(box.afterContent).toBe('none');
+      expect(box.beforeBackground).toBe('rgba(0, 0, 0, 0)');
+      expect(box.afterBackground).toBe('rgba(0, 0, 0, 0)');
+      expect(box.userSelect).toBe('none');
     }
     await frame
       .locator('.math-content.scrollable')
