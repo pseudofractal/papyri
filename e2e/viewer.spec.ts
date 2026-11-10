@@ -1832,7 +1832,7 @@ $$
     };
   });
   expect(styles.displayBackground).toBe('rgba(203, 166, 247, 0.26)');
-  expect(styles.katexBackground).toBe('rgba(0, 0, 0, 0)');
+  expect(styles.katexBackground).toBe('rgba(203, 166, 247, 0.26)');
   expect(styles.katexWidth).toBeGreaterThan(styles.displayWidth / 2);
   expect(styles.userSelect).toBe('none');
 });
