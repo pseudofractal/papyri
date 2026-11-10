@@ -99,6 +99,7 @@
     loadRecentFolders,
     persistRecentFolders,
     rememberRecentFolder,
+    startupRecentProject,
     type RecentFolder,
   } from './lib/recent';
   import { traceStartup } from './lib/startup-trace';
@@ -3141,14 +3142,34 @@
           traceStartup('source-ready');
           if (disposed) return;
           await workspace.changeSource(source);
-          if (initial.directory) {
-            workspace.directory = workspace.searchRoot = initial.path;
-            updateRecentFolders(initial.path);
+          const home = (window as unknown as { __PAPYRI_HOME__?: string }).__PAPYRI_HOME__ ?? '';
+          const recent = startupRecentProject(initial, recentFolders, home);
+          let startup = initial;
+          let startupFile: string | undefined;
+          if (recent) {
+            try {
+              await source.list(recent.path);
+              startup = { ...initial, path: recent.path, directory: true };
+              startupFile = recent.lastFile;
+            } catch {
+              recentFolders = recentFolders.filter((folder) => folder.path !== recent.path);
+              persistRecentFolders(recentFolders);
+            }
+          }
+          if (startup.directory) {
+            workspace.directory = workspace.searchRoot = startup.path;
+            if (startupFile) {
+              updateRecentFolders(startup.path, startupFile);
+              await workspace.open(startupFile);
+              if (workspace.active !== startupFile) updateRecentFolders(startup.path, null);
+            } else {
+              updateRecentFolders(startup.path);
+            }
           } else {
-            workspace.directory = dirname(initial.path);
-            workspace.searchRoot = dirname(initial.path);
-            await workspace.open(initial.path);
-            if (workspace.active === initial.path) traceStartup('file-ready');
+            workspace.directory = dirname(startup.path);
+            workspace.searchRoot = dirname(startup.path);
+            await workspace.open(startup.path);
+            if (workspace.active === startup.path) traceStartup('file-ready');
           }
         } else {
           await workspace.changeSource(demoSource());

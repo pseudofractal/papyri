@@ -5,6 +5,7 @@ import {
   parseRecentFolders,
   persistRecentFolders,
   rememberRecentFolder,
+  startupRecentProject,
   type RecentFolder,
 } from '../src/lib/recent';
 
@@ -56,6 +57,37 @@ describe('recent folders', () => {
       folders = rememberRecentFolder(folders, `/project-${index}`);
     expect(folders).toHaveLength(MAX_RECENT_FOLDERS);
     expect(folders[0].path).toBe(`/project-${MAX_RECENT_FOLDERS + 4}`);
+  });
+
+  it('reopens a recent project only when startup falls back to home', () => {
+    const recent = [
+      { path: '/work/notes', lastFile: '/work/notes/readme.md' },
+      { path: '/work/other' },
+    ];
+    expect(
+      startupRecentProject(
+        { path: '/home/pseudofractal', explicit: false },
+        recent,
+        '/home/pseudofractal',
+      ),
+    ).toEqual(recent[0]);
+    expect(
+      startupRecentProject(
+        { path: '/home/pseudofractal', explicit: true },
+        recent,
+        '/home/pseudofractal',
+      ),
+    ).toBeUndefined();
+    expect(
+      startupRecentProject(
+        { path: '/work/current', explicit: false },
+        recent,
+        '/home/pseudofractal',
+      ),
+    ).toBeUndefined();
+    expect(
+      startupRecentProject({ path: '/', explicit: false }, recent, '/home/pseudofractal'),
+    ).toEqual(recent[0]);
   });
 
   it('persists only in the native host and ignores storage failures', () => {

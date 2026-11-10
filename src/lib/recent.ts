@@ -82,6 +82,21 @@ export function persistRecentFolders(folders: RecentFolder[]): void {
 }
 
 /**
+ * Pick the newest recent project when startup fell back to the home directory.
+ * Explicit launch targets and working directories inside a project keep priority.
+ */
+export function startupRecentProject(
+  initial: { path: string; explicit: boolean },
+  folders: RecentFolder[],
+  home: string,
+): RecentFolder | undefined {
+  if (initial.explicit) return undefined;
+  const normalizedHome = home ? normalize(home) : '';
+  if (initial.path !== normalizedHome && initial.path !== '/') return undefined;
+  return folders[0];
+}
+
+/**
  * Move a folder to the front of the recent list. `undefined` keeps a known last
  * file; `null` explicitly clears it.
  */

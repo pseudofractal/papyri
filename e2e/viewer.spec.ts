@@ -150,6 +150,63 @@ test('uses Catppuccin file icons in tabs and the command palette', async ({ page
   await expect(fileOption.locator('.file-type-icon svg')).toHaveCount(1);
 });
 
+test('reopens the most recent project when launched at home', async ({ page }) => {
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce'),
+    });
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'papyri.recentFolders',
+      JSON.stringify({
+        version: 1,
+        folders: [{ path: '/work/project', lastFile: '/work/project/notes.md' }],
+      }),
+    );
+    Object.defineProperty(window, '__PAPYRI_HOME__', { value: '/home/user' });
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string, args: Record<string, unknown>) => {
+          if (command === 'initial_path')
+            return { path: '/home/user', directory: true, explicit: false };
+          if (command === 'list_directory') {
+            if (args.path === '/work/project')
+              return [
+                {
+                  name: 'notes.md',
+                  path: '/work/project/notes.md',
+                  directory: false,
+                  symlink: false,
+                },
+              ];
+            return [];
+          }
+          if (command === 'read_document')
+            return { text: '# Restored project\n\nNotes', stamp: '1' };
+          if (command === 'document_stamp') return '1';
+          if (command === 'declarative_preferences') return null;
+          if (command === 'latex_engines' || command === 'typst_binary') return [];
+          throw new Error(`Unexpected native command: ${command}`);
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await expect(
+    page.frameLocator('iframe').getByRole('heading', { name: 'Restored project' }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole('group', { name: 'Open documents' })
+      .locator('.tab-select')
+      .filter({ hasText: 'notes.md' }),
+  ).toBeVisible();
+});
+
 test('searches nested files and commands with the keyboard palette', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('Import selected folder').setInputFiles('examples/showcase');

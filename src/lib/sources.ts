@@ -76,9 +76,13 @@ export function importedSource(files: File[]): Source {
 export const native = '__TAURI_INTERNALS__' in window;
 export async function desktopSource(getPreferences: () => Preferences): Promise<{
   source: Source;
-  initial: { path: string; directory: boolean };
+  initial: { path: string; directory: boolean; explicit: boolean };
 }> {
-  const initial = await invokeHost<{ path: string; directory: boolean }>('initial_path');
+  const initial = await invokeHost<{
+    path: string;
+    directory: boolean;
+    explicit: boolean;
+  }>('initial_path');
   initial.path = normalize(initial.path);
   return {
     initial,

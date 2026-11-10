@@ -10,6 +10,9 @@ use std::{
 pub struct InitialPath {
   pub path: String,
   pub directory: bool,
+  /// True when the path came from an explicit launch target rather than the
+  /// process working directory.
+  pub explicit: bool,
 }
 pub const DOCUMENT_LIMIT: u64 = 8 * 1024 * 1024;
 pub const PDF_LIMIT: u64 = 64 * 1024 * 1024;
@@ -54,12 +57,28 @@ pub fn bounded_read(path: &str, limit: u64) -> Result<(Vec<u8>, fs::Metadata), S
   }
   Ok((bytes, metadata))
 }
+fn initial_argument(
+  env: Option<std::ffi::OsString>,
+  arg: Option<std::ffi::OsString>,
+) -> Option<PathBuf> {
+  env
+    .filter(|value| !value.is_empty())
+    .map(PathBuf::from)
+    .or_else(|| {
+      arg
+        .filter(|value| !value.to_string_lossy().starts_with('-'))
+        .map(PathBuf::from)
+    })
+}
+
 pub fn initial_path() -> Result<InitialPath, String> {
   let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-  let argument = std::env::var_os("PAPYRI_INITIAL_PATH")
-    .map(PathBuf::from)
-    .or_else(|| std::env::args_os().nth(1).map(PathBuf::from))
-    .unwrap_or(cwd.clone());
+  let argument = initial_argument(
+    std::env::var_os("PAPYRI_INITIAL_PATH"),
+    std::env::args_os().nth(1),
+  );
+  let explicit = argument.is_some();
+  let argument = argument.unwrap_or_else(|| cwd.clone());
   let path = if argument.is_absolute() {
     argument
   } else {
@@ -68,6 +87,7 @@ pub fn initial_path() -> Result<InitialPath, String> {
   Ok(InitialPath {
     directory: path.is_dir(),
     path: path.to_string_lossy().into_owned(),
+    explicit,
   })
 }
 pub fn list_directory(path: String) -> Result<Vec<Entry>, String> {
@@ -355,6 +375,22 @@ pub fn read_asset(path: String) -> Result<Vec<u8>, String> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::ffi::OsString;
+  #[test]
+  fn launch_flags_are_not_treated_as_paths() {
+    assert_eq!(
+      initial_argument(None, Some(OsString::from("--decorationless"))),
+      None
+    );
+    assert_eq!(
+      initial_argument(Some(OsString::new()), Some(OsString::from("notes.md"))),
+      Some(PathBuf::from("notes.md"))
+    );
+    assert_eq!(
+      initial_argument(Some(OsString::from("/work")), Some(OsString::from("--log"))),
+      Some(PathBuf::from("/work"))
+    );
+  }
   #[test]
   fn creates_entries_without_overwriting_or_traversing() {
     let directory = std::env::temp_dir().join(format!("papyri-create-test-{}", std::process::id()));
