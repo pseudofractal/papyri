@@ -43,10 +43,12 @@
     type LspDiagnostic,
   } from '../lib/editor-lsp';
   import { combineCompletionSources, createLatexCompletionSource } from '../lib/latex-completions';
+  import type { LatexProjectMetadata } from '../lib/latex-project';
   import { dirname } from '../lib/paths';
   import { native } from '../lib/sources';
   import BuildFailureCard from './BuildFailureCard.svelte';
   import type { BuildFailure } from '../lib/build-diagnostics';
+  import type { Delimiter } from '../lib/types';
 
   let {
     path,
@@ -54,6 +56,8 @@
     initialText,
     serverPath,
     root,
+    delimiters,
+    project,
     onchange,
     onsave,
     onposition,
@@ -66,6 +70,8 @@
     initialText: string;
     serverPath: string;
     root?: string;
+    delimiters: Delimiter[];
+    project?: LatexProjectMetadata;
     onchange: (text: string) => void;
     onsave: () => void;
     onposition?: (line: number, character: number) => void;
@@ -370,7 +376,11 @@
       onposition?.(line.number - 1, position - line.from);
     }
     const snippetSource = completeFromList(snippets[language]);
-    const latexSource = createLatexCompletionSource(language);
+    const latexSource = createLatexCompletionSource(
+      language,
+      () => delimiters,
+      () => project,
+    );
     const completionSettings = new Compartment();
     const languageSupport =
       language === 'markdown'

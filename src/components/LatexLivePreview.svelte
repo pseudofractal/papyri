@@ -59,10 +59,21 @@
   let timer: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
   let queued = false;
+  let compileSeconds = $state(0);
+  let compileStartedAt = 0;
+  let compileClock: ReturnType<typeof setInterval> | undefined;
+  let lastCompileSeconds = $state<number | null>(null);
+  let stopping = $state(false);
   let preview = $state<{ revealPdf: (location: SyncPdfLocation) => void }>();
   let activeSyncId = '';
   let pendingSyncId = '';
   let syncRequest = 0;
+  interface CompileStatus {
+    id: number;
+    path: string;
+    engine: string;
+    elapsedSeconds: number;
+  }
   function releaseSync(id: string) {
     if (id)
       void invokeHost('latex_sync_release', { id }).catch((reason: unknown) =>
@@ -88,9 +99,53 @@
   const compileFailure = $derived(
     error && /compilation failed/i.test(error) ? parseBuildFailure(error, 'latex', path) : null,
   );
+  const compileBusy = $derived(/Another LaTeX preview is compiling/.test(error));
   $effect(() => {
     onbuildfailure?.(compileFailure);
   });
+  $effect(() => {
+    if (disposed || bytes) return;
+    const tab = initialTab;
+    if (!tab.bytes || tab.path !== path) return;
+    bytes = tab.bytes;
+    compiledText = savedText;
+    compiledEngine = preferences.latexEngine;
+    compiledPath = preferences.latexPaths[preferences.latexEngine];
+    compiledOverlays = '[]';
+    revision++;
+  });
+
+  function startCompileClock() {
+    compileStartedAt = Date.now();
+    compileSeconds = 0;
+    clearInterval(compileClock);
+    compileClock = setInterval(() => {
+      compileSeconds = Math.floor((Date.now() - compileStartedAt) / 1000);
+    }, 500);
+  }
+  function stopCompileClock() {
+    clearInterval(compileClock);
+    compileClock = undefined;
+  }
+  async function cancelCompile(pathOnly: boolean) {
+    stopping = true;
+    queued = false;
+    try {
+      await invokeHost<boolean>('latex_cancel_compile', pathOnly ? { path } : {});
+      if (!disposed) {
+        error = '';
+        failedKey = currentKey;
+      }
+    } catch (reason) {
+      if (!disposed) error = String(reason);
+    } finally {
+      if (!disposed) stopping = false;
+    }
+  }
+  async function stopOtherAndRetry() {
+    await cancelCompile(false);
+    if (!disposed) void recompile();
+  }
 
   async function recompile() {
     clearTimeout(timer);
@@ -105,6 +160,8 @@
     const key = JSON.stringify([snapshot, engine, compilerPath, overlaySnapshot]);
     syncRequest++;
     compiling = true;
+    stopping = false;
+    startCompileClock();
     error = '';
     try {
       const result = await invokeHost<ArrayBuffer>('compile_latex_draft', {
@@ -132,12 +189,20 @@
       compiledOverlays = JSON.stringify(overlaySnapshot);
       failedKey = '';
       revision++;
+      lastCompileSeconds = (Date.now() - compileStartedAt) / 1000;
     } catch (reason) {
       if (!disposed) {
-        error = String(reason);
-        failedKey = key;
+        const message = String(reason);
+        if (/compilation cancelled/i.test(message)) {
+          error = '';
+          failedKey = key;
+        } else {
+          error = message;
+          failedKey = key;
+        }
       }
     } finally {
+      stopCompileClock();
       if (!disposed) {
         compiling = false;
         if (queued) {
@@ -152,8 +217,30 @@
     timer = setTimeout(() => void recompile(), 800);
     return () => clearTimeout(timer);
   });
+  async function startInitialCompile() {
+    if (!initial.bytes && initial.error) return;
+    try {
+      // Opening the editor can race the workspace's initial preview read by a
+      // few milliseconds. Give that read a chance to register before deciding
+      // that no compile is in progress.
+      if (!initial.bytes && !initial.error) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
+      // The workspace may already be compiling this document for its initial
+      // preview. Wait for that compile instead of racing it and reporting a
+      // misleading "another preview is compiling" error.
+      for (let attempt = 0; attempt < 350 && !disposed && !bytes; attempt++) {
+        const status = await invokeHost<CompileStatus | null>('latex_compile_status');
+        if (!status || status.path !== path) break;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    } catch (reason) {
+      console.error('Could not read LaTeX compile status:', reason);
+    }
+    if (!disposed && !bytes && stale) void recompile();
+  }
   onMount(() => {
-    void recompile();
+    void startInitialCompile();
   });
   export function reveal(source: string, line: number) {
     if (!activeSyncId || stale || compiling || updating) return;
@@ -184,6 +271,12 @@
   onDestroy(() => {
     disposed = true;
     clearTimeout(timer);
+    stopCompileClock();
+    if (compiling) {
+      void invokeHost('latex_cancel_compile', { path }).catch((reason: unknown) =>
+        console.error('Could not cancel LaTeX compilation:', reason),
+      );
+    }
     releaseSync(activeSyncId);
     releaseSync(pendingSyncId);
   });
@@ -191,7 +284,11 @@
 
 <div class="latex-live-preview">
   <div class="typst-editor-heading">
-    <span>PDF</span>
+    <span
+      title={lastCompileSeconds != null
+        ? `Last compile: ${lastCompileSeconds.toFixed(1)}s`
+        : 'PDF preview'}>PDF</span
+    >
     <label class="latex-live-toggle"><input type="checkbox" bind:checked={live} /> Live</label>
     <button
       class="btn btn-ghost btn-xs"
@@ -199,6 +296,14 @@
       disabled={compiling}
       title="Compile the current source"><RefreshCw size={13} /> Recompile</button
     >
+    {#if compiling}
+      <button
+        class="btn btn-ghost btn-xs"
+        onclick={() => void cancelCompile(true)}
+        disabled={stopping}
+        title="Stop the current LaTeX compilation">{stopping ? 'Stopping…' : 'Stop'}</button
+      >
+    {/if}
     <ZoomControls
       label="LaTeX preview"
       value={preferences.pdfZoom}
@@ -214,8 +319,15 @@
       ><Maximize2 size={14} /></button
     >
   </div>
-  {#if error && !compileFailure}<div class="error-banner" role="alert">
-      {displayPathMessage(error)}
+  {#if error && !compileFailure}<div class="error-banner latex-compile-error" role="alert">
+      <span>{displayPathMessage(error)}</span>
+      {#if compileBusy}
+        <button
+          class="btn btn-ghost btn-xs"
+          onclick={() => void stopOtherAndRetry()}
+          disabled={stopping}>{stopping ? 'Stopping…' : 'Stop other and retry'}</button
+        >
+      {/if}
     </div>{/if}
   <div class="latex-preview-body">
     {#if bytes}
@@ -262,11 +374,16 @@
           class:compiling={compiling || updating}
           role="status"
         >
-          {compiling || updating ? 'Compiling · Stale' : 'Stale'}
+          {compiling
+            ? `Compiling · ${compileSeconds}s · Stale`
+            : updating
+              ? 'Rendering · Stale'
+              : 'Stale'}
         </div>{/if}
     {:else if compiling}
       <div class="preview-status" role="status">
-        <span class="loading loading-spinner loading-sm"></span> Compiling document…
+        <span class="loading loading-spinner loading-sm"></span> Compiling with
+        {preferences.latexEngine} · {compileSeconds}s…
       </div>
     {:else if compileFailure}
       <div class="preview-paused" role="status">
@@ -293,6 +410,12 @@
   }
   .latex-preview-body {
     position: relative;
+  }
+  .latex-compile-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .preview-paused {
     display: flex;

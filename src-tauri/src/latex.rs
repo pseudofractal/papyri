@@ -12,9 +12,12 @@ use std::{
   os::unix::fs::DirBuilderExt,
   path::{Path, PathBuf},
   process::{Command, Stdio},
-  sync::{LazyLock, Mutex},
+  sync::{
+    atomic::{AtomicBool, AtomicU64, Ordering},
+    Arc, LazyLock, Mutex, TryLockError,
+  },
   thread,
-  time::Duration,
+  time::{Duration, Instant},
 };
 
 const ENGINES: [&str; 3] = ["lualatex", "pdflatex", "xelatex"];
@@ -23,6 +26,140 @@ const COMPILER_MEMORY_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 const COMPILER_CPU_SECONDS: u64 = 25;
 const COMPILER_TIMEOUT: Duration = Duration::from_secs(30);
 static COMPILER: Mutex<()> = Mutex::new(());
+static NEXT_COMPILE_ID: AtomicU64 = AtomicU64::new(1);
+
+struct ActiveCompile {
+  id: u64,
+  path: String,
+  engine: String,
+  started: Instant,
+  cancel: Arc<AtomicBool>,
+}
+
+static ACTIVE_COMPILE: Mutex<Option<ActiveCompile>> = Mutex::new(None);
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompileStatus {
+  pub id: u64,
+  pub path: String,
+  pub engine: String,
+  pub elapsed_seconds: f64,
+}
+
+struct ActiveCompileGuard(u64);
+
+impl ActiveCompileGuard {
+  fn install(id: u64, path: String, engine: String, cancel: Arc<AtomicBool>) -> Self {
+    let mut active = lock_active();
+    *active = Some(ActiveCompile {
+      id,
+      path,
+      engine,
+      started: Instant::now(),
+      cancel,
+    });
+    Self(id)
+  }
+}
+
+impl Drop for ActiveCompileGuard {
+  fn drop(&mut self) {
+    let mut active = lock_active();
+    if active.as_ref().is_some_and(|compile| compile.id == self.0) {
+      *active = None;
+    }
+  }
+}
+
+fn lock_active() -> std::sync::MutexGuard<'static, Option<ActiveCompile>> {
+  ACTIVE_COMPILE
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// Return the LaTeX preview currently being compiled, if any.
+pub fn compile_status() -> Option<CompileStatus> {
+  lock_active().as_ref().map(|compile| CompileStatus {
+    id: compile.id,
+    path: compile.path.clone(),
+    engine: compile.engine.clone(),
+    elapsed_seconds: compile.started.elapsed().as_secs_f64(),
+  })
+}
+
+fn compile_busy_error() -> String {
+  match compile_status() {
+    Some(compile) => format!(
+      "Another LaTeX preview is compiling: {} ({}, {:.1}s). Stop it or wait, then try again.",
+      compile.path, compile.engine, compile.elapsed_seconds
+    ),
+    None => "Another LaTeX preview is compiling. Try again.".into(),
+  }
+}
+
+/// Request cancellation of the active compile, optionally only for one path.
+/// Waits briefly for the compiler lock so a new compile can start immediately.
+pub fn cancel_compile(path: Option<String>) -> bool {
+  let cancel = {
+    let active = lock_active();
+    match active.as_ref() {
+      Some(compile)
+        if path
+          .as_ref()
+          .is_none_or(|requested| requested == &compile.path) =>
+      {
+        Some(compile.cancel.clone())
+      }
+      _ => None,
+    }
+  };
+  let Some(cancel) = cancel else {
+    return false;
+  };
+  cancel.store(true, Ordering::Relaxed);
+  let started = Instant::now();
+  while started.elapsed() < Duration::from_secs(5) {
+    if lock_active().is_none() {
+      break;
+    }
+    thread::sleep(Duration::from_millis(20));
+  }
+  true
+}
+
+enum WaitOutcome {
+  Completed(std::process::ExitStatus),
+  TimedOut,
+  Cancelled,
+}
+
+fn wait_with_cancel(
+  child: &mut std::process::Child,
+  timeout: Duration,
+  cancel: &AtomicBool,
+) -> Result<WaitOutcome, String> {
+  let started = Instant::now();
+  loop {
+    if cancel.load(Ordering::Relaxed) {
+      let _ = child.kill();
+      let _ = child.wait();
+      return Ok(WaitOutcome::Cancelled);
+    }
+    match child.try_wait() {
+      Ok(Some(status)) => return Ok(WaitOutcome::Completed(status)),
+      Ok(None) if started.elapsed() < timeout => thread::sleep(Duration::from_millis(50)),
+      result => {
+        let _ = child.kill();
+        let _ = child.wait();
+        return match result {
+          Ok(_) => Ok(WaitOutcome::TimedOut),
+          Err(error) => Err(error.to_string()),
+        };
+      }
+    }
+  }
+}
 static DEPENDENCIES: LazyLock<Mutex<HashMap<PathBuf, Vec<PathBuf>>>> =
   LazyLock::new(|| Mutex::new(HashMap::new()));
 static SYNC_ARTIFACTS: LazyLock<Mutex<HashMap<String, SyncArtifact>>> =
@@ -246,7 +383,13 @@ fn sandbox_command(project: &Path, output: &Path, binary: &Path, name: &str) -> 
   command
 }
 
-fn run_bibtex(project: &Path, output: &Path, binary: &Path, job_name: &str) -> Result<(), String> {
+fn run_bibtex(
+  project: &Path,
+  output: &Path,
+  binary: &Path,
+  job_name: &str,
+  cancel: &AtomicBool,
+) -> Result<(), String> {
   let mut command = sandbox_command(project, output, binary, "bibtex");
   command.args([
     "--setenv",
@@ -277,13 +420,15 @@ fn run_bibtex(project: &Path, output: &Path, binary: &Path, job_name: &str) -> R
     .ok_or("BibTeX diagnostic pipe unavailable")?;
   let out = thread::spawn(move || diagnostic_tail(stdout));
   let err = thread::spawn(move || diagnostic_tail(stderr));
-  let status = typst::wait_with_timeout(&mut child, COMPILER_TIMEOUT);
+  let status = wait_with_cancel(&mut child, COMPILER_TIMEOUT, cancel);
   let stdout = out.join().map_err(|_| "BibTeX output thread failed")??;
   let stderr = err
     .join()
     .map_err(|_| "BibTeX diagnostic thread failed")??;
-  let Some(status) = status? else {
-    return Err("BibTeX compilation exceeded 30 seconds".into());
+  let status = match status? {
+    WaitOutcome::Completed(status) => status,
+    WaitOutcome::TimedOut => return Err("BibTeX compilation exceeded 30 seconds".into()),
+    WaitOutcome::Cancelled => return Err("LaTeX compilation cancelled.".into()),
   };
   let output_text = String::from_utf8_lossy(&stdout);
   if !status.success() || output_text.contains("Warning--I didn't find a database entry") {
@@ -332,9 +477,18 @@ fn compile_internal(
   if !is_latex(&path) {
     return Err("Expected a .tex document".into());
   }
-  let _compiler = COMPILER
-    .try_lock()
-    .map_err(|_| "Another LaTeX preview is compiling. Try again.")?;
+  let _compiler = match COMPILER.try_lock() {
+    Ok(guard) => guard,
+    Err(TryLockError::Poisoned(poisoned)) => poisoned.into_inner(),
+    Err(TryLockError::WouldBlock) => return Err(compile_busy_error()),
+  };
+  let compile_id = NEXT_COMPILE_ID.fetch_add(1, Ordering::Relaxed);
+  let cancel = Arc::new(AtomicBool::new(false));
+  let _active =
+    ActiveCompileGuard::install(compile_id, path.clone(), engine.clone(), cancel.clone());
+  if cancel.load(Ordering::Relaxed) {
+    return Err("LaTeX compilation cancelled.".into());
+  }
   let search_path = std::env::var_os("PATH").unwrap_or_default();
   let configured = if configured_path.is_empty() {
     None
@@ -391,6 +545,9 @@ fn compile_internal(
   let mut passes = 2;
   let mut pass = 0;
   while pass < passes {
+    if cancel.load(Ordering::Relaxed) {
+      return Err("LaTeX compilation cancelled.".into());
+    }
     let mut command = sandbox_command(project, &output.0, &compiler, &engine);
     if let Some(draft_path) = &draft_path {
       command
@@ -436,11 +593,13 @@ fn compile_internal(
       .ok_or("LaTeX diagnostic pipe unavailable")?;
     let out = thread::spawn(move || diagnostic_tail(stdout));
     let err = thread::spawn(move || diagnostic_tail(stderr));
-    let status = typst::wait_with_timeout(&mut child, COMPILER_TIMEOUT);
+    let status = wait_with_cancel(&mut child, COMPILER_TIMEOUT, &cancel);
     let stdout = out.join().map_err(|_| "LaTeX output thread failed")??;
     let stderr = err.join().map_err(|_| "LaTeX diagnostic thread failed")??;
-    let Some(status) = status? else {
-      return Err("LaTeX compilation exceeded 30 seconds".into());
+    let status = match status? {
+      WaitOutcome::Completed(status) => status,
+      WaitOutcome::TimedOut => return Err("LaTeX compilation exceeded 30 seconds".into()),
+      WaitOutcome::Cancelled => return Err("LaTeX compilation cancelled.".into()),
     };
     if !status.success() {
       return Err(format!(
@@ -504,8 +663,11 @@ fn compile_internal(
         }
       }
       if needs_bibtex {
+        if cancel.load(Ordering::Relaxed) {
+          return Err("LaTeX compilation cancelled.".into());
+        }
         let tool = bibliography_tool(&compiler, &search_path, "bibtex")?;
-        run_bibtex(project, &output.0, &tool, job_name)?;
+        run_bibtex(project, &output.0, &tool, job_name, &cancel)?;
         passes = 3;
       }
     }
@@ -729,6 +891,57 @@ mod tests {
       sandbox_executable(Path::new("/opt/lualatex"), "lualatex"),
       Path::new("/compiler/lualatex")
     );
+  }
+
+  #[test]
+  fn reports_and_cancels_active_compiles() {
+    let cancel = Arc::new(AtomicBool::new(false));
+    let guard = ActiveCompileGuard::install(
+      9_401,
+      "/tmp/one.tex".into(),
+      "lualatex".into(),
+      cancel.clone(),
+    );
+    let status = compile_status().expect("active compile");
+    assert_eq!(status.path, "/tmp/one.tex");
+    assert_eq!(status.engine, "lualatex");
+    assert!(!cancel_compile(Some("/tmp/other.tex".into())));
+    assert!(!cancel.load(Ordering::Relaxed));
+
+    let waiter = thread::spawn(move || {
+      thread::sleep(Duration::from_millis(100));
+      drop(guard);
+    });
+    assert!(cancel_compile(Some("/tmp/one.tex".into())));
+    assert!(cancel.load(Ordering::Relaxed));
+    waiter.join().unwrap();
+    assert!(compile_status().is_none());
+  }
+
+  #[test]
+  fn cancelling_wait_kills_the_child() {
+    let mut child = Command::new("sleep").arg("10").spawn().unwrap();
+    let cancel = Arc::new(AtomicBool::new(false));
+    let flag = cancel.clone();
+    let request = thread::spawn(move || {
+      thread::sleep(Duration::from_millis(100));
+      flag.store(true, Ordering::Relaxed);
+    });
+    let outcome = wait_with_cancel(&mut child, Duration::from_secs(30), &cancel).unwrap();
+    assert!(matches!(outcome, WaitOutcome::Cancelled));
+    request.join().unwrap();
+  }
+
+  #[test]
+  fn waiting_times_out_and_kills_the_child() {
+    let mut child = Command::new("sleep").arg("10").spawn().unwrap();
+    let outcome = wait_with_cancel(
+      &mut child,
+      Duration::from_millis(100),
+      &AtomicBool::new(false),
+    )
+    .unwrap();
+    assert!(matches!(outcome, WaitOutcome::TimedOut));
   }
 
   #[test]

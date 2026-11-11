@@ -1,0 +1,25 @@
+[
+  {
+    "id": "gauss2026",
+    "type": "article-journal",
+    "title": "Neural Room Impulse Response Rendering with Physics-Informed Priors",
+    "author": [{"family": "Example", "given": "Ada"}, {"family": "Müller", "given": "Bea"}],
+    "issued": {"date-parts": [[2026]]},
+    "container-title": "Journal of the Acoustical Society of America",
+    "volume": "159",
+    "issue": "1",
+    "page": "210-226",
+    "DOI": "10.1234/jasa.2026.001",
+    "keyword": ["neural rendering", "room acoustics"]
+  },
+  {
+    "id": "okafor2023",
+    "type": "paper-conference",
+    "title": "Sound Field Synthesis with Local Wavefield Synthesis",
+    "author": [{"family": "Okafor", "given": "Grace"}, {"family": "Müller", "given": "Bea"}],
+    "issued": {"date-parts": [[2023]]},
+    "container-title": "International Conference on Digital Audio Effects",
+    "page": "201-208",
+    "keyword": ["sound field synthesis", "spatial audio"]
+  }
+]

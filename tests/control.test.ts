@@ -98,6 +98,8 @@ function sampleActions(overrides: Partial<ControlActions> = {}): ControlActions 
     command: stateAction(),
     preferences: stateAction(),
     refresh: stateAction(),
+    latexStatus: vi.fn(async () => null),
+    latexCancel: vi.fn(async () => false),
     editorOpen: stateAction(),
     editorClose: stateAction(),
     editorToggle: stateAction(),
@@ -183,6 +185,20 @@ describe('control executor', () => {
     const execute = createControlExecutor(actions);
     expect(await execute('state', {})).toEqual(sampleState());
     expect(await execute('headings', {})).toEqual({ path: '/notes.md', headings: [] });
+  });
+
+  it('forwards LaTeX compile status and cancellation', async () => {
+    const actions = sampleActions({
+      latexStatus: vi.fn(async () => ({ path: '/a.tex', engine: 'lualatex' })),
+      latexCancel: vi.fn(async () => true),
+    });
+    const execute = createControlExecutor(actions);
+    expect(await execute('latex.status', {})).toEqual({
+      path: '/a.tex',
+      engine: 'lualatex',
+    });
+    expect(await execute('latex.cancel', { path: '/a.tex' })).toBe(true);
+    expect(actions.latexCancel).toHaveBeenCalledWith('/a.tex');
   });
 
   it('validates and forwards open options', async () => {

@@ -1,4 +1,4 @@
-import { isLatex, isMarkdown, isTypst } from './paths';
+import { isBibliography, isLatex, isMarkdown, isTypst } from './paths';
 import {
   CONTROL_PROTOCOL,
   type ControlEditorState,
@@ -48,6 +48,7 @@ function documentKind(tab: Tab): ControlTab['kind'] {
   if (tab.bytes) return 'pdf';
   if (isTypst(tab.path)) return 'typst-source';
   if (isLatex(tab.path)) return 'latex-source';
+  if (isBibliography(tab.path)) return 'bibliography';
   return 'markdown';
 }
 

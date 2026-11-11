@@ -1,0 +1,23 @@
+%0 Journal Article
+%A Example, Ada
+%A Müller, Bea
+%T Neural Room Impulse Response Rendering with Physics-Informed Priors
+%J Journal of the Acoustical Society of America
+%D 2026
+%V 159
+%N 1
+%P 210-226
+%R 10.1234/jasa.2026.001
+%K neural rendering
+%K room acoustics
+%X A physics-informed neural renderer for room impulse responses.
+
+%0 Conference Paper
+%A Zhao, Chen
+%A Alvarez, Diego
+%T Sparse Geometric Acoustic Modeling for Dynamic Scenes
+%B IEEE International Conference on Acoustics, Speech and Signal Processing
+%D 2025
+%P 1-5
+%K geometric acoustics
+%K dynamic scenes

@@ -166,7 +166,7 @@ export interface ControlState {
 
 export interface ControlTab {
   path: string;
-  kind: 'markdown' | 'pdf' | 'typst-source' | 'latex-source';
+  kind: 'markdown' | 'pdf' | 'typst-source' | 'latex-source' | 'bibliography';
   active: boolean;
   secondary: boolean;
   scroll: number;
@@ -214,6 +214,8 @@ export interface ControlActions {
   command(id: string): Promise<unknown>;
   preferences(patch: Record<string, unknown>): Promise<unknown>;
   refresh(): Promise<unknown>;
+  latexStatus(): Promise<unknown>;
+  latexCancel(path?: string): Promise<unknown>;
   editorOpen(): Promise<unknown>;
   editorClose(): Promise<unknown>;
   editorToggle(): Promise<unknown>;
@@ -410,6 +412,10 @@ export function createControlExecutor(
       }
       case 'refresh':
         return actions.refresh();
+      case 'latex.status':
+        return actions.latexStatus();
+      case 'latex.cancel':
+        return actions.latexCancel(optionalString(params, 'path'));
       case 'editor.open':
         return actions.editorOpen();
       case 'editor.close':

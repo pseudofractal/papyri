@@ -62,8 +62,10 @@
   import { readExplorerState, writeExplorerState, type ExplorerState } from './lib/explorer-state';
   import { listDirectory } from './lib/directories';
   import Preview from './components/Preview.svelte';
+  import BibliographyView from './components/BibliographyView.svelte';
   import LatexLivePreview from './components/LatexLivePreview.svelte';
   import { EditorDraft } from './lib/editor-draft';
+  import { loadLatexProject, type LatexProjectMetadata } from './lib/latex-project';
   import type { PreviewLocation } from './lib/typst-live-preview';
   import Settings from './components/Settings.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
@@ -111,6 +113,7 @@
     isPdf,
     isTypst,
     isLatex,
+    isBibliography,
     normalize,
     displayPath,
     displayPathMessage,
@@ -356,6 +359,8 @@
   let editorServerStatus = $state('');
   let editorDiagnostics = $state<LspDiagnostic[]>([]);
   let latexEditorFailure = $state<BuildFailure | null>(null);
+  let latexProjectMetadata = $state.raw<LatexProjectMetadata | undefined>(undefined);
+  let latexProjectRevision = 0;
   let sidePanel = $state<{ setNote: (value: string) => void }>();
   let settingsPanel = $state<{ showTab: (tab: ControlSettingsTab) => void }>();
   let typstPreview = $state<{
@@ -486,7 +491,8 @@
   async function openEditor() {
     const source = workspace.source;
     const path = workspace.active;
-    if (!source || !path || isPdf(path) || !source.write || editorBusy) return;
+    if (!source || !path || isPdf(path) || isBibliography(path) || !source.write || editorBusy)
+      return;
     editorBusy = true;
     editorError = '';
     editorDiagnostics = [];
@@ -534,6 +540,47 @@
       editorBusy = false;
     }
   }
+
+  async function refreshLatexProjectMetadata() {
+    const bibliography = isBibliography(workspace.active);
+    const source = bibliography ? workspace.source : editorSource;
+    const draft = bibliography ? null : editorDraft;
+    const path = bibliography ? workspace.active : draft?.path;
+    if (
+      !source ||
+      !path ||
+      (!bibliography && (editorLanguage !== 'latex' || !editorVisible || !draft))
+    ) {
+      latexProjectMetadata = undefined;
+      return;
+    }
+    const projectRoot = bibliography
+      ? workspace.directory && workspace.directory !== '/'
+        ? workspace.directory
+        : dirname(path)
+      : (languageServerRoot ?? dirname(path));
+    const revision = ++latexProjectRevision;
+    latexProjectMetadata = undefined;
+    try {
+      const metadata = await loadLatexProject(source, projectRoot, {
+        draftText: (projectPath) => drafts.get(source)?.get(projectPath)?.text,
+      });
+      if (
+        revision === latexProjectRevision &&
+        (bibliography
+          ? workspace.active === path
+          : editorSource === source && editorDraft?.path === draft?.path)
+      ) {
+        latexProjectMetadata = metadata;
+      }
+    } catch (error) {
+      console.warn('Could not load LaTeX project metadata:', error);
+    }
+  }
+
+  $effect(() => {
+    void refreshLatexProjectMetadata();
+  });
 
   function updateEditor(text: string) {
     if (!editorDraft) return;
@@ -634,6 +681,7 @@
       draft.saved(text, saved.stamp);
       editorRevision++;
       if (workspace.source === source) await workspace.refresh();
+      void refreshLatexProjectMetadata();
     } catch (error) {
       editorError = String(error);
     } finally {
@@ -981,6 +1029,7 @@
     refreshing = true;
     try {
       await workspace.refresh();
+      void refreshLatexProjectMetadata();
     } finally {
       refreshing = false;
     }
@@ -1301,6 +1350,12 @@
     if (!value.trim()) return;
     const copied = await writeClipboard(value);
     if (!copied) workspace.error = 'Could not copy the selection.';
+  }
+  async function appendBibliographyEntry(entry: string): Promise<boolean> {
+    const tab = workspace.activeTab;
+    if (!tab || !isBibliography(tab.path) || !entry.trim()) return false;
+    const current = tab.text.trimEnd();
+    return workspace.writeText(tab.path, `${current}${current ? '\n\n' : ''}${entry.trim()}\n`);
   }
   async function copyPreviewSelection(kind: 'source' | 'text', text: string, source: string) {
     await copyText(kind === 'source' ? source : text);
@@ -2786,6 +2841,8 @@
     zoom,
     split,
     refresh,
+    latexStatus: () => invokeHost('latex_compile_status'),
+    latexCancel: (path?: string) => invokeHost('latex_cancel_compile', { path }),
     editor: {
       state: editorControlState,
       open: () => openEditorForControl(),
@@ -3274,7 +3331,7 @@
       </div>
       <span class="header-spacer"></span>
       <div class="view-actions">
-        {#if workspace.active}<button
+        {#if workspace.active && !isBibliography(workspace.active)}<button
             class="icon-button"
             class:enabled={editorVisible}
             aria-label={editorVisible ? 'Show preview' : 'Edit source'}
@@ -3577,6 +3634,8 @@
                         language={editorLanguage}
                         serverPath={preferences.languageServerPaths[editorLanguage]}
                         root={languageServerRoot}
+                        delimiters={preferences.delimiters}
+                        project={latexProjectMetadata}
                         initialText={editorDraft.text}
                         onchange={updateEditor}
                         onsave={() => void saveEditor()}
@@ -3654,28 +3713,47 @@
                       value={typstSourceShare}
                       onresize={(value) => (typstSourceShare = value)}
                     />
-                    {#key latexPreviewRoot}
-                      <LatexLivePreview
-                        bind:this={latexPreview}
-                        path={latexPreviewRoot || editorDraft.path}
-                        text={editorDraft.path === latexPreviewRoot
-                          ? editorText
-                          : (drafts.get(editorSource!)?.get(latexPreviewRoot)?.text ?? editorText)}
-                        savedText={editorDraft.path === latexPreviewRoot
-                          ? editorDraft.expectedText
-                          : (drafts.get(editorSource!)?.get(latexPreviewRoot)?.expectedText ?? '')}
-                        initialTab={workspace.activeTab}
-                        source={workspace.source}
-                        {preferences}
-                        onpreferences={updatePreferences}
-                        oncommand={viewCommand}
-                        onjump={(location) => void openPreviewSource(location)}
-                        onbuildfailure={(failure) => (latexEditorFailure = failure)}
-                        overlays={latexOverlays}
-                      />
-                    {/key}
+                    {#if workspace.busy && workspace.openingPath === (latexPreviewRoot || editorDraft.path)}
+                      <div class="latex-preview-wait" role="status">
+                        <span class="loading loading-spinner loading-sm"></span>
+                        Compiling {basename(workspace.openingPath || editorDraft.path)}…
+                      </div>
+                    {:else}
+                      {#key latexPreviewRoot}
+                        <LatexLivePreview
+                          bind:this={latexPreview}
+                          path={latexPreviewRoot || editorDraft.path}
+                          text={editorDraft.path === latexPreviewRoot
+                            ? editorText
+                            : (drafts.get(editorSource!)?.get(latexPreviewRoot)?.text ??
+                              editorText)}
+                          savedText={editorDraft.path === latexPreviewRoot
+                            ? editorDraft.expectedText
+                            : (drafts.get(editorSource!)?.get(latexPreviewRoot)?.expectedText ??
+                              '')}
+                          initialTab={workspace.activeTab}
+                          source={workspace.source}
+                          {preferences}
+                          onpreferences={updatePreferences}
+                          oncommand={viewCommand}
+                          onjump={(location) => void openPreviewSource(location)}
+                          onbuildfailure={(failure) => (latexEditorFailure = failure)}
+                          overlays={latexOverlays}
+                        />
+                      {/key}
+                    {/if}
                   {/if}
                 </div>
+              {:else if isBibliography(workspace.active)}
+                {#key workspace.active}<BibliographyView
+                    path={workspace.active}
+                    text={workspace.activeTab?.text ?? ''}
+                    project={latexProjectMetadata}
+                    oncopy={copyText}
+                    onopen={(url) => void invokeHost('open_external', { url })}
+                    onappend={appendBibliographyEntry}
+                    canadd={!!workspace.source?.write}
+                  />{/key}
               {:else}
                 {#key workspace.active}<Preview
                     bind:this={primaryPreview}

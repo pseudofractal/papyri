@@ -565,6 +565,19 @@ textarea:focus-visible {
   padding: 14px;
   font-size: 12px;
 }
+.latex-preview-wait {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px;
+  border-left: 1px solid var(--line);
+  background: var(--color-base-100);
+  color: var(--muted);
+  font-size: 12px;
+}
 .render-time {
   position: absolute;
   bottom: 8px;

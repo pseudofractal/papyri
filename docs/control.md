@@ -201,6 +201,8 @@ while work already underway may finish after the client has timed out.
 | `command`                      | `id`                                                                                                    | Run a palette command by id.                                      |
 | `preferences.set`              | `patch` object                                                                                          | Merge validated preference changes.                               |
 | `refresh`                      | none                                                                                                    | Refresh the active document and explorer.                         |
+| `latex.status`                 | none                                                                                                    | Path, engine, and elapsed time of the active LaTeX compile.       |
+| `latex.cancel`                 | optional `path`                                                                                         | Cancel the active LaTeX compile (optionally only that path).      |
 | `raise`                        | none                                                                                                    | Focus and show the main window (native).                          |
 | `quit`                         | none                                                                                                    | Exit Papyri (native).                                             |
 | `subscribe`                    | optional `events` array                                                                                 | Register for events; returns the initial state.                   |
@@ -215,6 +217,19 @@ is visible. The `anchor` option applies to the main pane only. `tab list --json`
 returns a focused `{"tabs":[...]}` object. Documents with scripts enabled do not
 update the saved scroll bookmark, but a control-initiated scroll still resolves
 with the frame's resulting position so `papyri ctl scroll` can report success.
+
+LaTeX compiles can be inspected and cancelled while they run:
+
+```sh
+papyri ctl raw latex.status '{}'
+papyri ctl raw latex.cancel '{}'
+papyri ctl raw latex.cancel '{"path":"/home/me/paper.tex"}'
+```
+
+`latex.status` returns `null` when idle, or `{id, path, engine, elapsedSeconds}`.
+`latex.cancel` returns `true` when it requested cancellation. The preview also
+shows a **Stop** button while compiling and a **Stop other and retry** action when
+another document's compile is blocking it.
 
 `--timeout SECONDS` sets the response timeout for one request. The default is
 60 seconds; `tools` commands default to one hour so downloads and TeX Live

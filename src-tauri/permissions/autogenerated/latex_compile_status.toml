@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-latex-compile-status"
+description = "Enables the latex_compile_status command without any pre-configured scope."
+commands.allow = ["latex_compile_status"]
+
+[[permission]]
+identifier = "deny-latex-compile-status"
+description = "Denies the latex_compile_status command without any pre-configured scope."
+commands.deny = ["latex_compile_status"]

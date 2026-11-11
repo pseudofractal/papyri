@@ -52,6 +52,26 @@ describe('workspace navigation and live updates', () => {
     expect(workspace.active).toBe('/a.md');
     expect(workspace.busy).toBe(false);
   });
+  it('deduplicates concurrent reads of the same document', async () => {
+    const { source } = memorySource();
+    const read = source.read;
+    let reads = 0;
+    let finish!: (file: FileData) => void;
+    source.read = (path) => {
+      if (path !== '/paper.tex') return read(path);
+      reads++;
+      return new Promise((resolve) => (finish = resolve));
+    };
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    const first = workspace.open('/paper.tex');
+    const second = workspace.open('/paper.tex');
+    expect(reads).toBe(1);
+    finish({ text: '', stamp: '1', bytes: Uint8Array.of(1) });
+    await Promise.all([first, second]);
+    expect(reads).toBe(1);
+    expect(workspace.tabs).toHaveLength(1);
+  });
   it('keeps recently opened files in order and clears them when the source changes', async () => {
     const workspace = new Workspace();
     workspace.changeSource(memorySource().source);

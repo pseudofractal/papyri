@@ -201,6 +201,8 @@ export interface ControlContext {
   zoom(command: ZoomCommand): void;
   split(): void;
   refresh(): Promise<void>;
+  latexStatus(): Promise<unknown>;
+  latexCancel(path?: string): Promise<unknown>;
   editor: ControlEditorContext;
   explorer: ControlExplorerContext;
   note: ControlNoteContext;
@@ -440,6 +442,14 @@ export function createControlActions(context: ControlContext): ControlActions {
       await context.workspaceReady;
       await context.refresh();
       return context.state();
+    },
+    latexStatus: async () => {
+      await context.workspaceReady;
+      return context.latexStatus();
+    },
+    latexCancel: async (path) => {
+      await context.workspaceReady;
+      return context.latexCancel(path);
     },
     editorOpen: async () => {
       await context.workspaceReady;

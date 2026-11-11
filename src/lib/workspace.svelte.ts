@@ -1,4 +1,4 @@
-import type { Source } from './types';
+import type { FileData, Source } from './types';
 import { isDocument, isLatex, isTypst, normalize } from './paths';
 import { listDirectory } from './directories';
 export interface AnchorTarget {
@@ -41,12 +41,23 @@ export class Workspace {
     this.secondaryScroll[this.secondary] ?? this.secondaryTab?.scroll ?? 0,
   );
   private navigation = 0;
+  private pendingReads: Record<string, Promise<FileData>> = {};
   canClose?: (path: string) => boolean;
   canChangeSource?: () => boolean;
+  private readFile(source: Source, path: string): Promise<FileData> {
+    const pending = this.pendingReads[path];
+    if (pending) return pending;
+    const read = source.read(path).finally(() => {
+      if (this.pendingReads[path] === read) delete this.pendingReads[path];
+    });
+    this.pendingReads[path] = read;
+    return read;
+  }
   changeSource(source: Source) {
     if (this.source && this.source !== source && this.canChangeSource && !this.canChangeSource())
       return false;
     this.navigation++;
+    this.pendingReads = {};
     this.source = source;
     this.tabs = [];
     this.active = '';
@@ -95,7 +106,7 @@ export class Workspace {
     this.busy = true;
     this.openingPath = path;
     try {
-      const file = await source.read(path);
+      const file = await this.readFile(source, path);
       if (request !== this.navigation || source !== this.source) return;
       const loaded = this.tabs.find((tab) => tab.path === path);
       if (!loaded) {
@@ -135,7 +146,7 @@ export class Workspace {
       const source = this.source;
       if (!source) return;
       try {
-        const file = await source.read(path);
+        const file = await this.readFile(source, path);
         if (this.source !== source) return;
         if (!this.tabs.some((tab) => tab.path === path))
           this.tabs.push({
@@ -206,6 +217,27 @@ export class Workspace {
         tab.error = `PDF preview failed. Could not read source. ${String(error)}`;
     }
   }
+  async writeText(path: string, text: string): Promise<boolean> {
+    const source = this.source;
+    const tab = this.tabs.find((item) => item.path === path);
+    if (!source?.write || !tab) {
+      this.error = 'This document is read-only.';
+      return false;
+    }
+    try {
+      const file = await source.write(path, text, { text: tab.text, stamp: tab.stamp });
+      tab.text = file.text;
+      tab.bytes = file.bytes;
+      tab.stamp = file.stamp;
+      tab.revision++;
+      tab.error = '';
+      this.error = '';
+      return true;
+    } catch (error) {
+      this.error = String(error);
+      return false;
+    }
+  }
   async refresh() {
     const source = this.source;
     if (!source) return;
@@ -221,7 +253,7 @@ export class Workspace {
           tab.error = describeCompilationFailure(tab.compilationError, !!tab.bytes);
           continue;
         }
-        const file = await source.read(path);
+        const file = await this.readFile(source, path);
         if (source !== this.source || !this.tabs.includes(tab)) continue;
         // A failed compile after a successful one keeps the last PDF visible.
         // The error banner explains the retained preview and refresh retries.

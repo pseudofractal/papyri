@@ -3112,7 +3112,7 @@ test('completes LaTeX commands inside Markdown math', async ({ page }) => {
     await route.fulfill({ response, body });
   });
   await page.addInitScript(() => {
-    const file = { text: '# Math\n\n$\\fra', stamp: '1' };
+    const file = { text: '# Math\n\n\\(\\fra', stamp: '1' };
     Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
     Object.defineProperty(window, '__TAURI_INTERNALS__', {
       value: {
@@ -3137,7 +3137,7 @@ test('completes LaTeX commands inside Markdown math', async ({ page }) => {
   ).toBeVisible();
   await page.getByRole('button', { name: 'Edit source' }).click();
   const editor = page.getByRole('textbox', { name: 'Source editor' });
-  expect(await editor.innerText()).toContain('$\\fra');
+  expect(await editor.innerText()).toContain('\\(\\fra');
   await editor.click();
   await page.keyboard.press('Control+End');
   await page.keyboard.press('Control+Space');
@@ -3149,7 +3149,44 @@ test('completes LaTeX commands inside Markdown math', async ({ page }) => {
   await page.keyboard.type('1');
   await page.keyboard.press('Tab');
   await page.keyboard.type('2');
-  await expect.poll(() => editor.innerText()).toContain('$\\frac{1}{2}');
+  await expect.poll(() => editor.innerText()).toContain('\\(\\frac{1}{2}');
+});
+
+test('completes LaTeX commands inside configured bracket math', async ({ page }) => {
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce'),
+    });
+  });
+  await page.addInitScript(() => {
+    const file = { text: '# Math\n\n[\n\n]\n', stamp: '1' };
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string) => {
+          if (command === 'initial_path') return { path: '/paper.md', directory: false };
+          if (command === 'read_document') return { ...file };
+          if (command === 'document_stamp') return file.stamp;
+          if (command === 'list_directory') return [];
+          throw new Error(`Unavailable native command: ${command}`);
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Edit source' }).click();
+  const editor = page.getByRole('textbox', { name: 'Source editor' });
+  await editor.click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  const menu = page.locator('.cm-tooltip-autocomplete');
+  await page.keyboard.type('\\');
+  await expect(menu).toBeVisible();
+  await page.keyboard.type('fra');
+  await expect(menu.getByRole('option', { name: /^\\frac\{\}\{\}/ })).toBeVisible();
 });
 
 test('completes LaTeX commands in a .tex source file', async ({ page }) => {
@@ -3162,7 +3199,7 @@ test('completes LaTeX commands in a .tex source file', async ({ page }) => {
   });
   await page.addInitScript(() => {
     const file = {
-      text: '\\documentclass{article}\n\\begin{document}\n\\begin{equation}\n\\fra\n',
+      text: '\\documentclass{article}\n\\begin{document}\n\n\\end{document}\n',
       stamp: '1',
     };
     Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
@@ -3184,11 +3221,113 @@ test('completes LaTeX commands in a .tex source file', async ({ page }) => {
   await editor.click();
   await page.keyboard.press('Control+End');
   await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  const menu = page.locator('.cm-tooltip-autocomplete');
+  await page.keyboard.type('\\');
+  await expect(menu).toBeVisible();
+  await page.keyboard.type('fra');
+  await expect(menu.getByRole('option', { name: /^\\frac\{\}\{\}/ })).toBeVisible();
+});
+
+test('inserts a complete environment from a name completion', async ({ page }) => {
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce'),
+    });
+  });
+  await page.addInitScript(() => {
+    const file = {
+      text: '\\documentclass{article}\n\\begin{document}\n\\begin{fi\n\\end{document}\n',
+      stamp: '1',
+    };
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string) => {
+          if (command === 'initial_path') return { path: '/paper.tex', directory: false };
+          if (command === 'read_document') return { ...file };
+          if (command === 'document_stamp') return file.stamp;
+          if (command === 'list_directory') return [];
+          throw new Error(`Unavailable native command: ${command}`);
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Edit source' }).click();
+  const editor = page.getByRole('textbox', { name: 'Source editor' });
+  await editor.click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
   await page.keyboard.press('End');
-  await page.keyboard.press('Control+Space');
+  await page.keyboard.type('g');
   const menu = page.locator('.cm-tooltip-autocomplete');
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole('option').first()).toContainText('\\frac');
+  await menu.getByRole('option', { name: /^figure environment/ }).click();
+  await expect(editor).toContainText('\\begin{figure}');
+  await expect(editor).toContainText('\\end{figure}');
+});
+
+test('completes project metadata in a .tex source file', async ({ page }) => {
+  const files: Record<string, string> = {
+    '/project/main.tex':
+      '\\documentclass{article}\n\\begin{document}\n\\input{cha\n\\end{document}\n',
+    '/project/chapter.tex': '\\newcommand{\\chaptercmd}[1]{#1}\n\\label{ch:one}\n',
+    '/project/refs.bib': '@article{key1, title={A}}\n',
+  };
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce'),
+    });
+  });
+  await page.addInitScript((files) => {
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string, args: Record<string, unknown>) => {
+          if (command === 'initial_path') return { path: '/project/main.tex', directory: false };
+          if (command === 'read_document') {
+            return { text: files[String(args.path)] ?? '', stamp: '1' };
+          }
+          if (command === 'document_stamp') return '1';
+          if (command === 'list_directory') {
+            if (args.path !== '/project') return [];
+            return Object.keys(files).map((path) => ({
+              name: path.split('/').pop(),
+              path,
+              directory: false,
+            }));
+          }
+          if (command === 'read_text_file') return files[String(args.path)] ?? '';
+          throw new Error(`Unavailable native command: ${command}`);
+        },
+      },
+    });
+  }, files);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Edit source' }).click();
+  const editor = page.getByRole('textbox', { name: 'Source editor' });
+  const menu = page.locator('.cm-tooltip-autocomplete');
+  // The project metadata scan runs asynchronously after the editor opens.
+  await page.waitForTimeout(1000);
+  await editor.fill('\\input{cha');
+  await page.keyboard.press('Control+Space');
+  await expect(menu.getByRole('option', { name: /^chapter/ })).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await editor.fill('\\chapterc');
+  await page.keyboard.press('Control+Space');
+  await expect(menu.getByRole('option', { name: /^\\chaptercmd\{\}/ })).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await editor.fill('\\cite{key');
+  await page.keyboard.press('Control+Space');
+  await expect(menu.getByRole('option', { name: /^key1/ })).toBeVisible();
 });
 
 test('does not offer LaTeX math completions outside Markdown math', async ({ page }) => {

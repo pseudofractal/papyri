@@ -1,0 +1,37 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\title{Room Acoustics: A Working Bibliography}
+\author{Example Research Group}
+\date{2026}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+Modeling room acoustics spans geometric, wave-based, and data-driven methods
+\cite{gauss2026,muller2025,zhao2025}. Perceptual studies motivate the choice of
+metrics and rendering strategy \cite{alvarez2024,okafor2016}.
+
+\section{Methods}
+Our pipeline couples a sparse geometric model \cite{zhao2025} with a
+physics-informed renderer \cite{gauss2026,gauss2026}. Reverberation time is
+estimated directly from speech \cite{nasser2023}, and material parameters are
+inferred with a diffusion model \cite{laurent2024}. See the measured impulse
+response corpus for evaluation data \cite{park2022}.
+
+\section{Related work}
+Wave-based simulation at interactive rates is discussed by Müller and Example
+\cite{muller2025}. Local wavefield synthesis provides an alternative spatial
+rendering approach \cite{okafor2023}. For broader treatments, see the monographs
+by Ivanov \cite{ivanov2022} and the auralization thesis by Example
+\cite{example2021}. Practical geometric-acoustics guidance is collected in
+\cite{muller2020}, while machine-learning approaches to acoustic parameters are
+surveyed in \cite{chen2020}.
+
+\bibliographystyle{plain}
+\bibliography{library}
+
+\end{document}

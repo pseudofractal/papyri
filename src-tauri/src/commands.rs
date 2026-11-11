@@ -1,4 +1,4 @@
-use crate::{files, latex, typst};
+use crate::{bibliography, files, latex, typst};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
@@ -109,6 +109,14 @@ pub fn latex_engines() -> Vec<latex::Engine> {
   latex::discover_engines()
 }
 #[tauri::command]
+pub fn latex_compile_status() -> Option<latex::CompileStatus> {
+  latex::compile_status()
+}
+#[tauri::command]
+pub async fn latex_cancel_compile(path: Option<String>) -> Result<bool, String> {
+  blocking(move || Ok(latex::cancel_compile(path))).await
+}
+#[tauri::command]
 pub fn typst_binary() -> Option<std::path::PathBuf> {
   typst::discover_binary()
 }
@@ -187,6 +195,18 @@ pub async fn document_stamp(path: String) -> Result<String, String> {
   .await
 }
 #[tauri::command]
+pub async fn fetch_bibliography_record(
+  identifier: String,
+) -> Result<bibliography::FetchedBibliography, String> {
+  blocking(move || bibliography::fetch(&identifier)).await
+}
+#[tauri::command]
+pub async fn download_bibliography_resources(
+  resources: Vec<bibliography::ReferenceResource>,
+) -> Result<bibliography::DownloadedResources, String> {
+  blocking(move || bibliography::download_resources(resources)).await
+}
+#[tauri::command]
 pub async fn pick_path(app: tauri::AppHandle, directory: bool) -> Result<Option<String>, String> {
   blocking(move || {
     let picker = app.dialog().file();
@@ -196,7 +216,10 @@ pub async fn pick_path(app: tauri::AppHandle, directory: bool) -> Result<Option<
       picker
         .add_filter(
           "Documents",
-          &["md", "markdown", "mdown", "mkd", "pdf", "typ", "tex"],
+          &[
+            "md", "markdown", "mdown", "mkd", "pdf", "typ", "tex", "bib", "bibtex", "ris", "nbib",
+            "enw", "csljson", "json",
+          ],
         )
         .blocking_pick_file()
     };

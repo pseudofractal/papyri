@@ -9,5 +9,12 @@ without requiring a language server.
 - Source: <https://github.com/James-Yu/LaTeX-Workshop/tree/master/data>
 - License: MIT (see `LICENSE`)
 
+`package-commands.json` is generated from the same upstream package data
+(`data/packages/*.json`), with package-command data from texlab's MIT-licensed
+`completion.json.gz` added for packages that LaTeX-Workshop does not cover.
+texlab is available at <https://github.com/latex-lsp/texlab> and is MIT-licensed.
+`bibliography-styles.json` lists common BibTeX style names from TeX Live 2025
+and widely used journal styles; style names themselves are not copyrightable.
+
 Commands, environments, packages and math symbols are data, not executable
 code. Keep this attribution and license with the data when redistributing it.

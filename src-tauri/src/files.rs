@@ -211,10 +211,15 @@ pub fn read_document(path: String) -> Result<Document, String> {
     .and_then(|e| e.to_str())
     .unwrap_or("")
     .to_lowercase();
-  if !["md", "markdown", "mdown", "mkd", "typ", "tex"].contains(&extension.as_str()) {
+  if ![
+    "md", "markdown", "mdown", "mkd", "typ", "tex", "bib", "bibtex", "ris", "nbib", "enw",
+    "csljson", "json",
+  ]
+  .contains(&extension.as_str())
+  {
     return Err(error(
       &path,
-      "Only Markdown, Typst, and LaTeX source documents can be opened",
+      "Only Markdown, Typst, LaTeX, and bibliography documents can be opened",
     ));
   }
   let (bytes, metadata) = bounded_read(&path, DOCUMENT_LIMIT)?;

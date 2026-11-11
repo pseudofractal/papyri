@@ -1,3 +1,4 @@
+mod bibliography;
 mod browser;
 mod cli;
 mod cli_args;
@@ -42,6 +43,8 @@ pub fn run() {
       commands::rename_file,
       commands::read_document,
       commands::read_text_file,
+      commands::fetch_bibliography_record,
+      commands::download_bibliography_resources,
       commands::delete_file,
       commands::write_document,
       commands::read_pdf,
@@ -49,6 +52,8 @@ pub fn run() {
       commands::latex_sync,
       commands::latex_sync_release,
       commands::latex_engines,
+      commands::latex_compile_status,
+      commands::latex_cancel_compile,
       commands::typst_binary,
       commands::read_asset,
       commands::document_stamp,

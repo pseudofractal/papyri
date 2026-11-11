@@ -1,0 +1,1602 @@
+[
+  {
+    "id": "2611.13071",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "Tripartite nonlocal magic from reflected and negativity spectra",
+    "file": "2611.13071.bib",
+    "bytes": 312
+  },
+  {
+    "id": "2611.13074",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "Four-charge Rotating AdS Black Holes in Gauged STU Supergravity",
+    "file": "2611.13074.bib",
+    "bytes": 307
+  },
+  {
+    "id": "2611.13078",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "More physics at the entangling surface: boundary conditions and entanglement in 2d TQFT",
+    "file": "2611.13078.bib",
+    "bytes": 386
+  },
+  {
+    "id": "2611.13086",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "Type IIB instanton corrections from pure modular unfolding",
+    "file": "2611.13086.bib",
+    "bytes": 304
+  },
+  {
+    "id": "2611.13088",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "Holographic Drag Force and the Entanglement Membrane: Geometric Reconstruction and Information Spreading",
+    "file": "2611.13088.bib",
+    "bytes": 354
+  },
+  {
+    "id": "2611.13092",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "Moduli spaces in CFT: vortex defects",
+    "file": "2611.13092.bib",
+    "bytes": 289
+  },
+  {
+    "id": "2611.13093",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "Categorical RMT",
+    "file": "2611.13093.bib",
+    "bytes": 293
+  },
+  {
+    "id": "2611.13097",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "BPS Bootstrap",
+    "file": "2611.13097.bib",
+    "bytes": 238
+  },
+  {
+    "id": "2611.13102",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "Effective scalar-fluid description of thermal first-order phase transitions and their spinodal instabilities",
+    "file": "2611.13102.bib",
+    "bytes": 463
+  },
+  {
+    "id": "2611.13112",
+    "category": "hep-th",
+    "primary": "hep-th",
+    "title": "Resummations In Higher-Curvature Modifications Of Starobinsky Inflation",
+    "file": "2611.13112.bib",
+    "bytes": 334
+  },
+  {
+    "id": "2611.12924",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "Conformally Sasakian manifolds and the $k$-nullity condition",
+    "file": "2611.12924.bib",
+    "bytes": 338
+  },
+  {
+    "id": "2611.13040",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "On the Concavity of R\\'enyi Entropy and R\\'enyi Entropy Power along Heat Flows on Manifolds",
+    "file": "2611.13040.bib",
+    "bytes": 335
+  },
+  {
+    "id": "2611.13812",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "Combinatorial curvature flows for spherical vertex scalings on infinitely triangulated surfaces",
+    "file": "2611.13812.bib",
+    "bytes": 356
+  },
+  {
+    "id": "2611.13854",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "Morse index and bifurcation of Clifford hypersurfaces under Hopf squashing",
+    "file": "2611.13854.bib",
+    "bytes": 321
+  },
+  {
+    "id": "2611.13918",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "Generalized Frobenius manifolds: symmetries and their classification in 2-dimensions",
+    "file": "2611.13918.bib",
+    "bytes": 422
+  },
+  {
+    "id": "2611.14005",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "Singular points of envelopes and offsets: a transition from 2D to 3D",
+    "file": "2611.14005.bib",
+    "bytes": 361
+  },
+  {
+    "id": "2611.14047",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "Complete self-shrinkers with scalar curvature bounded below",
+    "file": "2611.14047.bib",
+    "bytes": 346
+  },
+  {
+    "id": "2611.14137",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "Integrability of the horizontal mean curvature near characteristic points in the Heisenberg group",
+    "file": "2611.14137.bib",
+    "bytes": 375
+  },
+  {
+    "id": "2611.14144",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "Linear circle quotients of products of odd-dimensional spheres: classification and geometric applications",
+    "file": "2611.14144.bib",
+    "bytes": 357
+  },
+  {
+    "id": "2611.14189",
+    "category": "math.DG",
+    "primary": "math.DG",
+    "title": "Calabi-energy sublevels, K-stability and Calabi flow",
+    "file": "2611.14189.bib",
+    "bytes": 314
+  },
+  {
+    "id": "2611.13242",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Molecular Gas Optics Using Vibrational Population Density Refraction",
+    "file": "2611.13242.bib",
+    "bytes": 352
+  },
+  {
+    "id": "2611.13328",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Hysteresis and mode switching in FIB engineered random laser diodes",
+    "file": "2611.13328.bib",
+    "bytes": 445
+  },
+  {
+    "id": "2611.13341",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Universal spectral shapes of nonlinear light scattering from laser-driven dilute-gas density gratings",
+    "file": "2611.13341.bib",
+    "bytes": 365
+  },
+  {
+    "id": "2611.13476",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Hopfion Superlattices in 3D Twisted Moir\\'e Light Fields",
+    "file": "2611.13476.bib",
+    "bytes": 335
+  },
+  {
+    "id": "2611.13570",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Development of a versatile modular system to study the ablation and plume expansion in a thin film",
+    "file": "2611.13570.bib",
+    "bytes": 427
+  },
+  {
+    "id": "2611.13589",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Revisiting the dispersions and quality factors of nanoshell plasmons",
+    "file": "2611.13589.bib",
+    "bytes": 348
+  },
+  {
+    "id": "2611.13663",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Overcoming Dynamic Range Limitations in Computational Hyperspectral Imaging",
+    "file": "2611.13663.bib",
+    "bytes": 403
+  },
+  {
+    "id": "2611.13722",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Stress-controlled avoided-crossing evolution of an optical microresonator induced by inter-fibre side coupling",
+    "file": "2611.13722.bib",
+    "bytes": 399
+  },
+  {
+    "id": "2611.13743",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Structural Perturbations and Full Field Evolution in Tapered Spun Ring-Core Fiber Amplifiers",
+    "file": "2611.13743.bib",
+    "bytes": 397
+  },
+  {
+    "id": "2611.13746",
+    "category": "physics.optics",
+    "primary": "physics.optics",
+    "title": "Hierarchical interfacial anchoring for durable perovskite solar cells",
+    "file": "2611.13746.bib",
+    "bytes": 704
+  },
+  {
+    "id": "2611.12889",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "We Used It Anyway: Low Trust and High Adoption of Large Language Models in Requirements Engineering Education",
+    "file": "2611.12889.bib",
+    "bytes": 406
+  },
+  {
+    "id": "2611.12991",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "Specializing Meta Multi-Objectivization as Baseline for Software Engineering Optimization",
+    "file": "2611.12991.bib",
+    "bytes": 380
+  },
+  {
+    "id": "2611.13007",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "Just AI Governance and the Forbidden-Boundary Principle",
+    "file": "2611.13007.bib",
+    "bytes": 300
+  },
+  {
+    "id": "2611.13011",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "Compile-Gated Lean Proof Refactoring with Enterprise Agent Practices: A Model per Step under a US\\$3 Cap, Followed by Programmatic Rewrite Rules",
+    "file": "2611.13011.bib",
+    "bytes": 390
+  },
+  {
+    "id": "2611.13026",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "Repository-Context-Guided Image Understanding for Agentic Software Development",
+    "file": "2611.13026.bib",
+    "bytes": 419
+  },
+  {
+    "id": "2611.13041",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "Code-Grounded Agentic Explanations for Static Analysis Vulnerability Findings",
+    "file": "2611.13041.bib",
+    "bytes": 427
+  },
+  {
+    "id": "2611.13049",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "The Gene Is Not the Gate: Conceptualizing the Semantic Genome of Quantum Software",
+    "file": "2611.13049.bib",
+    "bytes": 383
+  },
+  {
+    "id": "2611.13055",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "Beyond the Document: Compiled Context and Governed Agents for Any Work Product",
+    "file": "2611.13055.bib",
+    "bytes": 340
+  },
+  {
+    "id": "2611.13125",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "MiniZoo: An Evolving Dataset of Mini Apps for the Research Community",
+    "file": "2611.13125.bib",
+    "bytes": 410
+  },
+  {
+    "id": "2611.13183",
+    "category": "cs.SE",
+    "primary": "cs.SE",
+    "title": "AgentScript-Eval: Benchmarking LLMs and Agents for Code Generation in an Enterprise DSL",
+    "file": "2611.13183.bib",
+    "bytes": 449
+  },
+  {
+    "id": "2611.13075",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "Shaping black hole resonances II: Spectroscopic landscapes and interference in black hole ringdown",
+    "file": "2611.13075.bib",
+    "bytes": 433
+  },
+  {
+    "id": "2611.13170",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "Depletion of Dark Matter Spikes by Massive Black Hole Mergers",
+    "file": "2611.13170.bib",
+    "bytes": 414
+  },
+  {
+    "id": "2611.13197",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "Eccentricity greatly enhances the detectability of line-of-sight acceleration in gravitational wave signals",
+    "file": "2611.13197.bib",
+    "bytes": 420
+  },
+  {
+    "id": "2611.13253",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "Polarized Equatorial Emission around Kerr Black Holes with Synchronized Scalar Hair. II. Indirect images",
+    "file": "2611.13253.bib",
+    "bytes": 429
+  },
+  {
+    "id": "2611.13266",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "Challenging the hoop conjecture with spinning pancakes and baguettes",
+    "file": "2611.13266.bib",
+    "bytes": 356
+  },
+  {
+    "id": "2611.13269",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "Viscosity heats, diffusion drains: Open-system thermodynamics in unimodular cosmology",
+    "file": "2611.13269.bib",
+    "bytes": 342
+  },
+  {
+    "id": "2611.13462",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "The out-state of scalar-induced gravitational waves",
+    "file": "2611.13462.bib",
+    "bytes": 298
+  },
+  {
+    "id": "2611.13569",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "Quasinormal overtones and grey-body factors of Frolov black holes",
+    "file": "2611.13569.bib",
+    "bytes": 360
+  },
+  {
+    "id": "2611.13871",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "Inverse Scattering & Isospectrality in (Analog) Cosmology",
+    "file": "2611.13871.bib",
+    "bytes": 336
+  },
+  {
+    "id": "2611.14001",
+    "category": "gr-qc",
+    "primary": "gr-qc",
+    "title": "Non-singular cosmology from effective LQG-inspired black holes",
+    "file": "2611.14001.bib",
+    "bytes": 390
+  },
+  {
+    "id": "2611.13021",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "Cluster-weighted modeling for count data with excess zeros and mixed-type covariates",
+    "file": "2611.13021.bib",
+    "bytes": 371
+  },
+  {
+    "id": "2611.13187",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "Causal Learning with Invalid Instruments for High-dimensional Imaging Responses",
+    "file": "2611.13187.bib",
+    "bytes": 366
+  },
+  {
+    "id": "2611.13206",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "Ratio-of-mediator-probability weighting for causal mediation analysis: estimation, extensions, and practical guidance",
+    "file": "2611.13206.bib",
+    "bytes": 384
+  },
+  {
+    "id": "2611.13327",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "Causal mediation analysis for a time-to-event endpoint in the presence of competing events",
+    "file": "2611.13327.bib",
+    "bytes": 383
+  },
+  {
+    "id": "2611.13423",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "High-Dimensional Nonsparse Regression under Covariate Shift via Importance-Weighted Partial Least Squares",
+    "file": "2611.13423.bib",
+    "bytes": 388
+  },
+  {
+    "id": "2611.13433",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "Regression Modeling for the Bloc Basu Bivariate Exponential Distribution: Marginal and Conditional Means",
+    "file": "2611.13433.bib",
+    "bytes": 380
+  },
+  {
+    "id": "2611.13451",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "Economics of Selection in Ranking & Selection: Neither Fixed-Precision nor Fixed-Budget",
+    "file": "2611.13451.bib",
+    "bytes": 362
+  },
+  {
+    "id": "2611.13460",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "Sufficient Dimension Reduction with Multimodal Predictor Objects",
+    "file": "2611.13460.bib",
+    "bytes": 323
+  },
+  {
+    "id": "2611.13464",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "AdaFCP: Local Neural Functional Representations for Industrial Change Detection",
+    "file": "2611.13464.bib",
+    "bytes": 367
+  },
+  {
+    "id": "2611.13492",
+    "category": "stat.ME",
+    "primary": "stat.ME",
+    "title": "Pseudo-marginal Sampling for Selective Inference",
+    "file": "2611.13492.bib",
+    "bytes": 311
+  },
+  {
+    "id": "2611.13316",
+    "category": "q-bio.NC",
+    "primary": "q-bio.NC",
+    "title": "A probabilistic model of visual segmentation explains early visual cortical dynamics",
+    "file": "2611.13316.bib",
+    "bytes": 363
+  },
+  {
+    "id": "2611.13637",
+    "category": "q-bio.NC",
+    "primary": "q-bio.NC",
+    "title": "Human and Machine Annotations Predict Brain Responses to Naturalistic Movies Across Development",
+    "file": "2611.13637.bib",
+    "bytes": 420
+  },
+  {
+    "id": "2611.13692",
+    "category": "q-bio.NC",
+    "primary": "q-bio.NC",
+    "title": "Similar visual tuning conceals different recovery dynamics in a model of macaque V1",
+    "file": "2611.13692.bib",
+    "bytes": 377
+  },
+  {
+    "id": "2611.13780",
+    "category": "q-bio.NC",
+    "primary": "q-bio.NC",
+    "title": "Neuromodulation Through Intrinsic Noise",
+    "file": "2611.13780.bib",
+    "bytes": 322
+  },
+  {
+    "id": "2611.14381",
+    "category": "q-bio.NC",
+    "primary": "q-bio.NC",
+    "title": "Optimization principles, revisited",
+    "file": "2611.14381.bib",
+    "bytes": 285
+  },
+  {
+    "id": "1901.02499",
+    "category": "q-bio.NC",
+    "primary": "cs.CV",
+    "title": "Grey matter sublayer thickness estimation in themouse cerebellum",
+    "file": "1901.02499.bib",
+    "bytes": 535
+  },
+  {
+    "id": "2109.05627",
+    "category": "q-bio.NC",
+    "primary": "eess.IV",
+    "title": "Differential Diagnosis of Frontotemporal Dementia and Alzheimer's Disease using Generative Adversarial Network",
+    "file": "2109.05627.bib",
+    "bytes": 415
+  },
+  {
+    "id": "2205.01188",
+    "category": "q-bio.NC",
+    "primary": "cs.LG",
+    "title": "Predicting Time-to-conversion for Dementia of Alzheimer's Type using Multi-modal Deep Survival Analysis",
+    "file": "2205.01188.bib",
+    "bytes": 641
+  },
+  {
+    "id": "2611.13070",
+    "category": "q-bio.NC",
+    "primary": "cs.LG",
+    "title": "IC-GNN: Modeling Individualized Brain Community Organization for Disease Prediction",
+    "file": "2611.13070.bib",
+    "bytes": 468
+  },
+  {
+    "id": "2611.13400",
+    "category": "q-bio.NC",
+    "primary": "stat.AP",
+    "title": "Orthographic depth at two scales, with English also matched for lexicon size",
+    "file": "2611.13400.bib",
+    "bytes": 325
+  },
+  {
+    "id": "2611.13027",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "TypedInk: Knowing When Not To Draw",
+    "file": "2611.13027.bib",
+    "bytes": 265
+  },
+  {
+    "id": "2611.13211",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "Designing UIs with GenAI: Understanding the Use, Benefits, and Limitations of Prompt-to-Design Generators",
+    "file": "2611.13211.bib",
+    "bytes": 374
+  },
+  {
+    "id": "2611.13287",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "Project Progress Desk: Know Where All Your Claude Code and Codex Projects Stand at a Glance",
+    "file": "2611.13287.bib",
+    "bytes": 697
+  },
+  {
+    "id": "2611.13368",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "Ender: Visual Scaffolding for Geometric Proof Comprehension",
+    "file": "2611.13368.bib",
+    "bytes": 367
+  },
+  {
+    "id": "2611.13386",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "Designing Accessible and Rigorous ML Experiments: No-Code Visual Workflows and Structured Guidance for Beginners",
+    "file": "2611.13386.bib",
+    "bytes": 451
+  },
+  {
+    "id": "2611.13387",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "Towards Accessible, Autonomous Photosynthesis Monitoring on Living Leaves",
+    "file": "2611.13387.bib",
+    "bytes": 461
+  },
+  {
+    "id": "2611.13525",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "EJAI: Judgment-Preserving Civic AI for Data Center Environmental Justice",
+    "file": "2611.13525.bib",
+    "bytes": 417
+  },
+  {
+    "id": "2611.13640",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "EyeQ: Exploring Corneal Reflection for Mobile Context Sensing",
+    "file": "2611.13640.bib",
+    "bytes": 446
+  },
+  {
+    "id": "2611.13652",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "How Well Do Benchmarks Evaluate LLMs' Use for Personal Health Informatics?",
+    "file": "2611.13652.bib",
+    "bytes": 350
+  },
+  {
+    "id": "2611.13691",
+    "category": "cs.HC",
+    "primary": "cs.HC",
+    "title": "Seeing Without Seeing: A Methodological Review of Visual Mental Imagery Reconstruction from Brain Activity",
+    "file": "2611.13691.bib",
+    "bytes": 382
+  },
+  {
+    "id": "2611.13043",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Proportional Neuro-Impulsive Control of SISO LTI Systems",
+    "file": "2611.13043.bib",
+    "bytes": 383
+  },
+  {
+    "id": "2611.13053",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Opacity of Discrete Event Systems under Sensor Attacks",
+    "file": "2611.13053.bib",
+    "bytes": 340
+  },
+  {
+    "id": "2611.13067",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Control Barrier Functions for Counting Tasks in Multi-Agent Systems",
+    "file": "2611.13067.bib",
+    "bytes": 352
+  },
+  {
+    "id": "2611.13153",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Fast Sampling or High Gain? iP versus PI Control",
+    "file": "2611.13153.bib",
+    "bytes": 305
+  },
+  {
+    "id": "2611.13173",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Risk-Aware Dynamic Operating Envelopes for Battery Arbitrage in Unbalanced Distribution Networks",
+    "file": "2611.13173.bib",
+    "bytes": 406
+  },
+  {
+    "id": "2611.13202",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Robust State-Parameter Estimation in Second-Order Th\\'evenin Batteries",
+    "file": "2611.13202.bib",
+    "bytes": 413
+  },
+  {
+    "id": "2611.13256",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Image-Driven Control with Application to Thermoforming",
+    "file": "2611.13256.bib",
+    "bytes": 334
+  },
+  {
+    "id": "2611.13277",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Pulsatile Endocrine Regulation with a Releasable Hormone Pool: Impulsive Feedback Model",
+    "file": "2611.13277.bib",
+    "bytes": 380
+  },
+  {
+    "id": "2611.13291",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Implicit DeepReach Without Implicit Differentiation",
+    "file": "2611.13291.bib",
+    "bytes": 394
+  },
+  {
+    "id": "2611.13340",
+    "category": "cs.SY",
+    "primary": "eess.SY",
+    "title": "Modal-Augmented Chebyshev Physics-Informed Kolmogorov-Arnold Networks for Power Systems",
+    "file": "2611.13340.bib",
+    "bytes": 440
+  },
+  {
+    "id": "2611.13131",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "Useful Work Can Increase Energy Use: Demand Elasticity and Proof of Useful Work",
+    "file": "2611.13131.bib",
+    "bytes": 330
+  },
+  {
+    "id": "2611.13252",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "Splitting for Stability: a Modified Reward Scheme for Transaction-Fee-Only Regimes",
+    "file": "2611.13252.bib",
+    "bytes": 367
+  },
+  {
+    "id": "2611.13342",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "Early Rug Pull Detection on Solana",
+    "file": "2611.13342.bib",
+    "bytes": 345
+  },
+  {
+    "id": "2611.13406",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "Stinging the Swarm: Extracting Attacker Intelligence from a Twin-Controller OT Honeypot",
+    "file": "2611.13406.bib",
+    "bytes": 377
+  },
+  {
+    "id": "2611.13437",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "5G CATS: 5G-Based Cryptographic Authorization Against Trafficking of Semiconductor Devices",
+    "file": "2611.13437.bib",
+    "bytes": 435
+  },
+  {
+    "id": "2611.13491",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "Data-Efficient Unlearning-Based Backdoor Detection in Federated Learning",
+    "file": "2611.13491.bib",
+    "bytes": 422
+  },
+  {
+    "id": "2611.13577",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "TERM: Target-Free Jailbreak Defense via Entropy-Guided Residual Modulation",
+    "file": "2611.13577.bib",
+    "bytes": 387
+  },
+  {
+    "id": "2611.13578",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "POEM: Output-Relative Block-Sparse Attention for Long-Context Prefilling",
+    "file": "2611.13578.bib",
+    "bytes": 376
+  },
+  {
+    "id": "2611.13641",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "MOAI: Module-Optimizing Architecture for non-interactive secure transformer Inference",
+    "file": "2611.13641.bib",
+    "bytes": 461
+  },
+  {
+    "id": "2611.13684",
+    "category": "cs.CR",
+    "primary": "cs.CR",
+    "title": "BypassGym: A Benchmark for Evaluating AI Agents' Endpoint Defense Evasion Capabilities",
+    "file": "2611.13684.bib",
+    "bytes": 404
+  },
+  {
+    "id": "2611.12900",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "From Relevant Posts to Attributable Spans: Explicit Symptom Evidence for Depression Questionnaire Inference",
+    "file": "2611.12900.bib",
+    "bytes": 380
+  },
+  {
+    "id": "2611.12901",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "Rethinking in Spikes: Mitigating Hallucinations in MDLMs with Step-Aware Decoding",
+    "file": "2611.12901.bib",
+    "bytes": 505
+  },
+  {
+    "id": "2611.12902",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "TimeOmni-o1: Bidirectionally Coupling Time Series Foundation Models and LLMs for Multimodal Reasoning and Forecasting",
+    "file": "2611.12902.bib",
+    "bytes": 408
+  },
+  {
+    "id": "2611.12903",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "SELD: Detecting Silent Evidence Loss in Context Compression beyond the Answer",
+    "file": "2611.12903.bib",
+    "bytes": 325
+  },
+  {
+    "id": "2611.12904",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "Actionable Feedback: Improving Model Capabilities from User Edit Data on Clinical Documentation",
+    "file": "2611.12904.bib",
+    "bytes": 428
+  },
+  {
+    "id": "2611.12906",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "Brasilidade: Measuring Brazilian Identity for Large Language Models",
+    "file": "2611.12906.bib",
+    "bytes": 453
+  },
+  {
+    "id": "2611.12918",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "IntentTwin: Deconfounding Candidate Support and the Oracle-to-Deployment Gap in Offline Web Behavior Prediction",
+    "file": "2611.12918.bib",
+    "bytes": 429
+  },
+  {
+    "id": "2611.12995",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "Capacity Allocation at the Source: Sparse Target Optimization for LLM Knowledge Editing",
+    "file": "2611.12995.bib",
+    "bytes": 404
+  },
+  {
+    "id": "2611.13012",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "khammoon: From a Linguistic Guideline to a Thai Morpheme Segmenter",
+    "file": "2611.13012.bib",
+    "bytes": 429
+  },
+  {
+    "id": "2611.13058",
+    "category": "cs.CL",
+    "primary": "cs.CL",
+    "title": "The Indic Token Tax in 2026: Measuring Tokenizer. Disparity and Its Cost for the Languages of India",
+    "file": "2611.13058.bib",
+    "bytes": 377
+  },
+  {
+    "id": "2611.13234",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "The Alpha Clustering Model of the EMC Effect",
+    "file": "2611.13234.bib",
+    "bytes": 292
+  },
+  {
+    "id": "2611.13408",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "Coherent control of quadrupolar order in solid spin-1 systems:\\ majorization bounds, orientation-indexed adiabatic inversion, and order lifetime",
+    "file": "2611.13408.bib",
+    "bytes": 407
+  },
+  {
+    "id": "2611.13602",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "Nuclear medium and final state interaction effects in $\\eta$ production induced by $\\nu_\\mu(\\bar\\nu_\\mu)$ at SBN and DUNE energies",
+    "file": "2611.13602.bib",
+    "bytes": 423
+  },
+  {
+    "id": "2611.13721",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "Density dependence of effective Lambda-nucleon interactions",
+    "file": "2611.13721.bib",
+    "bytes": 363
+  },
+  {
+    "id": "2611.13891",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "Triangular and fourth-order flow of D mesons in Pb-Pb collisions with event-by-event fluctuations",
+    "file": "2611.13891.bib",
+    "bytes": 382
+  },
+  {
+    "id": "2611.13899",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "M-SHIVA 1.0: A Relativistic Resistive MHD Code for Heavy-Ion Collisions, with Applications to Momentum Anisotropy and Joule Heating in QGP",
+    "file": "2611.13899.bib",
+    "bytes": 406
+  },
+  {
+    "id": "2611.13953",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "Formation of superheavy elements 119 and 120 in the $^{50}$Ti+$^{249}$Bk and $^{50}$Ti+$^{249}$Cf reactions: dinuclear system dynamics, survival probability, and decay chains of the evaporation residues",
+    "file": "2611.13953.bib",
+    "bytes": 454
+  },
+  {
+    "id": "2611.13954",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "Neutron stars nearly close the window for muon-induced baryon-number violation",
+    "file": "2611.13954.bib",
+    "bytes": 317
+  },
+  {
+    "id": "2611.14331",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "Perturbative QCD Constraints on Hot Neutron-Star Matter",
+    "file": "2611.14331.bib",
+    "bytes": 334
+  },
+  {
+    "id": "2611.14460",
+    "category": "nucl-th",
+    "primary": "nucl-th",
+    "title": "Structure of correlations for the single-$j$ model using quantum information theory",
+    "file": "2611.14460.bib",
+    "bytes": 367
+  },
+  {
+    "id": "2611.12963",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "Neural Networks with Local Converging Inputs for Solving the 3D Stokes Equations on Unstructured Meshes: Novel Techniques and Advances",
+    "file": "2611.12963.bib",
+    "bytes": 477
+  },
+  {
+    "id": "2611.12965",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "A Beltrami Mode in Extreme Fractional Hydrodynamics under Stochastic Forcing",
+    "file": "2611.12965.bib",
+    "bytes": 336
+  },
+  {
+    "id": "2611.13063",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "Numerical Investigations on Bitumen Liberation from Oil Sands Lump",
+    "file": "2611.13063.bib",
+    "bytes": 413
+  },
+  {
+    "id": "2611.13399",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "Lift-element-based dynamic network of vortex gust-airfoil interactions",
+    "file": "2611.13399.bib",
+    "bytes": 347
+  },
+  {
+    "id": "2611.13727",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "Kinetic Non-Equilibrium Receptivity Analysis of Hypersonic Flows via a Complex Linearized Unified Gas-Kinetic Scheme",
+    "file": "2611.13727.bib",
+    "bytes": 415
+  },
+  {
+    "id": "2611.13737",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "Linear stability of viscous stratified shear flows with arbitrary equations of state",
+    "file": "2611.13737.bib",
+    "bytes": 344
+  },
+  {
+    "id": "2611.13989",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "Beyond Fourier and Laplace: The Hankel Neural Operator for Learning Solution Operators of Differential Equations",
+    "file": "2611.13989.bib",
+    "bytes": 387
+  },
+  {
+    "id": "2611.14095",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "Modelling velocity gradient invariants in turbulence with Lundgren spiral vortex ensemble",
+    "file": "2611.14095.bib",
+    "bytes": 389
+  },
+  {
+    "id": "2611.14104",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "Purely elastic centre-mode instability in channel and pipe flows of a simplified Phan-Thien-Tanner fluid",
+    "file": "2611.14104.bib",
+    "bytes": 469
+  },
+  {
+    "id": "2611.14224",
+    "category": "physics.flu-dyn",
+    "primary": "physics.flu-dyn",
+    "title": "Some analytical solutions for the evaporative flux and the flow inside a sessile droplet in cylindrical-cap geometry",
+    "file": "2611.14224.bib",
+    "bytes": 401
+  },
+  {
+    "id": "2611.12957",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "DocFS: File Systems as Agentic Reasoning Environments for Complex Multimodal Document Question Answering",
+    "file": "2611.12957.bib",
+    "bytes": 419
+  },
+  {
+    "id": "2611.13539",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "Exploiting Feature-invariant Scaling Laws for Efficient A/B Experimentation in Recommendation Systems",
+    "file": "2611.13539.bib",
+    "bytes": 402
+  },
+  {
+    "id": "2611.13797",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "Auditing LLM Pseudo-Label Distillation for Review Informativeness at E-Commerce Scale",
+    "file": "2611.13797.bib",
+    "bytes": 409
+  },
+  {
+    "id": "2611.13966",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "Controlled Knowledge Engineering for Taxonomy Induction with Tool-Grounded LLM Agents and Runtime-Adaptive Policies",
+    "file": "2611.13966.bib",
+    "bytes": 434
+  },
+  {
+    "id": "2611.13972",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "Data Quality Challenges in Multimodal Tourism Recommender Systems",
+    "file": "2611.13972.bib",
+    "bytes": 347
+  },
+  {
+    "id": "2611.14004",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "LUMIR: Decoupled Multimodal Representation Learning from Heterogeneous Data for Next-POI Recommendation",
+    "file": "2611.14004.bib",
+    "bytes": 392
+  },
+  {
+    "id": "2611.14037",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "From Show Programs to Linked Data",
+    "file": "2611.14037.bib",
+    "bytes": 414
+  },
+  {
+    "id": "2611.14050",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "Ontology-Guided Knowledge Graph Construction and Robust Evidence Retrieval for Indian Knowledge Systems",
+    "file": "2611.14050.bib",
+    "bytes": 430
+  },
+  {
+    "id": "2611.14149",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "From Search to Decision: How Post-Training Shapes Information-Seeking Capabilities in Large Language Models",
+    "file": "2611.14149.bib",
+    "bytes": 429
+  },
+  {
+    "id": "2611.14220",
+    "category": "cs.IR",
+    "primary": "cs.IR",
+    "title": "SHARP: Semantic Hierarchical Agentic Reasoning for Next POI Prediction with Dynamic Memory",
+    "file": "2611.14220.bib",
+    "bytes": 425
+  },
+  {
+    "id": "2611.13430",
+    "category": "eess.AS",
+    "primary": "eess.AS",
+    "title": "Off-target posterior mass: A training-free diagnostic for fine-tuning spoken language diarization probes",
+    "file": "2611.13430.bib",
+    "bytes": 396
+  },
+  {
+    "id": "2611.13614",
+    "category": "eess.AS",
+    "primary": "eess.AS",
+    "title": "Emilia2: A Large-Scale Dataset for Controllable Long-Form Speech Generation",
+    "file": "2611.13614.bib",
+    "bytes": 576
+  },
+  {
+    "id": "2611.13689",
+    "category": "eess.AS",
+    "primary": "eess.AS",
+    "title": "Walrus Technical Report",
+    "file": "2611.13689.bib",
+    "bytes": 337
+  },
+  {
+    "id": "2611.13875",
+    "category": "eess.AS",
+    "primary": "eess.AS",
+    "title": "DialInstruct-TTS: Interactive Expressive Speech Generation via Multi-Turn Dialogue with Fine-Grained Temporal Control",
+    "file": "2611.13875.bib",
+    "bytes": 416
+  },
+  {
+    "id": "2611.14016",
+    "category": "eess.AS",
+    "primary": "eess.AS",
+    "title": "Passive ladder-network representation of the radiation impedance of a spherical cap on a rigid sphere",
+    "file": "2611.14016.bib",
+    "bytes": 363
+  },
+  {
+    "id": "2611.14043",
+    "category": "eess.AS",
+    "primary": "eess.AS",
+    "title": "ESDCodec: Ultra-Low Bitrate Speech Codec with Enhanced Semantic Disentanglement and Subband Decoding",
+    "file": "2611.14043.bib",
+    "bytes": 386
+  },
+  {
+    "id": "2611.13243",
+    "category": "eess.AS",
+    "primary": "cs.LG",
+    "title": "GigaEdge Spench: An SDK for Practical Streaming Speech Enhancement",
+    "file": "2611.13243.bib",
+    "bytes": 386
+  },
+  {
+    "id": "2611.13990",
+    "category": "eess.AS",
+    "primary": "cs.CL",
+    "title": "On the information rate of phones, syllables and words",
+    "file": "2611.13990.bib",
+    "bytes": 300
+  },
+  {
+    "id": "2611.14003",
+    "category": "eess.AS",
+    "primary": "cs.SD",
+    "title": "Spatio-Temporal Calibration of a Vehicle-Mounted Microphone Array for Autonomous Driving",
+    "file": "2611.14003.bib",
+    "bytes": 414
+  },
+  {
+    "id": "2611.14421",
+    "category": "eess.AS",
+    "primary": "cs.SD",
+    "title": "Earlybird: Predictive Streaming Speech Recognition in 29M Parameters",
+    "file": "2611.14421.bib",
+    "bytes": 327
+  },
+  {
+    "id": "2611.13083",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "Less is More: Unbiased Galaxy Clustering from Fewer Merger Trees",
+    "file": "2611.13083.bib",
+    "bytes": 382
+  },
+  {
+    "id": "2611.13100",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "Fast Scrambling Cosmology",
+    "file": "2611.13100.bib",
+    "bytes": 325
+  },
+  {
+    "id": "2611.13345",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "Millimeter-Wavelength Constraints on Circular Polarization of the Cosmic Microwave Background at Arcminute Scales with the Simons Array",
+    "file": "2611.13345.bib",
+    "bytes": 778
+  },
+  {
+    "id": "2611.13542",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "OASIS: A Fast Dynamical Halo Finding Algorithm",
+    "file": "2611.13542.bib",
+    "bytes": 418
+  },
+  {
+    "id": "2611.13567",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "The unified bound dark energy--bound dark matter model confronted with DESI DR2, ACT and SPT-3G, and the Unite supernovae measurements",
+    "file": "2611.13567.bib",
+    "bytes": 419
+  },
+  {
+    "id": "2611.13733",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "Scalar-Induced Gravitational Waves Probing Phase Transitions in the Standard Model and Beyond",
+    "file": "2611.13733.bib",
+    "bytes": 381
+  },
+  {
+    "id": "2611.13756",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "Self-Interacting Neutrinos in NEDE and DRMD Cosmologies: Posteriors, profiles and evidence using CLiENT",
+    "file": "2611.13756.bib",
+    "bytes": 446
+  },
+  {
+    "id": "2611.13806",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "Impact of Primordial Magnetic Field-induced Small-scale Power on Non-linear Structure Formation and Cosmic Reionization",
+    "file": "2611.13806.bib",
+    "bytes": 443
+  },
+  {
+    "id": "2611.13829",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "Stable cosmology under flexible covariances: Rescaling and cross-survey correlations in DESI BAO and supernova data",
+    "file": "2611.13829.bib",
+    "bytes": 427
+  },
+  {
+    "id": "2611.14086",
+    "category": "astro-ph.CO",
+    "primary": "astro-ph.CO",
+    "title": "Cosmic String Networks with Time-Varying Tension: Field-Theory Simulations and an Analytic Model",
+    "file": "2611.14086.bib",
+    "bytes": 365
+  },
+  {
+    "id": "2611.12949",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "Maze Runner: Autonomous Maze Navigation with Line-Based Localization and Control Barrier Functions",
+    "file": "2611.12949.bib",
+    "bytes": 388
+  },
+  {
+    "id": "2611.12983",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "CAFE: Closed-Loop Autonomous Task Formulation and Execution without Instance-Specific Instructions",
+    "file": "2611.12983.bib",
+    "bytes": 408
+  },
+  {
+    "id": "2611.13034",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "RoboACE: Adversarial Co-Evolution for Robot Self-Improvement",
+    "file": "2611.13034.bib",
+    "bytes": 351
+  },
+  {
+    "id": "2611.13039",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "Robo-MLT: Dual-System Robotic Manipulation for Long-Horizon Medical Laboratory Tasks",
+    "file": "2611.13039.bib",
+    "bytes": 432
+  },
+  {
+    "id": "2611.13114",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "ASPIRE: An Agentic System-Identification Platform for Iterative Reasoning and Exploration",
+    "file": "2611.13114.bib",
+    "bytes": 384
+  },
+  {
+    "id": "2611.13142",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "DOBB: Dynamic Oriented Bounding Boxes for Multi-Agent Collision Avoidance under State Uncertainty and Heterogeneous Dynamics",
+    "file": "2611.13142.bib",
+    "bytes": 411
+  },
+  {
+    "id": "2611.13160",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "How Much of Your VLA Is kNN",
+    "file": "2611.13160.bib",
+    "bytes": 286
+  },
+  {
+    "id": "2611.13204",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "Ground Reaction Force-Aware Model Predictive Control for Underactuated Upright Physical Assistance",
+    "file": "2611.13204.bib",
+    "bytes": 446
+  },
+  {
+    "id": "2611.13227",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "Latent Barrier Steering: Hierarchical Safety for Generative Planning",
+    "file": "2611.13227.bib",
+    "bytes": 356
+  },
+  {
+    "id": "2611.13229",
+    "category": "cs.RO",
+    "primary": "cs.RO",
+    "title": "Incorporating World Models in Decision Making for Next Best View Selection in Active Sensing",
+    "file": "2611.13229.bib",
+    "bytes": 384
+  },
+  {
+    "id": "2611.12928",
+    "category": "eess.IV",
+    "primary": "eess.IV",
+    "title": "Token Importance-Aware Semantic Communication Enabled Robust Video Transmission",
+    "file": "2611.12928.bib",
+    "bytes": 379
+  },
+  {
+    "id": "2611.13014",
+    "category": "eess.IV",
+    "primary": "eess.IV",
+    "title": "Is a CNN-Transformer Ensemble Worth It When a Chest X-Ray Foundation Model Is Available?",
+    "file": "2611.13014.bib",
+    "bytes": 363
+  },
+  {
+    "id": "2611.13029",
+    "category": "eess.IV",
+    "primary": "eess.IV",
+    "title": "Artifact Filtering versus Artifact-Compensated Training in JPEG to JPEG AI Recompression",
+    "file": "2611.13029.bib",
+    "bytes": 453
+  },
+  {
+    "id": "2611.13056",
+    "category": "eess.IV",
+    "primary": "eess.IV",
+    "title": "SNIF: a Self-Navigator Intelligent Filter correcting off-center and spin-history artifacts in quasi-random radial MRI",
+    "file": "2611.13056.bib",
+    "bytes": 448
+  },
+  {
+    "id": "2611.13289",
+    "category": "eess.IV",
+    "primary": "eess.IV",
+    "title": "MRFoundry: Knowledge-guided agent loops for end-to-end MRI research",
+    "file": "2611.13289.bib",
+    "bytes": 363
+  },
+  {
+    "id": "2611.13707",
+    "category": "eess.IV",
+    "primary": "eess.IV",
+    "title": "Joint Activation and Weight Quantization for Learned Image Compression",
+    "file": "2611.13707.bib",
+    "bytes": 326
+  },
+  {
+    "id": "2611.13970",
+    "category": "eess.IV",
+    "primary": "eess.IV",
+    "title": "Counterfactual Analysis of Extent Leakage from Annotation-Derived Prompts in Vision-Language Medical Image Segmentation",
+    "file": "2611.13970.bib",
+    "bytes": 429
+  },
+  {
+    "id": "2611.13971",
+    "category": "eess.IV",
+    "primary": "eess.IV",
+    "title": "TransGHOST: Real-Time, Synthesis-Free Reconstruction of Instrument-Occluded Regions in Ophthalmic Microsurgery",
+    "file": "2611.13971.bib",
+    "bytes": 452
+  },
+  {
+    "id": "2611.12916",
+    "category": "eess.IV",
+    "primary": "cs.MM",
+    "title": "One Rater to Score Them All: Frozen Large Language Model Anchoring for Video Quality of Experience",
+    "file": "2611.12916.bib",
+    "bytes": 391
+  },
+  {
+    "id": "2611.13200",
+    "category": "eess.IV",
+    "primary": "cs.CV",
+    "title": "Image Quality and the Reliability of Fabric-Density Measurement: Counting Threads from Smartphone Photos Through a Pick Glass",
+    "file": "2611.13200.bib",
+    "bytes": 383
+  },
+  {
+    "id": "2611.12933",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "Auditable Human-Agent Teams for Autonomous X-ray Experimentation",
+    "file": "2611.12933.bib",
+    "bytes": 481
+  },
+  {
+    "id": "2611.12934",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "EarthRecord: From Pixels to Land Change with Multimodal Agents over Four Decades of Satellite Imagery",
+    "file": "2611.12934.bib",
+    "bytes": 417
+  },
+  {
+    "id": "2611.12935",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "Train on prefill, monitor at decode: Using sparse autoencoders for topic monitoring",
+    "file": "2611.12935.bib",
+    "bytes": 354
+  },
+  {
+    "id": "2611.12936",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "LandslideFM: A Foundation Model Towards Unified Landslide Perception and Understanding",
+    "file": "2611.12936.bib",
+    "bytes": 375
+  },
+  {
+    "id": "2611.12937",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "Tracing Psychometric Inference in Large Language Models",
+    "file": "2611.12937.bib",
+    "bytes": 342
+  },
+  {
+    "id": "2611.12938",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "Graph Visualizations in Prompts for Knowledge Graph Question Answering",
+    "file": "2611.12938.bib",
+    "bytes": 375
+  },
+  {
+    "id": "2611.12940",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "Reinforcement Learning based control of Cancer Chemotherapy treatments",
+    "file": "2611.12940.bib",
+    "bytes": 353
+  },
+  {
+    "id": "2611.12941",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "AI Governance Should Prioritize Control and Knowledge Boundaries Over Limiting Intelligence",
+    "file": "2611.12941.bib",
+    "bytes": 333
+  },
+  {
+    "id": "2611.12942",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "Tabular Foundation Models vs Tuned Gradient Boosting for Telecom Churn: A Profit- and Calibration-Aware Evaluation",
+    "file": "2611.12942.bib",
+    "bytes": 361
+  },
+  {
+    "id": "2611.12950",
+    "category": "cs.AI",
+    "primary": "cs.AI",
+    "title": "SetPrint: Black-Box LLM Fingerprinting via Setwise Correspondence of Response Changes",
+    "file": "2611.12950.bib",
+    "bytes": 410
+  },
+  {
+    "id": "2611.13037",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "Spectral-Domain Information Geometry of Stationary Covariance Models: Gaussian and Elliptical Extensions",
+    "file": "2611.13037.bib",
+    "bytes": 389
+  },
+  {
+    "id": "2611.13240",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "Adaptive local Fr\\'echet regression with polyspherical predictors",
+    "file": "2611.13240.bib",
+    "bytes": 308
+  },
+  {
+    "id": "2611.13323",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "Species sampling priors through exact augmentation",
+    "file": "2611.13323.bib",
+    "bytes": 365
+  },
+  {
+    "id": "2611.13546",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "Statistical Analysis of the Structure from Noise Phenomenon in Generalized Procrustes Problems",
+    "file": "2611.13546.bib",
+    "bytes": 357
+  },
+  {
+    "id": "2611.13623",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "First-order asymptotic expansions for spectral convergence of normalized graph Laplacians constructed from samples on manifolds",
+    "file": "2611.13623.bib",
+    "bytes": 400
+  },
+  {
+    "id": "2611.13928",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "Asymptotic Bayes Optimality of Sparse Multiple Testing Procedures under One-Factor Dependence",
+    "file": "2611.13928.bib",
+    "bytes": 366
+  },
+  {
+    "id": "2611.13930",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "Lengthscale Estimation for the Gaussian Kernel and Deterministic Response Functions",
+    "file": "2611.13930.bib",
+    "bytes": 362
+  },
+  {
+    "id": "2611.14008",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "A linear programming approach to finite copula interpolation",
+    "file": "2611.14008.bib",
+    "bytes": 346
+  },
+  {
+    "id": "2611.14264",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "On the geometry of Gaussian Mean Shift Detection",
+    "file": "2611.14264.bib",
+    "bytes": 333
+  },
+  {
+    "id": "2611.14345",
+    "category": "stat.TH",
+    "primary": "math.ST",
+    "title": "Smoothed Least-Absolute Conditional Multidimensional Scaling via Iteratively Reweighted Majorization",
+    "file": "2611.14345.bib",
+    "bytes": 360
+  }
+]

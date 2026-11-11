@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fetch-bibliography-record"
+description = "Enables the fetch_bibliography_record command without any pre-configured scope."
+commands.allow = ["fetch_bibliography_record"]
+
+[[permission]]
+identifier = "deny-fetch-bibliography-record"
+description = "Denies the fetch_bibliography_record command without any pre-configured scope."
+commands.deny = ["fetch_bibliography_record"]
