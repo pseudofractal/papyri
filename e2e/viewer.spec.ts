@@ -3386,11 +3386,18 @@ test('recompiles LaTeX drafts while retaining the previous PDF', async ({ page }
     Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
     Object.defineProperty(window, '__TAURI_INTERNALS__', {
       value: {
+        transformCallback: () => 1,
         invoke: async (command: string, args: Record<string, unknown>) => {
           if (command === 'initial_path') return { path: '/paper.tex', directory: false };
           if (command === 'read_document') return { ...file };
           if (command === 'document_stamp') return file.stamp;
           if (command === 'list_directory') return [];
+          if (command === 'declarative_preferences') return null;
+          if (command === 'latex_compile_status') return null;
+          if (command === 'latex_cancel_compile') return true;
+          if (command === 'lsp_start') return 1;
+          if (command === 'lsp_send') return;
+          if (command === 'lsp_stop') return;
           if (command === 'read_pdf') return pdfBytes();
           if (command === 'compile_latex_draft') {
             (window as unknown as { compileRequests: string[] }).compileRequests.push(
@@ -3421,7 +3428,7 @@ test('recompiles LaTeX drafts while retaining the previous PDF', async ({ page }
   const frame = page.locator('iframe:not(.pending)');
   await expect(frame.contentFrame().locator('.page canvas').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Recompile' })).toBeEnabled();
-  await expect(page.getByText('Compiling · Stale')).toHaveCount(0);
+  await expect(page.getByText(/Compiling · .*Stale/)).toHaveCount(0);
   await frame
     .contentFrame()
     .locator('.page')
@@ -3456,14 +3463,14 @@ test('recompiles LaTeX drafts while retaining the previous PDF', async ({ page }
   await editor.fill('Draft one');
   await expect(page.getByText('Stale', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Recompile' }).click();
-  await expect(page.getByText('Compiling · Stale')).toBeVisible();
+  await expect(page.getByText(/Compiling · .*Stale/)).toBeVisible();
   await expect(frame).toHaveAttribute('data-old-pdf', 'yes');
   await expect
     .poll(() =>
       page.evaluate(() => (window as unknown as { compileRequests: string[] }).compileRequests),
     )
     .toEqual(['Draft one']);
-  await expect(page.getByText('Compiling · Stale')).toHaveCount(0);
+  await expect(page.getByText(/Compiling · .*Stale/)).toHaveCount(0);
   await expect(frame).not.toHaveAttribute('data-old-pdf', 'yes');
   await page.getByLabel('Live', { exact: true }).check();
   await editor.click();

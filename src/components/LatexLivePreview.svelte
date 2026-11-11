@@ -237,7 +237,9 @@
     } catch (reason) {
       console.error('Could not read LaTeX compile status:', reason);
     }
-    if (!disposed && !bytes && stale) void recompile();
+    // The initially loaded PDF has no SyncTeX handle. Recompile once when the
+    // editor opens so PDF-to-source synchronization works from the first click.
+    if (!disposed && !activeSyncId && !pendingSyncId && (bytes || stale)) void recompile();
   }
   onMount(() => {
     void startInitialCompile();
