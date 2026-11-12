@@ -1,23 +1,48 @@
-Papyri is a Markdown, PDF, Typst, and LaTeX viewer and source editor for Linux, macOS, Windows, and the browser with offline math and diagrams. The window uses a one-line shell: the explorer opens below the Papyri logo, open documents sit in the top line beside Find, Split, Copy raw, Settings, and Panel controls, and the full-height right panel holds the document outline, per-document notes, and separate embedded browser tabs for **ChatGPT**, **Wikipedia**, and **Gemini**. Toggle the panel with `Ctrl Shift B`; drag either side panel up to 95% of the window width.
+<p align="center">
+  <img src="docs/images/icon.png" width="96" height="96" alt="Papyri icon">
+</p>
 
-Each website tab keeps the site's own appearance and behaves like a normal browser tab, with its own history and page zoom: the address bar, history controls, reload, page zoom, and open-in-new-window button are available in the panel, right-clicking a page provides the usual navigation, link, image, edit, and zoom actions, and sign-in popups open in their own browser windows with a toolbar instead of silently disappearing. All site tabs and their popups share the same app-private browser profile: cookies are stored in an explicit SQLite database, and local storage, IndexedDB, and cache also persist across restarts, so completing an OAuth flow carries back to the panel and the session remains available later. Selecting Markdown text and right-clicking opens an action pad that previews the selected content as rendered Markdown; its **Source** control swaps the preview to the raw Markdown while hovered or pinned; right-clicking without a selection opens a context menu for the document, tab, file, or application instead of WebKit's navigation menu. Its actions copy the enclosing Markdown block (**Copy source**, the primary action), copy the rendered text (**Copy selected text**), or copy it as a Markdown quote (**Copy as quote**); `Ctrl C` copies the source directly and `Ctrl Shift C` copies the rendered selection. Selections containing mathematics use KaTeX's TeX source (`$…$` or `$$…$$`) instead of its rendered markup. The remaining actions send the selection to the ChatGPT or Gemini composer as a quote with the cursor ready for more typing, or search for it on Wikipedia. Notes are stored locally per document. **Copy raw** copies the active Markdown, Typst, or LaTeX source and is disabled for PDFs. The bottom bar shows the folder refresh state, document statistics, Fit to width, and document zoom; while text is selected, the statistics switch to the selected word and character counts.
+# Papyri
 
-Control a running window from the terminal with `papyri ctl`; see [docs/control.md](docs/control.md) for commands, events, editor integrations, screenshots, DOM inspection and interaction, native input, window capture, clipboard access, and waits. Press `Ctrl Shift D` for decoration-less reading, which hides the surrounding chrome while keeping the command palette and keyboard shortcuts, or start directly with `papyri --decorationless notes.md`. Run `papyri --help` for command help and `papyri completions <shell>` for shell completions. When launched without a file or folder argument, Papyri reopens the most recent project and its last document; an explicit file-manager or CLI target still takes precedence.
+Papyri is a local-first viewer and source editor for Markdown, PDF, Typst, and LaTeX. It renders mathematics and diagrams offline, keeps documents editable, and runs natively on Linux, macOS, and Windows.
 
-When launched from a terminal, Papyri detaches and appends output to its log file. Use `--log terminal` to stay attached, `--log PATH` to choose a file, or `--log cmd:COMMAND` to pipe output through a command such as `wl-copy`.
+![Papyri showing Markdown with rendered mathematics, the file explorer, and the document outline](docs/images/app.png)
 
-Use **Edit source** to edit a local Markdown, Typst, or LaTeX document. The editor provides syntax highlighting, snippets through completion (`Ctrl Space`), and `Ctrl S` to save. Markdown, Typst, and LaTeX code fences in completion details are highlighted when their language is specified. Long completion details scroll independently; use the mouse wheel over them or `Alt Page Up` and `Alt Page Down` to move through them. Use **Show preview** to return to the rendered document. Unsaved drafts remain available while switching tabs or preview mode; closing a modified tab or changing folders asks before discarding them. **Reload source** reloads from disk and asks before discarding edits. Saving checks for external changes and reports a conflict instead of silently replacing a detected newer version.
+- Preview Markdown, PDF, Typst, and LaTeX with math, diagrams, citations, and outlines.
+- Edit and save sources with draft recovery, conflict detection, and language-server completions.
+- Build bibliographies with DOI, arXiv, and PubMed lookup.
+- Read and research beside the document with embedded browser tabs on desktop.
+- Drive a running window from editors and scripts with `papyri ctl`.
 
-The conflict check cannot prevent another program from writing between the check and the save. Keep a backup if multiple programs may write the same document concurrently. On Unix, native saves also refuse files with multiple hard links or ownership that cannot be preserved; on Linux they also refuse extended attributes or ACLs.
+## Install
 
-The desktop editor connects to `marksman`, `tinymist`, and `texlab` language servers for diagnostics, completion, and hover features. Typst source editing also opens Tinymist's live preview beside the editor, including unsaved changes; click the preview to jump to source and select source text to reveal it in the preview. The divider is draggable and keyboard-accessible. Tinymist's live preview and PDF compilation both run with your user permissions; see [security](docs/security.md). Settings → Compilers lets you select your own executables or download and update those servers and Typst from their official GitHub releases. Downloaded binaries are verified against the release's SHA-256 digest and stored in Papyri's data directory; existing system tools are not replaced. Empty paths use `PATH`. LaTeX can use an existing TeX distribution, including one managed by Nix, or an optional private TeX Live installation. The TeX Live installer selects the basic, LaTeX, recommended font, LuaTeX, and XeTeX collections, can require several gigabytes, and updates through its own `tlmgr`. New yearly TeX Live releases may require a fresh managed installation. Syntax highlighting and snippets also work without a server. In the web build, source editing is available for folders granted through the File System Access API; local language servers require the desktop app. Imported file snapshots remain read-only.
+Download the latest [release](https://github.com/pseudofractal/papyri/releases/latest). Releases include an AppImage and `.deb` for Linux, a `.dmg` for Intel and Apple Silicon Macs, and an NSIS installer for Windows.
 
-The managed TeX Live installer uses Perl on Linux and macOS and the official Windows installer on Windows, together with TeX Live's standard download and SHA-512 verification. On Linux and macOS, Papyri's Nix package supplies these utilities; other installations need them on `PATH`. A failed installation is left in the application data directory with its log so it can be inspected or removed.
+On Linux, Nix users can install or run Papyri directly:
 
-Completion symbols use [Codicons](https://github.com/microsoft/vscode-codicons) by Microsoft and contributors, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (icon artwork) and the MIT license (code). License texts are included with the application in `vendor-licenses/`.
+```sh
+nix profile install github:pseudofractal/papyri
+nix run github:pseudofractal/papyri -- path/to/document.md
+```
 
-## Platform support
+## Build
 
-Native builds target Linux, macOS 11+, and Windows 10+. The core document, preview, editor, bibliography, compilation, and language-server features are shared across all three. The embedded website panel, coordinate input injection, window enumeration/capture, app/webview screenshots, clipboard images, and managed tools are implemented on all three desktop platforms. macOS asks for Accessibility and Screen Recording permission the first time; Windows input cannot target elevated windows. LaTeX and Typst compilation runs with the current user's permissions on every platform. The web build is viewer/editor-only and cannot run local compilers or native binaries. See [Platform support](docs/platform.md) for the capability contract and build instructions, and [release notes](docs/release-notes.md) for install formats and known limitations. Android is not built yet, but the native shell now isolates desktop-only subsystems behind that contract and ships generated Android icons.
+```sh
+nix develop
+npm ci
+npm run tauri dev
+```
 
-For declarative settings, Home Manager, NixOS, and standalone Nix configuration, see [Nix and configuration](docs/nix.md).
+The Nix development shell works on Linux. macOS and Windows builds need the platform toolchains described in [platform support](docs/platform.md).
+
+## Documentation
+
+- [Document support](docs/documents.md): formats, compilation, fonts, packages, and browser-mode limits
+- [Platform support](docs/platform.md): capabilities, build instructions, and the Android boundary
+- [Control API](docs/control.md): `papyri ctl`, editor integration, screenshots, and native input
+- [Security](docs/security.md): trust model and isolation boundaries
+- [Release notes](docs/release-notes.md): install formats and known limitations
+
+## License
+
+[MIT](LICENSE)
