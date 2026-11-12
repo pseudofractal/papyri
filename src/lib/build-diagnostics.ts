@@ -206,22 +206,7 @@ export function parseBuildFailure(
     .replace(/^[A-Za-z]+\s+compilation failed:\s*/i, '');
   body = body.replace(/\n?\s*(?:Showing source\.|Last preview retained\.)\s*$/i, '').trim();
 
-  const environment: string[] = [];
-  const logLines: string[] = [];
-  for (const line of body.split('\n')) {
-    const trimmed = line.trim();
-    if (/^Compilation requires Linux user namespaces\./i.test(trimmed)) {
-      environment.push(trimmed);
-      continue;
-    }
-    if (/^Imports must stay in the document folder;/i.test(trimmed)) {
-      environment.push(trimmed);
-      continue;
-    }
-    logLines.push(line);
-  }
-
-  const log = logLines.join('\n').trim().slice(0, MAX_LOG_CHARS);
+  const log = body.trim().slice(0, MAX_LOG_CHARS);
   const diagnostics =
     language === 'typst' ? typstDiagnostics(log, path) : latexDiagnostics(log, path);
   const summary =
@@ -233,7 +218,7 @@ export function parseBuildFailure(
     compiler,
     language,
     diagnostics,
-    environment,
+    environment: [],
     log,
     summary,
   };

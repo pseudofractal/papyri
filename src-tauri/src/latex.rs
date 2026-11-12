@@ -1,9 +1,7 @@
-//! Discover user-installed LaTeX engines and compile documents in an isolated sandbox.
+//! Discover user-installed LaTeX engines and compile documents.
 use crate::{
   executables::{find_in_path, is_executable as executable},
-  files,
-  platform::sandbox,
-  typst,
+  files, typst,
 };
 use serde::Serialize;
 use std::{
@@ -12,7 +10,7 @@ use std::{
   fs,
   io::Read,
   path::{Path, PathBuf},
-  process::Stdio,
+  process::{Command, Stdio},
   sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
     Arc, LazyLock, Mutex, TryLockError,
@@ -257,7 +255,7 @@ fn read_output(directory: &Path, name: &str, limit: u64) -> Result<Vec<u8>, Stri
 struct OutputDirectory(PathBuf);
 impl OutputDirectory {
   fn create() -> Result<Self, String> {
-    Ok(Self(sandbox::temporary_directory("papyri-latex")?))
+    Ok(Self(files::temporary_directory("papyri-latex")?))
   }
 }
 impl Drop for OutputDirectory {
@@ -308,26 +306,19 @@ fn run_bibtex(
   job_name: &str,
   cancel: &AtomicBool,
 ) -> Result<(), String> {
-  let mut command = sandbox::compiler_command(project, output, binary, "bibtex");
   let search_path = tex_search_path(project, output);
-  if cfg!(target_os = "linux") {
-    sandbox::set_env(&mut command, "BIBINPUTS", "/project//:");
-    sandbox::set_env(&mut command, "BSTINPUTS", "/project//:");
-    sandbox::set_working_directory_at(&mut command, output, Path::new("/output"));
-  } else {
-    command
-      .env("BIBINPUTS", &search_path)
-      .env("BSTINPUTS", &search_path)
-      .current_dir(output);
-  }
-  sandbox::configure_program(&mut command, binary, "bibtex");
-  command.arg(job_name);
+  let mut command = Command::new(binary);
+  command
+    .current_dir(output)
+    .env("BIBINPUTS", &search_path)
+    .env("BSTINPUTS", &search_path)
+    .arg(job_name);
   let mut child = command
     .stdin(Stdio::null())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
     .spawn()
-    .map_err(|error| format!("Cannot start sandboxed BibTeX: {error}"))?;
+    .map_err(|error| format!("Cannot start BibTeX: {error}"))?;
   let stdout = child
     .stdout
     .take()
@@ -461,21 +452,10 @@ fn compile_internal(
     overlay_paths.push((temporary, relative.to_path_buf()));
   }
   let entry_original = project.join(filename);
-  let entry_actual = if draft_path.is_some() && !cfg!(target_os = "linux") {
-    draft_path.clone().unwrap()
-  } else {
-    sandbox::project_path(project).join(filename)
-  };
+  let entry_actual = draft_path.clone().unwrap_or_else(|| project.join(filename));
   let overlay_map: Vec<(PathBuf, PathBuf)> = overlay_paths
     .iter()
-    .map(|(_, relative)| {
-      let actual = if cfg!(target_os = "linux") {
-        sandbox::project_path(project).join(relative)
-      } else {
-        output.0.join(relative)
-      };
-      (actual, project.join(relative))
-    })
+    .map(|(_, relative)| (output.0.join(relative), project.join(relative)))
     .collect();
   let mut bibliography = Vec::new();
   let mut needs_bibtex = false;
@@ -485,24 +465,9 @@ fn compile_internal(
     if cancel.load(Ordering::Relaxed) {
       return Err("LaTeX compilation cancelled.".into());
     }
-    let mut command = sandbox::compiler_command(project, &output.0, &compiler, &engine);
+    let mut command = Command::new(&compiler);
     let previewing = draft_path.is_some() || !overlay_paths.is_empty();
-    if cfg!(target_os = "linux") {
-      if let Some(draft_path) = &draft_path {
-        sandbox::add_read_only(
-          &mut command,
-          draft_path,
-          &sandbox::project_path(project).join(filename),
-        );
-      }
-      for (draft, relative) in &overlay_paths {
-        sandbox::add_read_only(
-          &mut command,
-          draft,
-          &sandbox::project_path(project).join(relative),
-        );
-      }
-    } else if previewing {
+    if previewing {
       for (draft, relative) in &overlay_paths {
         let destination = output.0.join(relative);
         if let Some(parent) = destination.parent() {
@@ -516,26 +481,15 @@ fn compile_internal(
         .env("BIBINPUTS", &search_path)
         .env("BSTINPUTS", &search_path);
     }
-    if engine == "xelatex" {
-      let driver = compiler.with_file_name("xdvipdfmx");
-      if executable(&driver) {
-        sandbox::add_read_only(&mut command, &driver, Path::new("/compiler/xdvipdfmx"));
-      }
-    }
-    sandbox::set_working_directory(&mut command, project);
-    sandbox::configure_program(&mut command, &compiler, &engine);
+    command.current_dir(project);
     command.args([
-      "-no-shell-escape",
       "-interaction=nonstopmode",
       "-halt-on-error",
       "-file-line-error",
       "-recorder",
       "-synctex=1",
     ]);
-    command.arg(format!(
-      "-output-directory={}",
-      sandbox::output_path(&output.0).display()
-    ));
+    command.arg(format!("-output-directory={}", output.0.display()));
     command.arg(format!("-jobname={job_name}"));
     command.arg(&entry_actual);
     let mut child = command
@@ -543,7 +497,7 @@ fn compile_internal(
       .stdout(Stdio::piped())
       .stderr(Stdio::piped())
       .spawn()
-      .map_err(|error| format!("Cannot start sandboxed LaTeX: {error}"))?;
+      .map_err(|error| format!("Cannot start LaTeX: {error}"))?;
     let stdout = child.stdout.take().ok_or("LaTeX output pipe unavailable")?;
     let stderr = child
       .stderr
@@ -645,7 +599,7 @@ fn compile_internal(
     if let Some(input) = line.strip_prefix("INPUT ") {
       let input = Path::new(input);
       let relative = if input.is_absolute() {
-        input.strip_prefix("/project").ok()
+        input.strip_prefix(project).ok()
       } else {
         Some(input)
       };
@@ -720,19 +674,9 @@ pub fn sync_query(
     .ok_or("The preview synchronization data has expired. Recompile the document.")?;
   let path = std::env::var_os("PATH").unwrap_or_default();
   let executable = bibliography_tool(&artifact.compiler, &path, "synctex")?;
-  let pdf = format!(
-    "{}/{}.pdf",
-    sandbox::output_path(&artifact.output.0).display(),
-    artifact.job_name
-  );
-  let mut command = sandbox::compiler_command(
-    &artifact.project,
-    &artifact.output.0,
-    &executable,
-    "synctex",
-  );
-  sandbox::set_working_directory(&mut command, &artifact.project);
-  sandbox::configure_program(&mut command, &executable, "synctex");
+  let pdf = format!("{}/{}.pdf", artifact.output.0.display(), artifact.job_name);
+  let mut command = Command::new(&executable);
+  command.current_dir(&artifact.project);
   if let (Some(source), Some(line)) = (source, line) {
     let canonical = crate::platform::strip_verbatim(
       &fs::canonicalize(&source).map_err(|error| format!("{source}: {error}"))?,
@@ -752,7 +696,7 @@ pub fn sync_query(
     {
       actual.clone()
     } else {
-      sandbox::project_path(&artifact.project).join(relative)
+      artifact.project.join(relative)
     };
     command
       .arg("view")
@@ -815,17 +759,13 @@ pub fn sync_query(
       } else {
         artifact.project.join(input)
       };
-      let resolved = crate::platform::strip_verbatim(
-        &fs::canonicalize(&candidate)
-          .or_else(|_| {
-            let path = match input.strip_prefix("/project") {
-              Ok(relative) => artifact.project.join(relative),
-              Err(_) => artifact.project.join(input),
-            };
-            fs::canonicalize(path)
-          })
-          .map_err(|error| format!("Cannot resolve SyncTeX source: {error}"))?,
-      );
+      let resolved =
+        crate::platform::strip_verbatim(&fs::canonicalize(&candidate).map_err(|error| {
+          format!(
+            "Cannot resolve SyncTeX source {}: {error}",
+            candidate.display()
+          )
+        })?);
       if !resolved.starts_with(&artifact.project) {
         return Err("SyncTeX source is outside the document folder".into());
       }
@@ -860,19 +800,6 @@ mod tests {
     let output = OutputDirectory::create().unwrap();
     std::os::unix::fs::symlink("/etc/passwd", output.0.join("papyri.pdf")).unwrap();
     assert!(read_output(&output.0, "papyri.pdf", files::PDF_LIMIT).is_err());
-  }
-
-  #[cfg(target_os = "linux")]
-  #[test]
-  fn keeps_distribution_executables_at_their_original_path_in_the_sandbox() {
-    let distribution = OutputDirectory::create().unwrap();
-    fs::create_dir(distribution.0.join("texmf-dist")).unwrap();
-    let executable = distribution.0.join("bin/x86_64-linux/lualatex");
-    assert_eq!(sandbox::executable(&executable, "lualatex"), executable);
-    assert_eq!(
-      sandbox::executable(Path::new("/opt/lualatex"), "lualatex"),
-      Path::new("/compiler/lualatex")
-    );
   }
 
   #[test]
@@ -930,8 +857,8 @@ mod tests {
 
   #[cfg(unix)]
   #[test]
-  #[ignore = "Requires user namespaces and PAPYRI_TEST_TEX_BIN containing the three engines"]
-  fn sandboxed_engines_compile_and_report_errors() {
+  #[ignore = "Requires PAPYRI_TEST_TEX_BIN containing the three engines"]
+  fn engines_compile_and_report_errors() {
     let binaries = PathBuf::from(std::env::var_os("PAPYRI_TEST_TEX_BIN").unwrap());
     let project = OutputDirectory::create().unwrap();
     let document = project.0.join("paper with spaces.tex");
@@ -1087,17 +1014,6 @@ mod tests {
       .contains("BibTeX failed"));
     fs::remove_file(&bibliography).unwrap();
     fs::remove_file(&style).unwrap();
-    let private = OutputDirectory::create().unwrap();
-    fs::write(private.0.join("secret.tex"), "private content").unwrap();
-    std::os::unix::fs::symlink(private.0.join("secret.tex"), project.0.join("escape.tex")).unwrap();
-    fs::write(
-      &document,
-      "\\documentclass{article}\n\\begin{document}\n\\input{escape}\n\\end{document}",
-    )
-    .unwrap();
-    let binary = binaries.join("lualatex").to_string_lossy().into_owned();
-    assert!(compile(name.clone(), "lualatex".into(), binary).is_err());
-    fs::remove_file(project.0.join("escape.tex")).unwrap();
     fs::write(
       &document,
       "\\documentclass{article}\n\\begin{document}Test\\end{document}\n",

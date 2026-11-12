@@ -17,15 +17,14 @@ Papyri keeps the document, preview, editor, bibliography, and project code indep
 | `managedTools`                        | Language servers and Typst can be downloaded from upstream releases. |
 | `managedTexlive`                      | The private TeX Live installer is supported on all desktops.         |
 | `latex` / `typst`                     | Native compilation is available.                                     |
-| `sandboxedCompilation`                | Compilation has an OS sandbox.                                       |
 | `clipboardImages`                     | Image clipboard read/write is available.                             |
 
 The frontend reads the injected object in `src/lib/platform.ts`. It hides embedded-browser controls and disables managed downloads where the capability is false.
 
 ## Platform modules
 
+- Compilation runs the selected LaTeX/Typst executables directly with the current user permissions on every platform. There is no compiler sandbox; the app still limits elapsed time and output size.
 - `platform/control.rs`: Unix stream socket on Linux/macOS; loopback TCP endpoint with a per-process token on Windows.
-- `platform/sandbox.rs`: bubblewrap plus `prlimit` on Linux, `sandbox-exec` on macOS, direct execution on Windows. LaTeX and Typst share this interface, so adding another OS only requires a compiler-command implementation.
 - `platform/clipboard.rs`: `wl-copy`/`xclip` on Linux, `arboard` on macOS and Windows.
 - `platform/window.rs`: `xcap` window enumeration and capture on macOS/Windows, with native focus calls.
 - `screenshot.rs`: grim/ImageMagick on Linux, `screencapture` on macOS, PowerShell/System.Drawing on Windows. App and browser capture use native Linux snapshots or a window-region capture on macOS/Windows.

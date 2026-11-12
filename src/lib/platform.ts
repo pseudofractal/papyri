@@ -21,7 +21,6 @@ export interface PlatformCapabilities {
   managedTexlive: boolean;
   latex: boolean;
   typst: boolean;
-  sandboxedCompilation: boolean;
   clipboardImages: boolean;
 }
 
@@ -40,7 +39,6 @@ const defaults: PlatformCapabilities = {
   managedTexlive: false,
   latex: false,
   typst: false,
-  sandboxedCompilation: false,
   clipboardImages: false,
 };
 
@@ -59,7 +57,6 @@ const nativeFallback: PlatformCapabilities = {
   managedTexlive: true,
   latex: true,
   typst: true,
-  sandboxedCompilation: true,
   clipboardImages: true,
 };
 

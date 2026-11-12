@@ -28,4 +28,4 @@ To test external-content permission, add a remote HTTPS image to a temporary cop
 
 Hover the external link in [Markdown and math](./markdown.md), or an external link in [the PDF](./sample.pdf), to see its destination and preview card. Enable network resources to request a preview; some sites block embedding.
 
-The app remains read-only: editing these files requires an external editor. The compiler sandboxes and browser-mode limitations are described in [document support](../../docs/documents.md).
+The app remains read-only: editing these files requires an external editor. Compiler behavior and browser-mode limitations are described in [document support](../../docs/documents.md).

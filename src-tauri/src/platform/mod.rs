@@ -14,7 +14,6 @@ use std::{
 
 pub mod clipboard;
 pub mod control;
-pub mod sandbox;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub mod window;
 
@@ -43,22 +42,16 @@ pub struct Capabilities {
   pub managed_texlive: bool,
   pub latex: bool,
   pub typst: bool,
-  pub sandboxed_compilation: bool,
   pub clipboard_images: bool,
 }
 
 pub fn capabilities() -> Capabilities {
-  let linux = cfg!(target_os = "linux");
-  let macos = cfg!(target_os = "macos");
   let mobile = cfg!(any(target_os = "android", target_os = "ios"));
   let desktop = !mobile;
   Capabilities {
     os: env::consts::OS,
     desktop,
     mobile,
-    // The embedded web panel is implemented with GTK child webviews. Other
-    // desktop shells use the system browser until a native child-webview
-    // implementation is added.
     browser_panel: desktop,
     input_injection: desktop,
     screen_capture: desktop,
@@ -70,7 +63,6 @@ pub fn capabilities() -> Capabilities {
     managed_texlive: desktop,
     latex: desktop,
     typst: desktop,
-    sandboxed_compilation: linux || (macos && Path::new("/usr/bin/sandbox-exec").is_file()),
     clipboard_images: desktop,
   }
 }
@@ -284,7 +276,6 @@ mod tests {
       "managedTexlive",
       "latex",
       "typst",
-      "sandboxedCompilation",
       "clipboardImages",
     ] {
       assert!(value.get(key).is_some(), "missing capability: {key}");

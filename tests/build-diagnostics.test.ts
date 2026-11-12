@@ -16,7 +16,7 @@ Transcript written on broken.log.
 
 const typstError = `Compilation failed. Typst compilation failed (exit status: 1): <stdin>:3:4: error: expected pattern
 
-Compilation requires Linux user namespaces. Imports must stay in the document folder; packages must already be cached. Showing source.`;
+Showing source.`;
 
 describe('build diagnostics', () => {
   it('extracts the LaTeX file-line diagnostic and drops the fatal summary', () => {
@@ -37,7 +37,7 @@ describe('build diagnostics', () => {
     expect(failure.environment).toEqual([]);
   });
 
-  it('extracts Typst locations and separates sandbox notes from the log', () => {
+  it('extracts Typst locations and drops wrapper notes from the log', () => {
     const failure = parseBuildFailure(typstError, 'typst', '/work/broken.typ');
     expect(failure.compiler).toBe('typst');
     expect(failure.diagnostics).toEqual([
@@ -51,8 +51,7 @@ describe('build diagnostics', () => {
     ]);
     expect(failure.summary).toBe('expected pattern');
     expect(failure.log).toBe('<stdin>:3:4: error: expected pattern');
-    expect(failure.environment).toHaveLength(1);
-    expect(failure.environment[0]).toContain('Linux user namespaces');
+    expect(failure.environment).toEqual([]);
   });
 
   it('falls back to the caret block when Typst omits the inline location', () => {

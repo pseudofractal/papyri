@@ -24,13 +24,13 @@ The Linux build uses GTK/WebKitGTK for the embedded browser panel and X11 for co
 
 Download the `.dmg` for your Mac (`x86_64` for Intel, `aarch64` for Apple Silicon), open it, and drag Papyri into Applications. The builds are unsigned, so the first launch may require right-clicking the app and choosing **Open**. macOS 11 or newer is required.
 
-The macOS build compiles LaTeX and Typst with the compilers found on `PATH` or selected in Settings. Compilation uses `sandbox-exec` to deny network access and writes outside the temporary output directory. Managed language-server, Typst, and TeX Live downloads are available. The embedded browser panel, coordinate input, screen/window capture, and `papyri ctl` are available. macOS asks for Accessibility permission before synthetic input and Screen Recording permission before screen/window capture.
+The macOS build compiles LaTeX and Typst with the compilers found on `PATH` or selected in Settings. Compilation runs with the current user permissions. Managed language-server, Typst, and TeX Live downloads are available. The embedded browser panel, coordinate input, screen/window capture, and `papyri ctl` are available. macOS asks for Accessibility permission before synthetic input and Screen Recording permission before screen/window capture.
 
 ## Windows
 
 Download and run the NSIS installer. Windows 10 or newer with the WebView2 runtime is required; the installer downloads WebView2 if it is missing.
 
-The Windows build compiles LaTeX and Typst with the compilers found on `PATH` or selected in Settings. Compilation runs with your user permissions because Windows has no bubblewrap equivalent. Managed language-server, Typst, and TeX Live downloads are available. The embedded browser panel, coordinate input, screen/window capture, and `papyri ctl` are available. Windows input cannot target higher-integrity/elevated windows, and compilation runs with the current user permissions.
+The Windows build compiles LaTeX and Typst with the compilers found on `PATH` or selected in Settings. Compilation runs with the current user permissions. Managed language-server, Typst, and TeX Live downloads are available. The embedded browser panel, coordinate input, screen/window capture, and `papyri ctl` are available. Windows input cannot target higher-integrity/elevated windows. LaTeX and Typst run with the current user permissions.
 
 ## Web build
 

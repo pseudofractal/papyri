@@ -32,6 +32,13 @@ pub struct Document {
 fn error(path: &str, error: impl std::fmt::Display) -> String {
   format!("{path}: {error}")
 }
+
+/// Create a private temporary directory for compiler output.
+pub fn temporary_directory(prefix: &str) -> Result<PathBuf, String> {
+  let path = std::env::temp_dir().join(crate::platform::unique_name(prefix));
+  crate::platform::create_private_dir(&path).map_err(|error| error.to_string())?;
+  Ok(path)
+}
 pub fn bounded_read(path: &str, limit: u64) -> Result<(Vec<u8>, fs::Metadata), String> {
   if !fs::metadata(path).map_err(|e| error(path, e))?.is_file() {
     return Err(error(path, "Not a regular file"));
