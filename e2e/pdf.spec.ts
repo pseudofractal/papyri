@@ -310,7 +310,7 @@ test('reports invalid PDFs and browser Typst limitations without executing sourc
     mimeType: 'text/plain',
     buffer: await readFile('e2e/fixtures/paged.typ'),
   });
-  await expect(page.getByRole('alert')).toContainText('requires the Linux app');
+  await expect(page.getByRole('alert')).toContainText('requires the desktop app');
   await expect(page.locator('.tab-select')).toHaveCount(1);
   await expect(page.frameLocator('iframe').locator('pre code')).toContainText('#set');
   await expect(page.frameLocator('iframe').locator('pre code .hljs-keyword').first()).toBeVisible();
@@ -319,7 +319,7 @@ test('reports invalid PDFs and browser Typst limitations without executing sourc
     mimeType: 'text/plain',
     buffer: Buffer.from('\\section{Hello}\n<script>parent.bad=true</script>'),
   });
-  await expect(page.getByRole('alert')).toContainText('requires the Linux app');
+  await expect(page.getByRole('alert')).toContainText('requires the desktop app');
   const latex = page.frameLocator('iframe').locator('pre code');
   await expect(latex).toContainText('\\section{Hello}');
   await expect(latex.locator('span').first()).toBeVisible();

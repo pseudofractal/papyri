@@ -9,6 +9,7 @@ import {
   isLatex,
 } from './paths';
 import type { Source, Entry, FileData, Preferences } from './types';
+import { platform } from './platform';
 import { invokeHost } from './native';
 import { MAX_DOCUMENT_BYTES, MAX_PDF_BYTES } from './limits';
 const MAX_ASSET_BYTES = 16 * 1024 * 1024;
@@ -30,7 +31,7 @@ async function readBrowserDocument(file: File): Promise<FileData> {
     text: decode(new Uint8Array(await file.arrayBuffer())),
     stamp: `${file.lastModified}:${file.size}`,
     ...(isLatex(file.name) || isTypst(file.name)
-      ? { compilationError: 'Compilation requires the Linux app.' }
+      ? { compilationError: 'Compilation requires the desktop app.' }
       : {}),
   };
 }
@@ -74,6 +75,8 @@ export function importedSource(files: File[]): Source {
   };
 }
 export const native = '__TAURI_INTERNALS__' in window;
+/** True only for the desktop shell; mobile builds use their own source. */
+export const desktop = native && platform.desktop;
 export async function desktopSource(getPreferences: () => Preferences): Promise<{
   source: Source;
   initial: { path: string; directory: boolean; explicit: boolean };

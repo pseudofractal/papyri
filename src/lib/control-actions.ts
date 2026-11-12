@@ -244,7 +244,7 @@ export function createControlActions(context: ControlContext): ControlActions {
   };
   const requireBrowser = () => {
     const state = context.browser.state();
-    if (!state) throw new Error('The web browser requires the Linux app.');
+    if (!state) throw new Error('The embedded web browser is unavailable in this build.');
     return state;
   };
   return {

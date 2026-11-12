@@ -1,4 +1,4 @@
-import { dirname, isTypst, normalize } from './paths';
+import { dirname, isAbsolutePath, isTypst, normalize } from './paths';
 
 export interface PreviewLocation {
   path: string;
@@ -12,7 +12,7 @@ export function previewLocation(value: unknown, mainFile: string): PreviewLocati
   const jump = value as { filepath?: unknown; start?: unknown };
   if (
     typeof jump.filepath !== 'string' ||
-    !jump.filepath.startsWith('/') ||
+    !isAbsolutePath(jump.filepath) ||
     jump.filepath.includes('\0')
   )
     return null;

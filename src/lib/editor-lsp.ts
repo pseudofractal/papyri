@@ -15,6 +15,7 @@ import type { CompletionSource } from '@codemirror/autocomplete';
 import { completionSource } from './completion-details';
 import DOMPurify from 'dompurify';
 import { invokeHost } from './native';
+import { isAbsolutePath } from './paths';
 
 export type EditorLanguage = 'markdown' | 'typst' | 'latex';
 export interface LspDiagnostic {
@@ -31,8 +32,9 @@ type ServerEvent = { type: 'message' | 'closed'; value: string };
 
 /** Convert an absolute filesystem path into an encoded file URI. */
 export function fileUri(path: string): string {
-  if (!path.startsWith('/')) throw new Error('Language servers require an absolute file path.');
-  return `file://${path.split('/').map(encodeURIComponent).join('/')}`;
+  if (!isAbsolutePath(path)) throw new Error('Language servers require an absolute file path.');
+  const windowsDrive = /^[A-Za-z]:\//.test(path);
+  return `file://${windowsDrive ? '/' : ''}${path.split('/').map(encodeURIComponent).join('/')}`;
 }
 
 /** Parse one LSP JSON-RPC message when it publishes diagnostics. */
@@ -56,7 +58,8 @@ export function parseDiagnosticsMessage(
       };
     };
     if (parsed.method !== 'textDocument/publishDiagnostics' || !parsed.params?.uri) return null;
-    const path = decodeURIComponent(new URL(parsed.params.uri).pathname);
+    let path = decodeURIComponent(new URL(parsed.params.uri).pathname);
+    if (/^\/[A-Za-z]:\//.test(path)) path = path.slice(1);
     const diagnostics: LspDiagnostic[] = [];
     for (const item of (parsed.params.diagnostics ?? []).slice(0, 2000)) {
       const severity = item.severity;

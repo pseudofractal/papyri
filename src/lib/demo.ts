@@ -14,8 +14,8 @@ const welcome = `# Papyri
 | Diagrams | Mermaid, Graphviz, Vega & Vega-Lite |
 | Code | Offline syntax highlighting |
 | PDF documents | Text selection, search, links, page navigation |
-| Typst documents | Local compilation in the Linux app |
-| LaTeX documents | Local compilation with an installed engine in the Linux app |
+| Typst documents | Local compilation in the desktop app |
+| LaTeX documents | Local compilation with an installed engine in the desktop app |
 
 ### Mathematics
 

@@ -179,8 +179,10 @@
         releaseSync(id);
         return;
       }
+      releaseSync(activeSyncId);
       releaseSync(pendingSyncId);
-      pendingSyncId = id;
+      activeSyncId = id;
+      pendingSyncId = '';
       bytes = response.slice(32);
       updating = true;
       compiledText = snapshot;

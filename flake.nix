@@ -71,8 +71,6 @@
             nativeBuildInputs = with pkgs; [ pkg-config cmake wrapGAppsHook3 rustfmt desktop-file-utils ];
             buildInputs = nativeLibraries;
             PAPYRI_TYPST_BINARY = "${pkgs.typst}/bin/typst";
-            PAPYRI_BWRAP_BINARY = "${pkgs.bubblewrap}/bin/bwrap";
-            PAPYRI_PRLIMIT_BINARY = "${pkgs.util-linux}/bin/prlimit";
             postPatch = ''
               substituteInPlace tauri.conf.json --replace-fail '"../dist"' '"${web}/dist"'
             '';
@@ -145,10 +143,8 @@
       apps = eachSystem (system: { default = { type = "app"; meta.description = "Open Markdown, PDF, Typst, LaTeX, or a directory"; program = "${self.packages.${system}.default}/bin/papyri"; }; });
       checks = eachSystem (system: let p = forSystem system; in { inherit (p) web quality packaging; linux = p.desktop; });
       devShells = eachSystem (system: let p = forSystem system; in { default = p.pkgs.mkShell {
-        packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config cmake chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst tinymist marksman texlab texliveMedium bubblewrap util-linux xdotool p.tauriDriver ];
+        packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config cmake chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst tinymist marksman texlab texliveMedium xdotool p.tauriDriver ];
         PAPYRI_TYPST_BINARY = "${p.pkgs.typst}/bin/typst";
-        PAPYRI_BWRAP_BINARY = "${p.pkgs.bubblewrap}/bin/bwrap";
-        PAPYRI_PRLIMIT_BINARY = "${p.pkgs.util-linux}/bin/prlimit";
         buildInputs = p.nativeLibraries;
         LD_LIBRARY_PATH = p.pkgs.lib.makeLibraryPath p.nativeLibraries;
         GIO_EXTRA_MODULES = "${p.pkgs.glib-networking}/lib/gio/modules";

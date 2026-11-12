@@ -14,6 +14,10 @@ pub fn initial_path() -> Result<files::InitialPath, String> {
   files::initial_path()
 }
 #[tauri::command]
+pub fn platform_capabilities() -> crate::platform::Capabilities {
+  crate::platform::capabilities()
+}
+#[tauri::command]
 pub fn declarative_preferences(app: tauri::AppHandle) -> Result<Option<serde_json::Value>, String> {
   use tauri::Manager;
   let user = app
@@ -21,9 +25,13 @@ pub fn declarative_preferences(app: tauri::AppHandle) -> Result<Option<serde_jso
     .config_dir()
     .map_err(|error| error.to_string())?
     .join("papyri/config.json");
+  #[cfg_attr(not(unix), allow(unused_mut))]
   let mut paths = vec![user];
-  let system_dirs = std::env::var_os("XDG_CONFIG_DIRS").unwrap_or_else(|| "/etc/xdg".into());
-  paths.extend(std::env::split_paths(&system_dirs).map(|path| path.join("papyri/config.json")));
+  #[cfg(unix)]
+  {
+    let system_dirs = std::env::var_os("XDG_CONFIG_DIRS").unwrap_or_else(|| "/etc/xdg".into());
+    paths.extend(std::env::split_paths(&system_dirs).map(|path| path.join("papyri/config.json")));
+  }
   for path in paths {
     match std::fs::read_to_string(&path) {
       Ok(contents) => {
@@ -227,7 +235,7 @@ pub async fn pick_path(app: tauri::AppHandle, directory: bool) -> Result<Option<
       .map(|path| {
         path
           .into_path()
-          .map(|p| p.to_string_lossy().into_owned())
+          .map(|p| crate::platform::path_string(&p))
           .map_err(|e| e.to_string())
       })
       .transpose()

@@ -559,7 +559,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
         execute("[...document.querySelectorAll('.file-row')].find(button=>button.textContent.trim()==='paper.typ').click()")
         until(lambda: execute("return [...document.querySelectorAll('.tab-select')].find(b => b.getAttribute('aria-pressed') === 'true')?.title===" + json.dumps(str(root / "paper.typ"))), "native Typst tab selected")
         frame()
-        until(lambda: preview("return document.querySelector('.textLayer')?.textContent.includes('Imported dependency')"), "native sandboxed Typst preview")
+        until(lambda: preview("return document.querySelector('.textLayer')?.textContent.includes('Imported dependency')"), "native Typst preview")
         execute("document.documentElement.dataset.retained='yes'")
         (root / "paper.typ").write_text("#let broken =")
         request("POST", prefix + "/frame", {"id": None})
@@ -730,7 +730,7 @@ with tempfile.TemporaryDirectory(prefix="papyri-native-") as directory:
             ).returncode != 0,
             "detached app shutdown",
         )
-        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "Markdown language server initialization", "ordered list numbering and spacing", "wrapped and scrolling math selection pixels", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "sandboxed Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "settings tabs and configurable fonts", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG", "spelling suggestions", "recent folder persistence and palette"]}, indent=2))
+        print(json.dumps({"native": "passed", "checks": ["CLI file/directory/current directory", "WebKit rendering", "Markdown language server initialization", "ordered list numbering and spacing", "wrapped and scrolling math selection pixels", "theme and reflowing zoom without reloading", "fit-to-width", "next/previous tab shortcuts", "diagram expansion and close", "explorer resizing", "multiline bracket math and numbered references", "local images", "Mermaid and Graphviz WASM", "opaque frame", "explicit script trust and reset", "trusted control scroll", "host token denial", "live file and directory refresh", "scroll restoration", "relative Markdown links", "hidden entries", "deleted-file error", "split-pane error state", "PDF canvas/text/navigation/fit", "Typst compilation", "Typst error retention and dependency refresh", "control socket and CLI", "CLI socket, tab list, completions", "control settings, panels, and decoration-less mode", "settings tabs and configurable fonts", "CLI decoration-less launch", "CLI detached logging", "image viewer and inline SVG", "spelling suggestions", "recent folder persistence and palette"]}, indent=2))
     except Exception:
         if session:
             try:

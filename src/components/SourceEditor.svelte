@@ -45,7 +45,7 @@
   import { combineCompletionSources, createLatexCompletionSource } from '../lib/latex-completions';
   import type { LatexProjectMetadata } from '../lib/latex-project';
   import { dirname } from '../lib/paths';
-  import { native } from '../lib/sources';
+  import { desktop } from '../lib/sources';
   import BuildFailureCard from './BuildFailureCard.svelte';
   import type { BuildFailure } from '../lib/build-diagnostics';
   import type { Delimiter } from '../lib/types';
@@ -184,7 +184,7 @@
     editorView.focus();
   }
   let serverStatus = $state(
-    native ? 'Connecting language server…' : 'Language server requires the Linux app.',
+    desktop ? 'Connecting language server…' : 'Language server requires the desktop app.',
   );
   let diagnostics = $state<LspDiagnostic[]>([]);
   function reportStatus(message: string) {
@@ -553,7 +553,7 @@
       view.requestMeasure();
     });
     resizeObserver.observe(container);
-    if (native) {
+    if (desktop) {
       void connectEditorLanguageServer(
         language,
         root || dirname(path),

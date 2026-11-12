@@ -26,9 +26,7 @@ it.each([
 describe('failed-build source views', () => {
   const text = '= Intentional Typst error\n\n#let';
   const failure = parseBuildFailure(
-    `Compilation failed. Typst compilation failed (exit status: 1): <stdin>:3:4: error: expected pattern
-
-Compilation requires Linux user namespaces. Imports must stay in the document folder; packages must already be cached.`,
+    `Compilation failed. Typst compilation failed (exit status: 1): <stdin>:3:4: error: expected pattern`,
     'typst',
     '/work/broken.typ',
   );

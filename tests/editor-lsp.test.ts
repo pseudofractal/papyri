@@ -15,6 +15,19 @@ describe('language-server file URIs', () => {
   it('rejects relative paths', () => {
     expect(() => fileUri('relative.md')).toThrow('absolute');
   });
+
+  it('round-trips Windows drive paths without a leading slash', () => {
+    const uri = fileUri('C:/papers/paper.tex');
+    expect(uri).toBe('file:///C%3A/papers/paper.tex');
+    const message = JSON.stringify({
+      method: 'textDocument/publishDiagnostics',
+      params: {
+        uri,
+        diagnostics: [{ range: { start: { line: 1, character: 0 } }, message: 'Missing brace' }],
+      },
+    });
+    expect(parseDiagnosticsMessage(message)?.path).toBe('C:/papers/paper.tex');
+  });
 });
 
 describe('language-server diagnostics', () => {

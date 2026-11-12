@@ -1,6 +1,6 @@
 # Control API and CLI
 
-The Linux app exposes a per-user control socket while it is running. `papyri ctl`
+The desktop app exposes a per-user control endpoint while it is running. `papyri ctl`
 is a small client for that socket, and the same newline-delimited JSON protocol
 is available to editor integrations such as a Neovim plugin.
 
@@ -123,18 +123,22 @@ directories are created with mode `0700`.
 
 ## Socket
 
-| Platform    | Default path                                                            |
-| ----------- | ----------------------------------------------------------------------- |
-| Linux       | `$XDG_RUNTIME_DIR/papyri/control.sock`                                  |
-| Fallback    | `$XDG_CACHE_HOME/papyri/control.sock` or `~/.cache/papyri/control.sock` |
-| Last resort | `$TMPDIR/papyri-<uid>/control.sock`                                     |
+| Platform       | Default path                                                                        |
+| -------------- | ----------------------------------------------------------------------------------- |
+| Linux          | `$XDG_RUNTIME_DIR/papyri/control.sock`                                              |
+| Linux fallback | `$XDG_CACHE_HOME/papyri/control.sock` or `~/.cache/papyri/control.sock`             |
+| macOS          | `$XDG_RUNTIME_DIR/papyri/control.sock`, then `~/Library/Caches/papyri/control.sock` |
+| Windows        | `%LOCALAPPDATA%\papyri\control.json` (loopback TCP endpoint with a token)           |
+| Last resort    | `$TMPDIR/papyri-<uid>/control.sock`                                                 |
 
 Set `PAPYRI_CONTROL_SOCKET` to use another path, or pass the global
 `papyri ctl --socket <PATH>` option. A relative `--socket` path is resolved to
 an absolute path against the CLI's working directory. The parent directory is
 created with mode `0700` when absent and the socket with mode `0600`, so only
-the same user can connect. Keep an overridden socket directory private. There
-is no network listener. `papyri ctl socket` prints the path that would be used
+the same user can connect. Keep an overridden socket directory private. Unix
+builds have no network listener. Windows binds a loopback TCP listener, stores
+the port and a random per-process token in the endpoint file, and rejects every
+request that does not present the token. `papyri ctl socket` prints the path that would be used
 without connecting.
 
 Each line is one JSON object. Requests carry an `id` chosen by the client and a
@@ -357,10 +361,12 @@ returns a compact role/name/value tree for all three frames.
 | `wait.idle`      | optional `timeoutMs`                      | Wait until document, editor, browser, and tools are idle. |
 | `wait.state`     | `path`, `equals`, optional `timeoutMs`    | Wait until a dotted state path equals a JSON value.       |
 
-`input.*` uses XTest and therefore requires an X11 display; Papyri should run
-with `GDK_BACKEND=x11` on Wayland desktops. `window.capture` uses the native
-window surface, so it includes browser-panel webviews. The CLI equivalents are
-`input`, `clipboard`, `window`, and `wait`.
+`input.*` uses XTest on Linux (run with `GDK_BACKEND=x11` on Wayland),
+CoreGraphics on macOS, and `SendInput` on Windows. macOS requires Accessibility
+permission; Windows cannot inject into higher-integrity/elevated windows.
+`window.list`, `window.focus`, and `window.capture` operate on desktop windows
+on all three platforms. Clipboard text and image methods work on all desktop
+builds. The CLI equivalents are `input`, `clipboard`, `window`, and `wait`.
 
 ```sh
 papyri ctl input click 400 300
@@ -408,7 +414,7 @@ use `selection.set TEXT` first when no text is selected.
 | `browser.quote`    | `site` (`chatgpt`/`gemini`), `text` | Send a quote to the site composer.              |
 | `browser.search`   | `text`                              | Search Wikipedia for the text.                  |
 
-Browser methods require the Linux app. `right.tab` accepts `outline`, `notes`,
+Browser methods require the Linux build; other platforms report that the embedded browser panel is unavailable. `right.tab` accepts `outline`, `notes`,
 `chatgpt`, `wikipedia`, and `gemini`. Website pages can be inspected and driven
 with `dom --frame browser` (query/get/focus/click/type/ax); browser DOM
 references are scoped to the active page and reset on navigation.

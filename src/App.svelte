@@ -90,7 +90,7 @@
     type BrowserState,
   } from './lib/browser';
   import { Workspace } from './lib/workspace.svelte';
-  import { native, desktopSource, importedSource, browserDirectory } from './lib/sources';
+  import { desktop, desktopSource, importedSource, browserDirectory } from './lib/sources';
   import { demoSource } from './lib/demo';
   import {
     loadPreferences,
@@ -114,6 +114,7 @@
     isTypst,
     isLatex,
     isBibliography,
+    isRootPath,
     normalize,
     displayPath,
     displayPathMessage,
@@ -165,14 +166,14 @@
     const root = workspace.directory;
     const source = workspace.source;
     explorerState =
-      native && source?.create
+      desktop && source?.create
         ? readExplorerState(root, localStorage)
         : { workingDirectory: root, expanded: [] };
     explorerSelection = '';
   });
   function updateExplorerState(state: ExplorerState) {
     explorerState = state;
-    if (native && workspace.source?.create) {
+    if (desktop && workspace.source?.create) {
       try {
         writeExplorerState(workspace.directory, state, localStorage);
       } catch {
@@ -499,7 +500,7 @@
     latexEditorFailure = null;
     try {
       SourceEditor ??= (await import('./components/SourceEditor.svelte')).default;
-      if (native && isTypst(path))
+      if (desktop && isTypst(path))
         TypstLivePreview ??= (await import('./components/TypstLivePreview.svelte')).default;
       if (workspace.source !== source || workspace.active !== path) return;
       let sourceDrafts = drafts.get(source);
@@ -519,7 +520,7 @@
       clearTimeout(markdownUpdateTimer);
       markdownPreviewText = draft.text;
       markdownPreviewScroll = 0;
-      if (native && isTypst(path)) {
+      if (desktop && isTypst(path)) {
         typstPreviewPaths = typstPreviewSessions.get(path) ?? new Set([path]);
         typstPreviewSessions.set(path, typstPreviewPaths);
         typstPreviewRoot = path;
@@ -527,7 +528,7 @@
         typstPreviewRoot = '';
         typstPreviewPaths = new Set();
       }
-      latexPreviewRoot = native && isLatex(path) ? path : '';
+      latexPreviewRoot = desktop && isLatex(path) ? path : '';
       if (latexPreviewRoot) {
         typstPreviewPaths = typstPreviewSessions.get(path) ?? new Set([path]);
         typstPreviewSessions.set(path, typstPreviewPaths);
@@ -953,7 +954,7 @@
   });
   async function chooseFolder() {
     try {
-      if (native) {
+      if (desktop) {
         const selected = await invokeHost<string | null>('pick_path', { directory: true });
         if (typeof selected === 'string') useFolder(selected, true);
       } else await workspace.selectSource(await browserDirectory());
@@ -963,7 +964,7 @@
   }
   async function chooseFile() {
     try {
-      if (native) {
+      if (desktop) {
         const selected = await invokeHost<string | null>('pick_path', { directory: false });
         if (typeof selected === 'string') {
           workspace.directory = dirname(selected);
@@ -1014,7 +1015,7 @@
     }
     if (target.kind === 'external') {
       try {
-        if (native) {
+        if (desktop) {
           await invokeHost('open_external', { url: target.url });
         } else window.open(target.url, '_blank', 'noopener,noreferrer');
       } catch (error) {
@@ -1149,7 +1150,7 @@
   function openBrowserExternal() {
     const url = browser.url || preferences.browserUrl;
     if (!/^https?:\/\//i.test(url)) return;
-    if (native)
+    if (desktop)
       invokeHost('open_external', { url }).catch((error) => (workspace.error = String(error)));
     else window.open(url, '_blank', 'noopener,noreferrer');
   }
@@ -1570,14 +1571,14 @@
         run: () => zoom({ target: 'ui', action: 'reset' }),
       },
     ];
-    if (!native)
+    if (!desktop)
       commands.push({
         id: 'import-folder',
         label: 'Import folder snapshot',
         keywords: 'upload directory',
         run: () => folderInput.click(),
       });
-    if (native)
+    if (desktop)
       for (const engine of ['lualatex', 'pdflatex', 'xelatex'] as LatexEngine[])
         commands.push({
           id: `latex-${engine}`,
@@ -1585,7 +1586,7 @@
           keywords: 'compiler engine tex',
           run: () => updatePreferences({ ...preferences, latexEngine: engine }),
         });
-    if (workspace.directory !== '/' && workspace.directory !== workspace.source?.root)
+    if (!isRootPath(workspace.directory) && workspace.directory !== workspace.source?.root)
       commands.push({
         id: 'parent',
         label: 'Go to parent folder',
@@ -2945,7 +2946,7 @@
     },
     rightTab: async (tab) => {
       if (isSiteTab(tab) && !browserAvailable())
-        throw new Error('The web browser requires the Linux app.');
+        throw new Error('The embedded web browser is unavailable in this build.');
       await openRightTab(tab);
     },
     browser: {
@@ -3084,7 +3085,7 @@
   let lastPublishedState = '';
   let lastPublishedHeadings = '';
   function scheduleControlPublish() {
-    if (!native || controlPublishTimer) return;
+    if (!desktop || controlPublishTimer) return;
     controlPublishTimer = setTimeout(() => {
       controlPublishTimer = undefined;
       const state = controlState();
@@ -3095,12 +3096,12 @@
     }, CONTROL_PUBLISH_INTERVAL_MS);
   }
   $effect(() => {
-    if (!native) return;
+    if (!desktop) return;
     void controlState();
     scheduleControlPublish();
   });
   $effect(() => {
-    if (!native) return;
+    if (!desktop) return;
     const value = {
       path: headingsPath === workspace.active ? workspace.active : null,
       headings: headingsPath === workspace.active ? headings : [],
@@ -3112,7 +3113,7 @@
   });
   let lastPublishedBrowser = '';
   $effect(() => {
-    if (!native) return;
+    if (!desktop) return;
     const value = { ...browser };
     const key = JSON.stringify(value);
     if (key === lastPublishedBrowser) return;
@@ -3121,7 +3122,7 @@
   });
   let lastPublishedSelection = '';
   $effect(() => {
-    if (!native) return;
+    if (!desktop) return;
     const key = JSON.stringify(selectionStats);
     if (key === lastPublishedSelection) return;
     lastPublishedSelection = key;
@@ -3189,7 +3190,7 @@
     }
     (async () => {
       let configurationError = '';
-      if (native) {
+      if (desktop) {
         try {
           const configured = await invokeHost<Record<string, unknown> | null>(
             'declarative_preferences',
@@ -3215,7 +3216,7 @@
         }
       }
       try {
-        if (native) {
+        if (desktop) {
           const { source, initial } = await desktopSource(() => preferences);
           traceStartup('source-ready');
           if (disposed) return;
@@ -3429,7 +3430,7 @@
                 workspace.treeRevision++;
               }}
               disabled={workspace.directory === workspace.source?.root ||
-                workspace.directory === '/'}><ArrowUp size={14} /></button
+                isRootPath(workspace.directory)}><ArrowUp size={14} /></button
             >
           </div>
           <div class="explorer-tools">

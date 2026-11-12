@@ -1190,9 +1190,9 @@ fn zoom_request(args: ZoomArgs) -> Result<Value, String> {
 fn expand_home(path: &Path) -> PathBuf {
   let mut components = path.components();
   if matches!(components.next(), Some(std::path::Component::Normal(part)) if part == "~") {
-    if let Some(home) = std::env::var_os("HOME") {
+    if let Some(home) = crate::platform::home_dir() {
       let rest = components.as_path();
-      return Path::new(&home).join(rest);
+      return home.join(rest);
     }
   }
   path.to_path_buf()
@@ -1237,6 +1237,7 @@ fn run_watch(args: WatchArgs, wait: Duration) -> Result<(), CliError> {
         json!({ "events": args.events })
       },
       timeout_ms: None,
+      token: None,
     },
   )
   .map_err(|message| CliError::new("io-error", message))?;
