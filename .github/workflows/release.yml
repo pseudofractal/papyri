@@ -60,6 +60,11 @@ jobs:
           key: ${{ matrix.name }}
       - name: Build bundle
         run: npx tauri build ${{ matrix.args }}
+      - name: Verify macOS signature
+        if: runner.os == 'macOS'
+        run: |
+          APP="src-tauri/target/${{ matrix.target }}/release/bundle/macos/Papyri.app"
+          codesign --verify --deep --strict --verbose=2 "$APP"
       - name: Collect Linux assets
         if: runner.os == 'Linux'
         run: |

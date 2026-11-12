@@ -2,6 +2,15 @@
 
 Papyri is a Markdown, PDF, Typst, and LaTeX viewer and source editor. Releases include native builds for Linux, macOS, and Windows. The browser build runs from source.
 
+> **macOS v0.2.0 notice:** The v0.2.0 macOS bundles were not ad-hoc signed, so macOS may report them as damaged. Repair a downloaded copy with:
+>
+> ```sh
+> xattr -cr /Applications/Papyri.app
+> codesign --force --deep --sign - /Applications/Papyri.app
+> ```
+>
+> Then approve Papyri in **System Settings → Privacy & Security**. Later builds are ad-hoc signed and do not need the repair step.
+
 ## What's new in v0.2.0
 
 - Native macOS and Windows builds, including the embedded browser panel, coordinate input, screen and window capture, managed tools, and TeX Live installation.
@@ -28,7 +37,7 @@ The Linux build uses GTK/WebKitGTK for the embedded browser panel and X11 for co
 
 ## macOS
 
-Download the `.dmg` for your Mac (`x86_64` for Intel, `aarch64` for Apple Silicon), open it, and drag Papyri into Applications. The builds are unsigned, so the first launch may require right-clicking the app and choosing **Open**. macOS 11 or newer is required.
+Download the `.dmg` for your Mac (`x86_64` for Intel, `aarch64` for Apple Silicon), open it, and drag Papyri into Applications. The builds are ad-hoc signed but not notarized. On first launch, open **System Settings → Privacy & Security**, scroll to Security, and choose **Open Anyway** for Papyri. On older macOS versions, right-clicking the app and choosing **Open** also works. macOS 11 or newer is required.
 
 The macOS build compiles LaTeX and Typst with the compilers found on `PATH` or selected in Settings. Compilation runs with the current user permissions. Managed language-server, Typst, and TeX Live downloads are available. The embedded browser panel, coordinate input, screen/window capture, and `papyri ctl` are available. macOS asks for Accessibility permission before synthetic input and Screen Recording permission before screen/window capture.
 

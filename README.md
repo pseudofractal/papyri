@@ -16,7 +16,7 @@ Papyri is a local-first viewer and source editor for Markdown, PDF, Typst, and L
 
 ## Install
 
-Download the latest [release](https://github.com/pseudofractal/papyri/releases/latest). Releases include an AppImage and `.deb` for Linux, a `.dmg` for Intel and Apple Silicon Macs, and an NSIS installer for Windows.
+Download the latest [release](https://github.com/pseudofractal/papyri/releases/latest). Releases include an AppImage and `.deb` for Linux, a `.dmg` for Intel and Apple Silicon Macs, and an NSIS installer for Windows. On macOS, approve Papyri in **System Settings → Privacy & Security** on first launch.
 
 On Linux, Nix users can install or run Papyri directly:
 

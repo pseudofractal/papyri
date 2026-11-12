@@ -110,6 +110,7 @@ Some compiler integration tests are ignored by default. Run them explicitly with
 - Compilers run directly with the current user's permissions on every platform. Do not reintroduce compiler sandboxing (`sandboxedCompilation`, bubblewrap, `prlimit`, `sandbox-exec`) or re-add `-no-shell-escape`. The app still bounds elapsed time, diagnostics, and output size.
 - The host token is injected into the main webview only. Browser child webviews and preview frames must not receive it.
 - Managed tools are downloaded from upstream GitHub releases and must keep size, SHA-256, archive, and architecture verification. Do not bypass these checks or add unchecked download paths.
+- Keep macOS ad-hoc signing enabled (`signingIdentity: "-"`). Without a bundle signature, Apple Silicon can report downloaded builds as damaged. Developer ID signing and notarization are separate maintainer concerns.
 - Network access for document resources is opt-in. Do not fetch remote content when the network preference is disabled.
 - Treat `SECURITY.md` and `docs/security.md` as the reporting and trust-model references.
 

@@ -52,7 +52,7 @@ npm run tauri build -- --target aarch64-apple-darwin   # Apple Silicon
 npm run tauri build -- --target x86_64-apple-darwin    # Intel
 ```
 
-The local `.dmg` and `.app` are under `src-tauri/target/<target>/release/bundle/`. Unsigned builds require right-click → Open on first launch. Code signing and notarization can be added with the standard Tauri macOS environment variables.
+The local `.dmg` and `.app` are under `src-tauri/target/<target>/release/bundle/`. The macOS bundle is ad-hoc signed by default, which prevents Apple Silicon from treating downloaded builds as damaged. It is not notarized, so the first launch still requires **System Settings → Privacy & Security → Open Anyway** (or right-click → Open on older macOS). Code signing and notarization can replace the ad-hoc identity with the standard Tauri macOS environment variables.
 
 ### Windows
 
