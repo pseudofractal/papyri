@@ -312,16 +312,25 @@ fn update(root: &Path) -> Result<TexLivePaths, String> {
     return Err("Invalid managed TeX Live location".into());
   }
   let bin = engine_bin(&installation, std::env::consts::ARCH);
-  let manager = bin.join(platform::executable_name("tlmgr"));
-  if !executables::is_executable(&manager) {
-    return Err("The managed TeX Live updater is missing".into());
-  }
+  let manager = ["tlmgr.exe", "tlmgr.bat", "tlmgr"]
+    .iter()
+    .map(|name| bin.join(name))
+    .find(|path| executables::is_executable(path))
+    .ok_or("The managed TeX Live updater is missing")?;
   let path = std::env::join_paths(std::iter::once(bin).chain(std::env::split_paths(
     &std::env::var_os("PATH").unwrap_or_default(),
   )))
   .map_err(|error| error.to_string())?;
+  #[cfg(target_os = "windows")]
+  let mut command = {
+    let mut command = Command::new("cmd");
+    command.arg("/C").arg(&manager);
+    command
+  };
+  #[cfg(not(target_os = "windows"))]
+  let mut command = Command::new(&manager);
   run(
-    Command::new(manager)
+    command
       .args(["--repository", REPOSITORY, "update", "--self", "--all"])
       .env("PATH", path),
     &installation.join("papyri-update.log"),
