@@ -23,6 +23,7 @@ use std::{
 const MAX_WAIT_SECONDS: f64 = 86_400.0;
 const DEFAULT_REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 const TOOL_REQUEST_TIMEOUT: Duration = Duration::from_secs(3600);
+const AGENT_SKILL: &str = include_str!("agent-skill.md");
 static REQUEST_TIMEOUT_MS: AtomicU64 = AtomicU64::new(60_000);
 
 #[derive(Debug)]
@@ -93,6 +94,12 @@ pub fn intercept() -> bool {
       let json_output = args.json;
       if let Err(error) = run_ctl(args) {
         fail(error, json_output);
+      }
+      true
+    }
+    Some(TopCommand::Skill) => {
+      if let Err(error) = run_skill() {
+        fail(error, false);
       }
       true
     }
@@ -190,6 +197,15 @@ fn record_initial_path(path: &Path) -> Result<(), CliError> {
   let path = absolute_path(path)?;
   std::env::set_var("PAPYRI_INITIAL_PATH", path);
   Ok(())
+}
+
+fn run_skill() -> Result<(), CliError> {
+  write_output(AGENT_SKILL).map_err(|error| {
+    CliError::new(
+      "io-error",
+      format!("Could not write the Papyri agent skill: {error}"),
+    )
+  })
 }
 
 fn run_completions(args: CompletionsArgs) -> Result<(), CliError> {
@@ -1916,5 +1932,14 @@ mod tests {
       };
       assert!(matches!(theme, ThemeArg::Light));
     }
+  }
+
+  #[test]
+  fn exposes_the_agent_skill() {
+    let cli = Cli::try_parse_from(["papyri", "skill"]).unwrap();
+    assert!(matches!(cli.command, Some(TopCommand::Skill)));
+    assert!(AGENT_SKILL.contains("papyri ctl --help"));
+    assert!(AGENT_SKILL.contains("papyri ctl state --json"));
+    assert!(AGENT_SKILL.contains("docs/agent-guide.md"));
   }
 }

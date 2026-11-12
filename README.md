@@ -37,8 +37,11 @@ The Nix development shell works on Linux. macOS and Windows builds need the plat
 
 ## Documentation
 
+AI agents can run `papyri skill` for a compact guide to the control API and setup.
+
 - [Document support](docs/documents.md): formats, compilation, fonts, packages, and browser-mode limits
 - [Platform support](docs/platform.md): capabilities, build instructions, and the Android boundary
+- [Agent guide](docs/agent-guide.md): using Papyri from an AI agent or editor
 - [Control API](docs/control.md): `papyri ctl`, editor integration, screenshots, and native input
 - [Security](docs/security.md): trust model and isolation boundaries
 - [Release notes](docs/release-notes.md): install formats and known limitations

@@ -58,6 +58,9 @@ is running raises that window.
 
 ## Help and completion
 
+`papyri skill` prints the compact agent skill embedded in the binary. The longer
+[agent guide](agent-guide.md) covers setup, common workflows, and safety.
+
 The control help includes workflow examples, and each command has detailed
 value and option help:
 

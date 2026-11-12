@@ -9,8 +9,8 @@ use std::path::PathBuf;
   name = "papyri",
   version,
   about = "Read Markdown, PDF, Typst, and LaTeX documents",
-  long_about = "Papyri is a read-only document viewer for Markdown, PDF, Typst, and LaTeX.\n\nRun `papyri ctl --help` to control a running window over its local socket, or `papyri completions <shell>` to install shell completions.",
-  after_help = "Examples:\n  papyri notes.md\n  papyri --decorationless notes.md\n  papyri --log terminal notes.md\n  papyri ctl state --json\n  papyri ctl scroll by 400\n  papyri completions bash\n\nSee docs/control.md for the control protocol and editor integration examples."
+  long_about = "Papyri is a local-first Markdown, PDF, Typst, and LaTeX viewer and source editor.\n\nRun `papyri ctl --help` to control a running window over its local socket, `papyri skill` to print a compact guide for AI agents, or `papyri completions <shell>` to install shell completions.",
+  after_help = "Examples:\n  papyri notes.md\n  papyri --decorationless notes.md\n  papyri --log terminal notes.md\n  papyri ctl state --json\n  papyri ctl scroll by 400\n  papyri skill\n  papyri completions bash\n\nSee docs/control.md for the control protocol and docs/agent-guide.md for agent workflows."
 )]
 pub(crate) struct Cli {
   /// Document or directory to open. A running window receives this path.
@@ -39,6 +39,8 @@ pub(crate) enum TopCommand {
     after_help = "Examples:\n  papyri ctl ping --wait 5\n  papyri ctl open notes.md --anchor intro\n  papyri ctl editor open\n  papyri ctl editor set --file draft.tex\n  papyri ctl explorer list\n  papyri ctl note set 'Check section 3'\n  papyri ctl browser navigate 'https://example.com'\n  papyri ctl tools status\n  papyri ctl tab next\n  papyri ctl scroll by 400\n  papyri ctl decorationless on\n  papyri ctl preferences set '{\"theme\":\"latte\"}'\n  papyri ctl watch --events state,headings,browser,selection\n\nSet PAPYRI_CONTROL_SOCKET or pass --socket to target another instance."
   )]
   Ctl(CtlArgs),
+  /// Print the compact agent skill for Papyri and its control CLI
+  Skill,
   /// Generate shell completions for papyri
   Completions(CompletionsArgs),
 }
