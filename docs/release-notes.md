@@ -1,6 +1,6 @@
 # Papyri release notes
 
-Papyri is a Markdown, PDF, Typst, and LaTeX viewer and source editor. Releases include native builds for Linux, macOS, and Windows, plus a browser build.
+Papyri is a Markdown, PDF, Typst, and LaTeX viewer and source editor. Releases include native builds for Linux, macOS, and Windows. The browser build runs from source.
 
 ## What's new in v0.2.0
 

@@ -43,6 +43,10 @@ The Nix development shell works on Linux. macOS and Windows builds need the plat
 - [Security](docs/security.md): trust model and isolation boundaries
 - [Release notes](docs/release-notes.md): install formats and known limitations
 
+## Third-party notices
+
+Bundled icons include [Codicons](https://github.com/microsoft/vscode-codicons) by Microsoft and contributors, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (artwork) and the MIT license (code), and Catppuccin icons under the MIT license. License texts ship with the application.
+
 ## License
 
 [MIT](LICENSE)
