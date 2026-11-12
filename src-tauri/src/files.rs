@@ -1,8 +1,8 @@
+use crate::platform::path_string;
 use serde::Serialize;
 use std::{
   fs,
   io::{Read, Write},
-  os::unix::fs::MetadataExt,
   path::{Path, PathBuf},
   time::UNIX_EPOCH,
 };
@@ -86,7 +86,7 @@ pub fn initial_path() -> Result<InitialPath, String> {
   };
   Ok(InitialPath {
     directory: path.is_dir(),
-    path: path.to_string_lossy().into_owned(),
+    path: path_string(&path),
     explicit,
   })
 }
@@ -106,7 +106,7 @@ pub fn list_directory(path: String) -> Result<Vec<Entry>, String> {
     };
     result.push(Entry {
       name: entry.file_name().to_string_lossy().into_owned(),
-      path: entry_path.to_string_lossy().into_owned(),
+      path: path_string(&entry_path),
       directory,
       symlink,
     });
@@ -155,12 +155,11 @@ pub fn create_entry(directory: String, name: String, kind: String) -> Result<Str
     }
     _ => return Err("Unsupported entry type.".into()),
   }
-  Ok(path.to_string_lossy().into_owned())
+  Ok(path_string(&path))
 }
 
 /// Rename a regular file within its directory, refusing to replace another entry.
 pub fn rename_file(path: String, name: String) -> Result<String, String> {
-  use std::{ffi::CString, os::unix::ffi::OsStrExt};
   let mut components = Path::new(&name).components();
   if !matches!(components.next(), Some(std::path::Component::Normal(_)))
     || components.next().is_some()
@@ -189,21 +188,8 @@ pub fn rename_file(path: String, name: String) -> Result<String, String> {
   {
     return Err("Keep the existing file extension when renaming.".into());
   }
-  let old = CString::new(source.as_os_str().as_bytes()).map_err(|e| e.to_string())?;
-  let new = CString::new(target.as_os_str().as_bytes()).map_err(|e| e.to_string())?;
-  let result = unsafe {
-    libc::renameat2(
-      libc::AT_FDCWD,
-      old.as_ptr(),
-      libc::AT_FDCWD,
-      new.as_ptr(),
-      libc::RENAME_NOREPLACE,
-    )
-  };
-  if result != 0 {
-    return Err(error(&path, std::io::Error::last_os_error()));
-  }
-  Ok(target.to_string_lossy().into_owned())
+  crate::platform::rename_no_replace(source, &target).map_err(|e| error(&path, e))?;
+  Ok(path_string(&target))
 }
 pub fn read_document(path: String) -> Result<Document, String> {
   let extension = Path::new(&path)
@@ -267,11 +253,15 @@ pub fn write_document(
   }
   let target = fs::canonicalize(&path).map_err(|e| error(&path, e))?;
   let metadata = fs::metadata(&target).map_err(|e| error(&path, e))?;
-  if metadata.nlink() > 1 {
-    return Err(error(
-      &path,
-      "Cannot safely replace a file with multiple hard links",
-    ));
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::MetadataExt;
+    if metadata.nlink() > 1 {
+      return Err(error(
+        &path,
+        "Cannot safely replace a file with multiple hard links",
+      ));
+    }
   }
   #[cfg(target_os = "linux")]
   {
@@ -315,9 +305,14 @@ pub fn write_document(
       .map_err(|e| error(&path, e))?;
     created = true;
     let replacement_metadata = file.metadata().map_err(|e| error(&path, e))?;
-    if replacement_metadata.uid() != metadata.uid() || replacement_metadata.gid() != metadata.gid()
+    #[cfg(unix)]
     {
-      return Err(error(&path, "Cannot preserve source file ownership"));
+      use std::os::unix::fs::MetadataExt;
+      if replacement_metadata.uid() != metadata.uid()
+        || replacement_metadata.gid() != metadata.gid()
+      {
+        return Err(error(&path, "Cannot preserve source file ownership"));
+      }
     }
     file
       .set_permissions(metadata.permissions())
@@ -336,7 +331,7 @@ pub fn write_document(
         "Document changed on disk; reload before saving",
       ));
     }
-    fs::rename(&temporary, &target).map_err(|e| error(&path, e))?;
+    crate::platform::replace_file(&temporary, &target).map_err(|e| error(&path, e))?;
     read_document(path.clone())
   })();
   if created && temporary.exists() {
@@ -455,10 +450,13 @@ mod tests {
     let path = file.to_string_lossy().into_owned();
     assert_eq!(read_text_file(path.clone()).unwrap(), "bibliography");
     assert!(delete_file(root.to_string_lossy().into_owned()).is_err());
-    let link = root.join("directory-link");
-    std::os::unix::fs::symlink(&root, &link).unwrap();
-    delete_file(link.to_string_lossy().into_owned()).unwrap();
-    assert!(root.is_dir());
+    #[cfg(unix)]
+    {
+      let link = root.join("directory-link");
+      std::os::unix::fs::symlink(&root, &link).unwrap();
+      delete_file(link.to_string_lossy().into_owned()).unwrap();
+      assert!(root.is_dir());
+    }
     delete_file(path.clone()).unwrap();
     assert!(!file.exists());
     assert!(delete_file(path).is_err());
@@ -484,6 +482,7 @@ mod tests {
     assert!(fs::read_dir(&directory).unwrap().next().is_none());
     fs::remove_dir(directory).unwrap();
   }
+  #[cfg(unix)]
   #[test]
   fn refuses_to_break_hard_links_when_saving() {
     let directory =
@@ -556,29 +555,32 @@ mod tests {
       .unwrap()
       .iter()
       .any(|e| e.name == ".hidden.md"));
-    let symlink = directory.join("loop");
-    std::os::unix::fs::symlink(&directory, &symlink).unwrap();
-    let broken_link = directory.join("broken");
-    std::os::unix::fs::symlink(directory.join("missing"), &broken_link).unwrap();
-    let entries = list_directory(directory.to_string_lossy().into_owned()).unwrap();
-    assert_eq!(
-      entries
+    #[cfg(unix)]
+    {
+      let symlink = directory.join("loop");
+      std::os::unix::fs::symlink(&directory, &symlink).unwrap();
+      let broken_link = directory.join("broken");
+      std::os::unix::fs::symlink(directory.join("missing"), &broken_link).unwrap();
+      let entries = list_directory(directory.to_string_lossy().into_owned()).unwrap();
+      assert_eq!(
+        entries
+          .iter()
+          .map(|entry| entry.name.as_str())
+          .collect::<Vec<_>>(),
+        vec!["loop", ".hidden.md", "broken"]
+      );
+      assert!(entries
         .iter()
-        .map(|entry| entry.name.as_str())
-        .collect::<Vec<_>>(),
-      vec!["loop", ".hidden.md", "broken"]
-    );
-    assert!(entries
-      .iter()
-      .any(|entry| entry.name == "loop" && entry.directory && entry.symlink));
-    assert!(entries
-      .iter()
-      .any(|entry| entry.name == "broken" && !entry.directory && entry.symlink));
-    assert!(entries
-      .iter()
-      .any(|entry| entry.name == ".hidden.md" && !entry.directory && !entry.symlink));
-    fs::remove_file(symlink).unwrap();
-    fs::remove_file(broken_link).unwrap();
+        .any(|entry| entry.name == "loop" && entry.directory && entry.symlink));
+      assert!(entries
+        .iter()
+        .any(|entry| entry.name == "broken" && !entry.directory && entry.symlink));
+      assert!(entries
+        .iter()
+        .any(|entry| entry.name == ".hidden.md" && !entry.directory && !entry.symlink));
+      fs::remove_file(symlink).unwrap();
+      fs::remove_file(broken_link).unwrap();
+    }
     fs::write(&file, "# Changed").unwrap();
     assert_eq!(read_document(path.clone()).unwrap().text, "# Changed");
     fs::remove_file(file).unwrap();
@@ -596,6 +598,7 @@ mod tests {
     }
     fs::remove_dir(directory).unwrap();
   }
+  #[cfg(target_os = "linux")]
   #[test]
   fn rejects_non_markdown_and_devices() {
     assert!(read_document("/etc/passwd".into()).is_err());

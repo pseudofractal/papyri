@@ -3,13 +3,7 @@
 use gtk::prelude::*;
 use serde::Serialize;
 use serde_json::{json, Value};
-use std::{
-  ffi::CString,
-  io::Write,
-  process::{Command, Stdio},
-  sync::mpsc,
-  time::Duration,
-};
+use std::{ffi::CString, sync::mpsc, time::Duration};
 use tauri::{AppHandle, Manager};
 use x11_dl::{xlib, xtest};
 
@@ -196,13 +190,13 @@ impl XServer {
   }
 
   fn paste_text(&self, text: &str) -> Result<(), String> {
-    let previous = read_clipboard().ok();
-    write_clipboard(text)?;
+    let previous = crate::platform::clipboard::read_text().ok();
+    crate::platform::clipboard::write_text(text)?;
     std::thread::sleep(Duration::from_millis(250));
     self.press_keys("ctrl+v")?;
     std::thread::sleep(Duration::from_millis(350));
     if let Some(previous) = previous {
-      let _ = write_clipboard(&previous);
+      let _ = crate::platform::clipboard::write_text(&previous);
     }
     Ok(())
   }
@@ -343,171 +337,6 @@ fn character_key(character: char) -> Option<(String, bool)> {
     '~' => ("grave".into(), true),
     _ => return None,
   })
-}
-
-#[tauri::command]
-pub async fn clipboard_read() -> Result<String, String> {
-  tauri::async_runtime::spawn_blocking(read_clipboard)
-    .await
-    .map_err(|error| error.to_string())?
-}
-
-#[tauri::command]
-pub async fn clipboard_read_image(output: Option<String>) -> Result<Value, String> {
-  tauri::async_runtime::spawn_blocking(move || read_clipboard_image(output))
-    .await
-    .map_err(|error| error.to_string())?
-}
-
-fn read_clipboard_image(output: Option<String>) -> Result<Value, String> {
-  let mut command = if prefer_x11_clipboard() {
-    let mut command = Command::new("xclip");
-    command.args(["-selection", "clipboard", "-t", "image/png", "-o"]);
-    command
-  } else if std::env::var_os("WAYLAND_DISPLAY").is_some() {
-    let mut command = Command::new("wl-paste");
-    command.args(["--type", "image/png"]);
-    command
-  } else if std::env::var_os("DISPLAY").is_some() {
-    let mut command = Command::new("xclip");
-    command.args(["-selection", "clipboard", "-t", "image/png", "-o"]);
-    command
-  } else {
-    return Err("No clipboard backend is available.".into());
-  };
-  let output_result = command
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .output()
-    .map_err(|error| format!("Could not read the clipboard image: {error}"))?;
-  if !output_result.status.success() || output_result.stdout.is_empty() {
-    return Err("The clipboard does not contain a PNG image.".into());
-  }
-  if output_result.stdout.len() > 128 * 1024 * 1024 {
-    return Err("The clipboard image exceeds the 128 MiB limit.".into());
-  }
-  crate::screenshot::store_png(output_result.stdout, output, false, "clipboard")
-}
-
-#[tauri::command]
-pub async fn clipboard_write_image(path: String) -> Result<(), String> {
-  tauri::async_runtime::spawn_blocking(move || write_clipboard_image(&path))
-    .await
-    .map_err(|error| error.to_string())?
-}
-
-fn write_clipboard_image(path: &str) -> Result<(), String> {
-  let bytes = std::fs::read(path).map_err(|error| format!("Could not read {path}: {error}"))?;
-  if bytes.len() > 128 * 1024 * 1024 {
-    return Err("The clipboard image exceeds the 128 MiB limit.".into());
-  }
-  let mut command = if prefer_x11_clipboard() {
-    let mut command = Command::new("xclip");
-    command.args(["-selection", "clipboard", "-t", "image/png", "-i"]);
-    command
-  } else if std::env::var_os("WAYLAND_DISPLAY").is_some() {
-    let mut command = Command::new("wl-copy");
-    command.args(["--type", "image/png"]);
-    command
-  } else if std::env::var_os("DISPLAY").is_some() {
-    let mut command = Command::new("xclip");
-    command.args(["-selection", "clipboard", "-t", "image/png", "-i"]);
-    command
-  } else {
-    return Err("No clipboard backend is available.".into());
-  };
-  let mut child = command
-    .stdin(Stdio::piped())
-    .stdout(Stdio::null())
-    .stderr(Stdio::null())
-    .spawn()
-    .map_err(|error| format!("Could not write the clipboard image: {error}"))?;
-  if let Some(mut stdin) = child.stdin.take() {
-    stdin.write_all(&bytes).map_err(|error| error.to_string())?;
-  }
-  std::thread::spawn(move || {
-    let _ = child.wait();
-  });
-  Ok(())
-}
-
-#[tauri::command]
-pub async fn clipboard_write(text: String) -> Result<(), String> {
-  tauri::async_runtime::spawn_blocking(move || write_clipboard(&text))
-    .await
-    .map_err(|error| error.to_string())?
-}
-
-fn read_clipboard() -> Result<String, String> {
-  let mut command = clipboard_command_read()?;
-  let output = command
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .output()
-    .map_err(|error| format!("Could not read the clipboard: {error}"))?;
-  if !output.status.success() {
-    return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
-  }
-  String::from_utf8(output.stdout).map_err(|error| error.to_string())
-}
-
-fn write_clipboard(text: &str) -> Result<(), String> {
-  let mut command = clipboard_command_write()?;
-  let mut child = command
-    .stdin(Stdio::piped())
-    .stdout(Stdio::null())
-    .stderr(Stdio::piped())
-    .spawn()
-    .map_err(|error| format!("Could not write the clipboard: {error}"))?;
-  if let Some(mut stdin) = child.stdin.take() {
-    stdin
-      .write_all(text.as_bytes())
-      .map_err(|error| error.to_string())?;
-  }
-  let status = child.wait().map_err(|error| error.to_string())?;
-  if !status.success() {
-    return Err("The clipboard backend failed.".into());
-  }
-  Ok(())
-}
-
-fn prefer_x11_clipboard() -> bool {
-  std::env::var_os("DISPLAY").is_some()
-    && std::env::var("GDK_BACKEND").map_or(true, |backend| backend != "wayland")
-}
-
-fn clipboard_command_read() -> Result<Command, String> {
-  if prefer_x11_clipboard() {
-    let mut command = Command::new("xclip");
-    command.args(["-selection", "clipboard", "-o"]);
-    return Ok(command);
-  }
-  if std::env::var_os("WAYLAND_DISPLAY").is_some() {
-    return Ok(Command::new("wl-paste"));
-  }
-  if std::env::var_os("DISPLAY").is_some() {
-    let mut command = Command::new("xclip");
-    command.args(["-selection", "clipboard", "-o"]);
-    return Ok(command);
-  }
-  Err("No clipboard backend is available.".into())
-}
-
-fn clipboard_command_write() -> Result<Command, String> {
-  if prefer_x11_clipboard() {
-    let mut command = Command::new("xclip");
-    command.args(["-selection", "clipboard"]);
-    return Ok(command);
-  }
-  if std::env::var_os("WAYLAND_DISPLAY").is_some() {
-    return Ok(Command::new("wl-copy"));
-  }
-  if std::env::var_os("DISPLAY").is_some() {
-    let mut command = Command::new("xclip");
-    command.args(["-selection", "clipboard"]);
-    return Ok(command);
-  }
-  Err("No clipboard backend is available.".into())
 }
 
 #[derive(Serialize)]

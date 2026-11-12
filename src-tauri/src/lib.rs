@@ -1,5 +1,8 @@
 mod bibliography;
+#[cfg(target_os = "linux")]
 mod browser;
+#[cfg(not(target_os = "linux"))]
+mod browser_stub;
 mod cli;
 mod cli_args;
 mod cli_output;
@@ -7,16 +10,24 @@ mod commands;
 mod control;
 mod executables;
 mod files;
+#[cfg(target_os = "linux")]
 mod input;
+#[cfg(not(target_os = "linux"))]
+mod input_portable;
+#[cfg(not(target_os = "linux"))]
+use input_portable as input;
 mod latex;
 mod logging;
 mod lsp;
 mod lsp_protocol;
+mod platform;
 mod screenshot;
 mod security;
 mod texlive;
 mod tools;
 mod typst;
+#[cfg(not(target_os = "linux"))]
+use browser_stub as browser;
 use tauri::Manager;
 
 fn trace_native_startup(stage: &str) {
@@ -36,6 +47,7 @@ pub fn run() {
   let handler: Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync> =
     Box::new(tauri::generate_handler![
       commands::initial_path,
+      commands::platform_capabilities,
       commands::declarative_preferences,
       commands::startup_trace,
       commands::list_directory,
@@ -63,10 +75,10 @@ pub fn run() {
       screenshot::capture_screen,
       screenshot::capture_webview,
       input::input_inject,
-      input::clipboard_read,
-      input::clipboard_write,
-      input::clipboard_read_image,
-      input::clipboard_write_image,
+      platform::clipboard::clipboard_read,
+      platform::clipboard::clipboard_write,
+      platform::clipboard::clipboard_read_image,
+      platform::clipboard::clipboard_write_image,
       input::window_list,
       input::window_focus,
       input::window_capture,
@@ -96,7 +108,10 @@ pub fn run() {
       control::control_emit
     ]);
   trace_native_startup("builder");
-  tauri::Builder::default()
+  let builder = tauri::Builder::default();
+  #[cfg(not(target_os = "linux"))]
+  let builder = builder.append_invoke_initialization_script(include_str!("preview_zoom.js"));
+  builder
     .manage(control::ControlState::default())
     .manage(lsp::ServerState::default())
     .append_invoke_initialization_script(security::initialization(&token))
@@ -112,43 +127,50 @@ pub fn run() {
     })
     .setup(|app| {
       trace_native_startup("setup");
-      let window = app
-        .get_webview_window("main")
-        .ok_or("Main window is unavailable")?;
-      window.with_webview(|webview| {
-        use webkit2gtk::{
-          UserContentInjectedFrames, UserContentManagerExt, UserScript, UserScriptInjectionTime,
-          WebViewExt,
-        };
-        if let Some(manager) = webview.inner().user_content_manager() {
-          manager.add_script(&UserScript::new(
-            include_str!("preview_zoom.js"),
-            UserContentInjectedFrames::AllFrames,
-            UserScriptInjectionTime::Start,
-            &[],
-            &[],
-          ));
+      #[cfg(not(any(target_os = "android", target_os = "ios")))]
+      {
+        let window = app
+          .get_webview_window("main")
+          .ok_or("Main window is unavailable")?;
+        #[cfg(target_os = "linux")]
+        window.with_webview(|webview| {
+          use webkit2gtk::{
+            UserContentInjectedFrames, UserContentManagerExt, UserScript, UserScriptInjectionTime,
+            WebViewExt,
+          };
+          if let Some(manager) = webview.inner().user_content_manager() {
+            manager.add_script(&UserScript::new(
+              include_str!("preview_zoom.js"),
+              UserContentInjectedFrames::AllFrames,
+              UserScriptInjectionTime::Start,
+              &[],
+              &[],
+            ));
+          }
+        })?;
+        let icon = app
+          .default_window_icon()
+          .ok_or("Application icon is unavailable")?;
+        window.set_icon(icon.clone())?;
+        #[cfg(target_os = "linux")]
+        {
+          let data_dir = app
+            .path()
+            .app_data_dir()
+            .map_err(|error| format!("Application data directory is unavailable: {error}"))?
+            .join("browser");
+          let cache_dir = app
+            .path()
+            .app_cache_dir()
+            .map_err(|error| format!("Application cache directory is unavailable: {error}"))?
+            .join("browser");
+          if let Err(error) = browser::install(&window, app.handle().clone(), data_dir, cache_dir) {
+            eprintln!("Papyri browser panel unavailable: {error}");
+          }
         }
-      })?;
-      let icon = app
-        .default_window_icon()
-        .ok_or("Application icon is unavailable")?;
-      window.set_icon(icon.clone())?;
-      let data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|error| format!("Application data directory is unavailable: {error}"))?
-        .join("browser");
-      let cache_dir = app
-        .path()
-        .app_cache_dir()
-        .map_err(|error| format!("Application cache directory is unavailable: {error}"))?
-        .join("browser");
-      if let Err(error) = browser::install(&window, app.handle().clone(), data_dir, cache_dir) {
-        eprintln!("Papyri browser panel unavailable: {error}");
-      }
-      if let Err(error) = control::start(app.handle().clone()) {
-        eprintln!("Papyri control socket unavailable: {error}");
+        if let Err(error) = control::start(app.handle().clone()) {
+          eprintln!("Papyri control socket unavailable: {error}");
+        }
       }
       trace_native_startup("setup-complete");
       Ok(())

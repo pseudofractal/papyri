@@ -1,15 +1,16 @@
 //! Screen and DOM-element screenshots for the control API.
 
+use crate::platform;
 use serde::{Deserialize, Serialize};
 use std::{
   fs,
   io::Write,
-  os::unix::fs::OpenOptionsExt,
-  path::{Path, PathBuf},
+  path::PathBuf,
   process::{Command, Stdio},
   sync::mpsc,
   time::{Duration, SystemTime, UNIX_EPOCH},
 };
+#[cfg(target_os = "linux")]
 use tauri::{AppHandle, Manager};
 
 const MAX_CAPTURE_BYTES: usize = 128 * 1024 * 1024;
@@ -63,6 +64,7 @@ pub async fn capture_screen(
   .map_err(|error| error.to_string())?
 }
 
+#[cfg(target_os = "linux")]
 #[tauri::command]
 pub async fn capture_webview(
   app: AppHandle,
@@ -83,6 +85,18 @@ pub async fn capture_webview(
   })
   .await
   .map_err(|error| error.to_string())?
+}
+
+#[cfg(not(target_os = "linux"))]
+#[tauri::command]
+pub async fn capture_webview(
+  _app: tauri::AppHandle,
+  _rect: Option<NormalizedRect>,
+  _output: Option<String>,
+  _clipboard: bool,
+  _target: Option<String>,
+) -> Result<CaptureResult, String> {
+  Err("App screenshots are only available in the Linux build.".into())
 }
 
 pub(crate) fn store_png(
@@ -128,6 +142,7 @@ fn finish(
   })
 }
 
+#[cfg(target_os = "linux")]
 fn screen_png(region: Option<ScreenRegion>) -> Result<Vec<u8>, String> {
   if command_available("grim") {
     let mut command = Command::new("grim");
@@ -155,6 +170,73 @@ fn screen_png(region: Option<ScreenRegion>) -> Result<Vec<u8>, String> {
   )
 }
 
+#[cfg(target_os = "macos")]
+fn screen_png(region: Option<ScreenRegion>) -> Result<Vec<u8>, String> {
+  let path = std::env::temp_dir().join(platform::unique_name("papyri-capture"));
+  let mut command = Command::new("screencapture");
+  command.arg("-x").arg("-t").arg("png");
+  if let Some(region) = region {
+    command.arg("-R").arg(format!(
+      "{},{},{},{}",
+      region.x, region.y, region.width, region.height
+    ));
+  }
+  command.arg(&path);
+  let output = command
+    .output()
+    .map_err(|error| format!("Could not run screencapture: {error}"))?;
+  if !output.status.success() {
+    let _ = fs::remove_file(&path);
+    return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+  }
+  let bytes = fs::read(&path).map_err(|error| format!("Could not read the screenshot: {error}"));
+  let _ = fs::remove_file(&path);
+  bytes
+}
+
+#[cfg(target_os = "windows")]
+fn screen_png(region: Option<ScreenRegion>) -> Result<Vec<u8>, String> {
+  let path = std::env::temp_dir().join(platform::unique_name("papyri-capture"));
+  let (x, y, width, height) = match region {
+    Some(region) => (region.x, region.y, region.width, region.height),
+    None => (0, 0, 0, 0),
+  };
+  let script = format!(
+    "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; \
+     $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; \
+     $x = {x}; $y = {y}; $w = {width}; $h = {height}; \
+     if ($w -le 0) {{ $w = $b.Width }}; if ($h -le 0) {{ $h = $b.Height }}; \
+     $bitmap = New-Object System.Drawing.Bitmap $w, $h; \
+     $graphics = [System.Drawing.Graphics]::FromImage($bitmap); \
+     $graphics.CopyFromScreen($x, $y, 0, 0, (New-Object System.Drawing.Size $w, $h)); \
+     $bitmap.Save($env:PAPYRI_CAPTURE_PATH, [System.Drawing.Imaging.ImageFormat]::Png); \
+     $graphics.Dispose(); $bitmap.Dispose()"
+  );
+  let output = Command::new("powershell")
+    .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+    .env("PAPYRI_CAPTURE_PATH", &path)
+    .stdout(Stdio::null())
+    .stderr(Stdio::piped())
+    .output()
+    .map_err(|error| format!("Could not run PowerShell screen capture: {error}"))?;
+  if !output.status.success() {
+    let _ = fs::remove_file(&path);
+    return Err(format!(
+      "PowerShell screen capture failed: {}",
+      String::from_utf8_lossy(&output.stderr).trim()
+    ));
+  }
+  let bytes = fs::read(&path).map_err(|error| format!("Could not read the screenshot: {error}"));
+  let _ = fs::remove_file(&path);
+  bytes
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+fn screen_png(_region: Option<ScreenRegion>) -> Result<Vec<u8>, String> {
+  Err("Screen capture is unavailable on this platform.".into())
+}
+
+#[cfg(target_os = "linux")]
 fn import_png(region: Option<ScreenRegion>) -> Result<Vec<u8>, String> {
   let temp = std::env::temp_dir().join(format!("papyri-capture-{}.png", std::process::id()));
   let status = Command::new("import")
@@ -209,6 +291,7 @@ fn run_capture(mut command: Command, label: &str) -> Result<Vec<u8>, String> {
   Ok(output.stdout)
 }
 
+#[cfg(target_os = "linux")]
 fn webview_png(app: &AppHandle, rect: Option<NormalizedRect>) -> Result<Vec<u8>, String> {
   let window = app
     .get_webview_window("main")
@@ -236,6 +319,7 @@ fn webview_png(app: &AppHandle, rect: Option<NormalizedRect>) -> Result<Vec<u8>,
     .map_err(|_| "The screenshot request timed out.".to_string())?
 }
 
+#[cfg(target_os = "linux")]
 fn crop_surface(
   surface: &gtk::cairo::Surface,
   rect: Option<NormalizedRect>,
@@ -288,40 +372,7 @@ fn crop_surface(
 }
 
 fn copy_png(bytes: &[u8]) -> Result<(), String> {
-  let mut command = if std::env::var_os("WAYLAND_DISPLAY").is_some() && command_available("wl-copy")
-  {
-    let mut command = Command::new("wl-copy");
-    command.arg("--type").arg("image/png");
-    command
-  } else if std::env::var_os("DISPLAY").is_some() && command_available("xclip") {
-    let mut command = Command::new("xclip");
-    command
-      .arg("-selection")
-      .arg("clipboard")
-      .arg("-t")
-      .arg("image/png")
-      .arg("-i");
-    command
-  } else {
-    return Err("No image clipboard backend is available (install wl-copy or xclip).".into());
-  };
-  let mut child = command
-    .stdin(Stdio::piped())
-    .stdout(Stdio::null())
-    .stderr(Stdio::null())
-    .spawn()
-    .map_err(|error| format!("Could not start the clipboard backend: {error}"))?;
-  if let Some(mut stdin) = child.stdin.take() {
-    stdin
-      .write_all(bytes)
-      .map_err(|error| format!("Could not write to the clipboard: {error}"))?;
-  }
-  // Clipboard owners stay alive while they own the selection. Reap the child
-  // in the background so Papyri never blocks on it.
-  std::thread::spawn(move || {
-    let _ = child.wait();
-  });
-  Ok(())
+  platform::clipboard::write_image_bytes(bytes)
 }
 
 fn save_png(bytes: &[u8], output: Option<&str>) -> Result<String, String> {
@@ -336,11 +387,14 @@ fn save_png(bytes: &[u8], output: Option<&str>) -> Result<String, String> {
     fs::create_dir_all(parent)
       .map_err(|error| format!("Could not create {}: {error}", parent.display()))?;
   }
-  let mut file = fs::OpenOptions::new()
-    .write(true)
-    .create(true)
-    .truncate(true)
-    .mode(0o600)
+  let mut options = fs::OpenOptions::new();
+  options.write(true).create(true).truncate(true);
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::OpenOptionsExt;
+    options.mode(0o600);
+  }
+  let mut file = options
     .open(&path)
     .map_err(|error| format!("Could not create {}: {error}", path.display()))?;
   file
@@ -350,9 +404,7 @@ fn save_png(bytes: &[u8], output: Option<&str>) -> Result<String, String> {
 }
 
 fn default_path() -> PathBuf {
-  let base = std::env::var_os("XDG_CACHE_HOME")
-    .map(PathBuf::from)
-    .or_else(|| std::env::var_os("HOME").map(|home| Path::new(&home).join(".cache")))
+  let base = platform::cache_dir()
     .unwrap_or_else(std::env::temp_dir)
     .join("papyri")
     .join("screenshots");
@@ -364,8 +416,12 @@ fn default_path() -> PathBuf {
 }
 
 fn command_available(name: &str) -> bool {
-  std::env::var_os("PATH")
-    .is_some_and(|paths| std::env::split_paths(&paths).any(|path| path.join(name).is_file()))
+  std::env::var_os("PATH").is_some_and(|paths| {
+    std::env::split_paths(&paths).any(|path| {
+      path.join(name).is_file()
+        || (cfg!(target_os = "windows") && path.join(format!("{name}.exe")).is_file())
+    })
+  })
 }
 
 fn png_dimensions(bytes: &[u8]) -> Option<(u32, u32)> {
@@ -394,6 +450,7 @@ mod tests {
     assert_eq!(png_dimensions(b"not a png"), None);
   }
 
+  #[cfg(target_os = "linux")]
   #[test]
   fn rejects_invalid_capture_rectangles() {
     let surface =

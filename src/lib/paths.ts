@@ -7,13 +7,26 @@ export const isBibliography = (path: string) =>
   /\.(bib|bibtex|ris|nbib|enw|csljson|json)$/i.test(path);
 export const isDocument = (path: string) =>
   isMarkdown(path) || isPdf(path) || isTypst(path) || isLatex(path) || isBibliography(path);
+export function isAbsolutePath(path: string): boolean {
+  return path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path);
+}
+export function isRootPath(path: string): boolean {
+  return path === '/' || /^[A-Za-z]:[\\/]$/.test(path);
+}
 export function normalize(path: string): string {
+  const windows = /^[A-Za-z]:/.test(path) || path.startsWith('\\\\');
+  const source = windows ? path.replace(/\\/g, '/') : path;
+  const unc = /^\/\/[^/]+\/[^/]+/.test(source);
+  const drive = /^[A-Za-z]:/.exec(source)?.[0] ?? '';
+  const rest = drive ? source.slice(2) : source;
   const segments: string[] = [];
-  for (const segment of path.split('/')) {
+  for (const segment of rest.split('/')) {
     if (!segment || segment === '.') continue;
     if (segment === '..') segments.pop();
     else segments.push(segment);
   }
+  if (unc) return '//' + segments.join('/');
+  if (drive) return `${drive}/${segments.join('/')}`;
   return '/' + segments.join('/');
 }
 export const dirname = (path: string) => path.slice(0, path.lastIndexOf('/')) || '/';
@@ -76,7 +89,7 @@ export function resolveLink(document: string, href: string): Target {
     if (path.includes('\0') || path.includes('\\')) return { kind: 'blocked' };
     return {
       kind: 'local',
-      path: normalize(path.startsWith('/') ? path : `${dirname(document)}/${path}`),
+      path: normalize(isAbsolutePath(path) ? path : `${dirname(document)}/${path}`),
       anchor: decodeURIComponent(rawAnchor),
     };
   } catch {

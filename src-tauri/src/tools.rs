@@ -1,12 +1,11 @@
 //! Download selected upstream releases into Papyri's private tool directory.
-use crate::executables;
+use crate::{executables, platform};
 use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
   fs::{self, OpenOptions},
   io::{Cursor, Read, Write},
-  os::unix::fs::PermissionsExt,
   path::{Path, PathBuf},
   process::{Command, Stdio},
   sync::Mutex,
@@ -38,26 +37,59 @@ fn tool(name: &str, architecture: &str) -> Result<Tool, String> {
       ))
     }
   };
-  let (name, repository, asset) = match name {
-    "marksman" => (
+  let os = std::env::consts::OS;
+  let (name, repository, asset) = match (name, os) {
+    ("marksman", "linux") => (
       "marksman",
       "artempyanykh/marksman",
       format!("marksman-linux-{short_arch}"),
     ),
-    "tinymist" => (
+    ("marksman", "macos") => ("marksman", "artempyanykh/marksman", "marksman-macos".into()),
+    ("marksman", "windows") => ("marksman", "artempyanykh/marksman", "marksman.exe".into()),
+    ("tinymist", "linux") => (
       "tinymist",
       "Myriad-Dreamin/tinymist",
       format!("tinymist-{arch}-unknown-linux-gnu.tar.gz"),
     ),
-    "texlab" => (
+    ("tinymist", "macos") => (
+      "tinymist",
+      "Myriad-Dreamin/tinymist",
+      format!("tinymist-{arch}-apple-darwin.tar.gz"),
+    ),
+    ("tinymist", "windows") => (
+      "tinymist",
+      "Myriad-Dreamin/tinymist",
+      format!("tinymist-{arch}-pc-windows-msvc.zip"),
+    ),
+    ("texlab", "linux") => (
       "texlab",
       "latex-lsp/texlab",
       format!("texlab-{arch}-linux.tar.gz"),
     ),
-    "typst" => (
+    ("texlab", "macos") => (
+      "texlab",
+      "latex-lsp/texlab",
+      format!("texlab-{arch}-macos.tar.gz"),
+    ),
+    ("texlab", "windows") => (
+      "texlab",
+      "latex-lsp/texlab",
+      format!("texlab-{arch}-windows.zip"),
+    ),
+    ("typst", "linux") => (
       "typst",
       "typst/typst",
       format!("typst-{arch}-unknown-linux-musl.tar.xz"),
+    ),
+    ("typst", "macos") => (
+      "typst",
+      "typst/typst",
+      format!("typst-{arch}-apple-darwin.tar.xz"),
+    ),
+    ("typst", "windows") => (
+      "typst",
+      "typst/typst",
+      format!("typst-{arch}-pc-windows-msvc.zip"),
     ),
     _ => return Err("Unsupported managed tool".into()),
   };
@@ -101,6 +133,25 @@ pub(crate) fn read_limited(mut reader: impl Read, limit: u64) -> Result<Vec<u8>,
 }
 
 fn executable_from_archive(tool: &Tool, bytes: &[u8]) -> Result<Vec<u8>, String> {
+  if tool.asset.ends_with(".zip") {
+    let reader = Cursor::new(bytes);
+    let mut archive =
+      zip::ZipArchive::new(reader).map_err(|error| format!("Invalid ZIP archive: {error}"))?;
+    let wanted = platform::executable_name(tool.name);
+    for index in 0..archive.len() {
+      let mut entry = archive
+        .by_index(index)
+        .map_err(|error| format!("Invalid ZIP entry: {error}"))?;
+      if entry.is_file()
+        && Path::new(entry.name())
+          .file_name()
+          .is_some_and(|name| name == wanted.as_str())
+      {
+        return read_limited(&mut entry, EXECUTABLE_LIMIT);
+      }
+    }
+    return Err(format!("The release archive does not contain {}", wanted));
+  }
   if !tool.asset.ends_with(".tar.gz") && !tool.asset.ends_with(".tar.xz") {
     return read_limited(bytes, EXECUTABLE_LIMIT);
   }
@@ -109,6 +160,7 @@ fn executable_from_archive(tool: &Tool, bytes: &[u8]) -> Result<Vec<u8>, String>
   } else {
     Box::new(XzDecoder::new(Cursor::new(bytes)))
   };
+  let wanted = platform::executable_name(tool.name);
   let mut archive = tar::Archive::new(reader.take(ARCHIVE_CONTENT_LIMIT));
   for entry in archive
     .entries()
@@ -118,16 +170,13 @@ fn executable_from_archive(tool: &Tool, bytes: &[u8]) -> Result<Vec<u8>, String>
     let path = entry
       .path()
       .map_err(|error| format!("Invalid archive path: {error}"))?;
-    if path.file_name().is_some_and(|name| name == tool.name)
+    if path.file_name().is_some_and(|name| name == wanted.as_str())
       && entry.header().entry_type().is_file()
     {
       return read_limited(entry, EXECUTABLE_LIMIT);
     }
   }
-  Err(format!(
-    "The release archive does not contain {}",
-    tool.name
-  ))
+  Err(format!("The release archive does not contain {}", wanted))
 }
 
 pub(crate) fn verify_executable(path: &Path, name: &str) -> Result<(), String> {
@@ -172,8 +221,9 @@ fn replace_binary(directory: &Path, name: &str, binary: &[u8]) -> Result<PathBuf
   let suffix: String = random.iter().map(|byte| format!("{byte:02x}")).collect();
   let staging = directory.join(format!(".staging-{suffix}"));
   fs::create_dir(&staging).map_err(|error| format!("Cannot stage {name}: {error}"))?;
-  let temporary = staging.join(name);
-  let destination = directory.join(name);
+  let binary_name = platform::executable_name(name);
+  let temporary = staging.join(&binary_name);
+  let destination = directory.join(&binary_name);
   let result = (|| {
     let mut file = OpenOptions::new()
       .write(true)
@@ -182,18 +232,60 @@ fn replace_binary(directory: &Path, name: &str, binary: &[u8]) -> Result<PathBuf
       .map_err(|error| format!("Cannot stage {name}: {error}"))?;
     file
       .write_all(binary)
-      .and_then(|()| file.set_permissions(fs::Permissions::from_mode(0o755)))
+      .and_then(|()| platform::make_executable(&temporary))
       .and_then(|()| file.sync_all())
       .map_err(|error| format!("Cannot stage {name}: {error}"))?;
     drop(file);
     verify_executable(&temporary, name)?;
-    fs::rename(&temporary, &destination)
+    platform::replace_file(&temporary, &destination)
       .map_err(|error| format!("Cannot install {name}: {error}"))?;
     Ok(destination)
   })();
   let _ = fs::remove_file(temporary);
   let _ = fs::remove_dir(staging);
   result
+}
+
+fn binary_matches_platform(binary: &[u8]) -> bool {
+  if cfg!(target_os = "linux") {
+    let expected_machine: u16 = match std::env::consts::ARCH {
+      "x86_64" => 62,
+      "aarch64" => 183,
+      _ => return false,
+    };
+    binary.len() >= 20
+      && binary.starts_with(b"\x7fELF")
+      && binary[4] == 2
+      && binary[5] == 1
+      && u16::from_le_bytes([binary[18], binary[19]]) == expected_machine
+  } else if cfg!(target_os = "macos") {
+    const MACHO_64_LE: &[u8] = b"\xcf\xfa\xed\xfe";
+    const MACHO_FAT_BE: &[u8] = b"\xca\xfe\xba\xbe";
+    const MACHO_FAT_LE: &[u8] = b"\xbe\xba\xfe\xca";
+    binary.starts_with(MACHO_64_LE)
+      || binary.starts_with(MACHO_FAT_BE)
+      || binary.starts_with(MACHO_FAT_LE)
+  } else if cfg!(target_os = "windows") {
+    if !binary.starts_with(b"MZ") || binary.len() < 64 {
+      return false;
+    }
+    let offset =
+      u32::from_le_bytes([binary[0x3c], binary[0x3d], binary[0x3e], binary[0x3f]]) as usize;
+    let Some(header) = binary.get(offset..offset.saturating_add(6)) else {
+      return false;
+    };
+    if &header[..4] != b"PE\0\0" {
+      return false;
+    }
+    let machine = u16::from_le_bytes([header[4], header[5]]);
+    match std::env::consts::ARCH {
+      "x86_64" => machine == 0x8664,
+      "aarch64" => machine == 0xaa64,
+      _ => false,
+    }
+  } else {
+    false
+  }
 }
 
 fn install(directory: &Path, name: &str) -> Result<InstalledTool, String> {
@@ -256,22 +348,15 @@ fn install(directory: &Path, name: &str) -> Result<InstalledTool, String> {
     return Err("Downloaded file failed its size or SHA-256 check".into());
   }
   let binary = executable_from_archive(&tool, &archive)?;
-  let expected_machine = match std::env::consts::ARCH {
-    "x86_64" => 62,
-    "aarch64" => 183,
-    _ => unreachable!(),
-  };
-  if binary.len() < 20
-    || !binary.starts_with(b"\x7fELF")
-    || binary[4] != 2
-    || binary[5] != 1
-    || u16::from_le_bytes([binary[18], binary[19]]) != expected_machine
-  {
-    return Err("Downloaded executable does not match this Linux architecture".into());
+  if !binary_matches_platform(&binary) {
+    return Err(format!(
+      "Downloaded executable does not match this {} architecture",
+      std::env::consts::OS
+    ));
   }
   let destination = replace_binary(directory, tool.name, &binary)?;
   Ok(InstalledTool {
-    path: destination.to_string_lossy().into_owned(),
+    path: platform::path_string(&destination),
     version: release.tag_name,
   })
 }
@@ -299,7 +384,7 @@ pub async fn pick_executable(app: tauri::AppHandle) -> Result<Option<String>, St
     if !path.is_absolute() || !executables::is_executable(&path) {
       return Err("Choose an executable file".into());
     }
-    Ok(Some(path.to_string_lossy().into_owned()))
+    Ok(Some(platform::path_string(&path)))
   })
   .await
   .map_err(|error| error.to_string())?
@@ -310,14 +395,17 @@ mod tests {
   use super::*;
   #[test]
   fn permits_only_known_tools_and_architectures() {
-    assert_eq!(
-      tool("marksman", "x86_64").unwrap().asset,
-      "marksman-linux-x64"
-    );
-    assert_eq!(
-      tool("typst", "aarch64").unwrap().asset,
-      "typst-aarch64-unknown-linux-musl.tar.xz"
-    );
+    if cfg!(target_os = "linux") {
+      assert_eq!(
+        tool("marksman", "x86_64").unwrap().asset,
+        "marksman-linux-x64"
+      );
+      assert_eq!(
+        tool("typst", "aarch64").unwrap().asset,
+        "typst-aarch64-unknown-linux-musl.tar.xz"
+      );
+    }
+    assert!(tool("marksman", "x86_64").is_ok());
     assert!(tool("../sh", "x86_64").is_err());
     assert!(tool("texlab", "sparc").is_err());
   }
@@ -330,7 +418,7 @@ mod tests {
   fn failed_update_preserves_the_installed_binary() {
     let directory = std::env::temp_dir().join(format!("papyri-update-test-{}", std::process::id()));
     fs::create_dir(&directory).unwrap();
-    let destination = directory.join("marksman");
+    let destination = directory.join(platform::executable_name("marksman"));
     fs::write(&destination, b"previous version").unwrap();
     assert!(replace_binary(&directory, "marksman", b"not an executable").is_err());
     assert_eq!(fs::read(&destination).unwrap(), b"previous version");

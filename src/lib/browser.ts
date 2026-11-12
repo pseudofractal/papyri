@@ -1,5 +1,6 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { invokeHost } from './native';
+import { platform } from './platform';
 import { native } from './sources';
 import type { SiteId } from './sites';
 import { DEFAULT_BROWSER_URL } from './view';
@@ -30,7 +31,7 @@ export const emptyBrowserState: BrowserState = {
 };
 
 export function browserAvailable(): boolean {
-  return native;
+  return native && platform.browserPanel;
 }
 
 /** Turn address-bar input into a safe HTTP(S) destination. */

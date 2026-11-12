@@ -1,10 +1,9 @@
 //! Compile with the official CLI inside a read-only, network-isolated Linux sandbox.
-use crate::{executables, files};
+use crate::{executables, files, platform::sandbox};
 use std::{
   collections::HashMap,
   fs,
   io::{Read, Write},
-  os::unix::fs::DirBuilderExt,
   path::{Path, PathBuf},
   process::{Child, Command, ExitStatus, Stdio},
   sync::{LazyLock, Mutex},
@@ -16,8 +15,6 @@ const COMPILE_TIMEOUT: Duration = Duration::from_secs(30);
 const DIAGNOSTIC_LIMIT: usize = 32 * 1024;
 const DEPENDENCY_LIMIT: u64 = 1024 * 1024;
 const MAX_TRACKED_DOCUMENTS: usize = 32;
-const COMPILER_MEMORY_BYTES: u64 = 2 * 1024 * 1024 * 1024;
-const COMPILER_CPU_SECONDS: u64 = 25;
 static COMPILER: Mutex<()> = Mutex::new(());
 static DEPENDENCIES: LazyLock<Mutex<HashMap<PathBuf, Vec<PathBuf>>>> =
   LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -76,15 +73,7 @@ pub fn stamp(path: String) -> Result<String, String> {
 struct OutputDirectory(PathBuf);
 impl OutputDirectory {
   fn create() -> Result<Self, String> {
-    let mut entropy = [0u8; 16];
-    getrandom::fill(&mut entropy).map_err(|error| error.to_string())?;
-    let suffix: String = entropy.iter().map(|byte| format!("{byte:02x}")).collect();
-    let path = std::env::temp_dir().join(format!("papyri-typst-{suffix}"));
-    fs::DirBuilder::new()
-      .mode(0o700)
-      .create(&path)
-      .map_err(|error| error.to_string())?;
-    Ok(Self(path))
+    Ok(Self(sandbox::temporary_directory("papyri-typst")?))
   }
 }
 impl Drop for OutputDirectory {
@@ -135,6 +124,25 @@ pub(crate) fn wait_with_timeout(
   }
 }
 
+#[cfg(not(target_os = "linux"))]
+fn package_paths() -> Option<(PathBuf, PathBuf)> {
+  let data = if cfg!(target_os = "macos") {
+    crate::platform::config_dir()?.join("typst/packages")
+  } else {
+    std::env::var_os("APPDATA")
+      .map(PathBuf::from)
+      .or_else(crate::platform::config_dir)?
+      .join("typst/packages")
+  };
+  let cache = crate::platform::cache_dir()?.join("typst/packages");
+  (data.is_dir() || cache.is_dir()).then_some((data, cache))
+}
+
+#[cfg(target_os = "linux")]
+fn package_paths() -> Option<(PathBuf, PathBuf)> {
+  None
+}
+
 pub fn compile(path: String, configured_path: String) -> Result<Vec<u8>, String> {
   if !is_typst(&path) {
     return Err("Expected a .typ document".into());
@@ -142,96 +150,74 @@ pub fn compile(path: String, configured_path: String) -> Result<Vec<u8>, String>
   let _compiler = COMPILER
     .try_lock()
     .map_err(|_| "Another Typst preview is compiling. Try opening this document again.")?;
-  let canonical = fs::canonicalize(&path).map_err(|error| format!("{path}: {error}"))?;
+  let canonical = crate::platform::strip_verbatim(
+    &fs::canonicalize(&path).map_err(|error| format!("{path}: {error}"))?,
+  );
   let project = canonical.parent().ok_or("Document has no parent folder")?;
   let initial_stamp = stamp(path.clone())?;
   let (source, _) = files::bounded_read(&path, files::DOCUMENT_LIMIT)?;
   std::str::from_utf8(&source).map_err(|error| format!("Expected UTF-8 Typst: {error}"))?;
   let output = OutputDirectory::create()?;
   let compiler = resolve_binary(&configured_path)?;
-  let sandbox = option_env!("PAPYRI_BWRAP_BINARY").unwrap_or("bwrap");
-  let limiter = option_env!("PAPYRI_PRLIMIT_BINARY").unwrap_or("prlimit");
-  let mut command = Command::new(limiter);
-  command.args([
-    format!("--as={COMPILER_MEMORY_BYTES}"),
-    format!("--cpu={COMPILER_CPU_SECONDS}"),
-    format!("--fsize={}", files::PDF_LIMIT),
-    "--".into(),
-    sandbox.into(),
-  ]);
-  command.args([
-    "--unshare-all",
-    "--new-session",
-    "--die-with-parent",
-    "--cap-drop",
-    "ALL",
-    "--proc",
-    "/proc",
-    "--dev",
-    "/dev",
-    "--tmpfs",
-    "/tmp",
-    "--dir",
-    "/compiler",
-    "--dir",
-    "/packages/local",
-    "--dir",
-    "/packages/cache",
-    "--clearenv",
-    "--setenv",
-    "HOME",
-    "/tmp",
-    "--setenv",
-    "LANG",
-    "C.UTF-8",
-  ]);
-  for directory in ["/nix/store", "/usr", "/bin", "/lib", "/lib64"] {
-    if Path::new(directory).exists() {
-      command.args(["--ro-bind", directory, directory]);
+  let mut command = sandbox::compiler_command(project, &output.0, &compiler, "typst");
+  if cfg!(target_os = "linux") {
+    command.args(["--dir", "/packages/local", "--dir", "/packages/cache"]);
+    bind_packages(
+      &mut command,
+      "XDG_DATA_HOME",
+      ".local/share",
+      "/packages/local",
+    );
+    bind_packages(&mut command, "XDG_CACHE_HOME", ".cache", "/packages/cache");
+    command.args(["--chdir", "/project", "--"]);
+    sandbox::configure_program(&mut command, &compiler, "typst");
+  } else {
+    command.current_dir(project);
+    sandbox::configure_program(&mut command, &compiler, "typst");
+    if let Some((local, cache)) = package_paths() {
+      command.arg("--package-path").arg(local);
+      command.arg("--package-cache-path").arg(cache);
     }
   }
-  command.arg("--ro-bind").arg(project).arg("/project");
-  command
-    .arg("--ro-bind")
-    .arg(&compiler)
-    .arg("/compiler/typst");
-  command.arg("--bind").arg(&output.0).arg("/output");
-  bind_packages(
-    &mut command,
-    "XDG_DATA_HOME",
-    ".local/share",
-    "/packages/local",
-  );
-  bind_packages(&mut command, "XDG_CACHE_HOME", ".cache", "/packages/cache");
   command.args([
-    "--chdir",
-    "/project",
-    "--",
-    "/compiler/typst",
     "compile",
     "--root",
-    "/project",
+    if cfg!(target_os = "linux") {
+      "/project"
+    } else {
+      project
+        .to_str()
+        .ok_or("Document folder is not valid UTF-8")?
+    },
     "--ignore-system-fonts",
-    "--package-path",
-    "/packages/local",
-    "--package-cache-path",
-    "/packages/cache",
     "--jobs",
     "2",
     "--diagnostic-format",
     "short",
   ]);
   if project.join("fonts").is_dir() {
-    command.args(["--font-path", "/project/fonts"]);
+    if cfg!(target_os = "linux") {
+      command.arg("--font-path").arg("/project/fonts");
+    } else {
+      command.arg("--font-path").arg(project.join("fonts"));
+    }
   }
-  command.args(["--deps", "/output/deps.json", "--format", "pdf", "-", "-"]);
+  command.arg("--deps").arg(if cfg!(target_os = "linux") {
+    PathBuf::from("/output/deps.json")
+  } else {
+    output.0.join("deps.json")
+  });
+  command.args(["--format", "pdf", "-", "-"]);
   let mut child = command
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
     .spawn()
     .map_err(|error| {
-      format!("Cannot start sandboxed Typst: {error}. Use the Nix package or dev shell.")
+      format!(
+        "Cannot start Typst: {error}. {}",
+        sandbox::compilation_hint()
+      )
     })?;
   let stdout = child.stdout.take().ok_or("Typst output pipe unavailable")?;
   let stderr = child
@@ -256,8 +242,9 @@ pub fn compile(path: String, configured_path: String) -> Result<Vec<u8>, String>
   };
   if !status.success() {
     return Err(format!(
-      "Typst compilation failed ({status}): {}\nCompilation requires Linux user namespaces. Imports must stay in the document folder; packages must already be cached.",
-      String::from_utf8_lossy(&diagnostics)
+      "Typst compilation failed ({status}): {}\n{}",
+      String::from_utf8_lossy(&diagnostics),
+      sandbox::compilation_hint()
     ));
   }
   input_result.map_err(|error| format!("Could not pass source to Typst: {error}"))?;

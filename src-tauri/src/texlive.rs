@@ -1,6 +1,6 @@
 //! Optional private TeX Live installation and updates via the upstream installer.
 use crate::{
-  executables,
+  executables, platform,
   tools::{read_limited, verify_executable},
 };
 use flate2::read::GzDecoder;
@@ -29,7 +29,20 @@ pub struct TexLivePaths {
   xelatex: String,
 }
 
-fn platform(architecture: &str) -> Result<&'static str, String> {
+fn texlive_platform(architecture: &str) -> Result<&'static str, String> {
+  if cfg!(target_os = "android") || cfg!(target_os = "ios") {
+    return Err("Managed TeX Live installation is unavailable on mobile.".into());
+  }
+  if cfg!(target_os = "macos") {
+    // The universal macOS binaries run on both Intel and Apple Silicon.
+    return Ok("universal-darwin");
+  }
+  if cfg!(target_os = "windows") {
+    return Err(
+      "Managed TeX Live installation is not available on Windows; install TeX Live separately."
+        .into(),
+    );
+  }
   match architecture {
     "x86_64" => Ok("x86_64-linux"),
     "aarch64" => Ok("aarch64-linux"),
@@ -40,7 +53,7 @@ fn platform(architecture: &str) -> Result<&'static str, String> {
 }
 
 fn engine_paths(root: &Path, architecture: &str) -> Result<TexLivePaths, String> {
-  let bin = root.join("bin").join(platform(architecture)?);
+  let bin = root.join("bin").join(texlive_platform(architecture)?);
   let mut paths = Vec::new();
   for name in ["lualatex", "pdflatex", "xelatex"] {
     let path = bin.join(name);
@@ -65,7 +78,7 @@ fn profile(root: &Path, architecture: &str) -> Result<String, String> {
     return Err("TeX Live directory contains a newline".into());
   }
   // Specifying any collection makes install-tl ignore the scheme's collection list.
-  Ok(format!("selected_scheme scheme-small\nTEXDIR {root}\nTEXMFLOCAL {root}/texmf-local\nTEXMFSYSCONFIG {root}/texmf-config\nTEXMFSYSVAR {root}/texmf-var\nTEXMFCONFIG {root}/texmf-config\nTEXMFVAR {root}/texmf-var\nTEXMFHOME {root}/texmf-local\ninstopt_adjustpath 0\ninstopt_portable 1\ntlpdbopt_install_docfiles 0\ntlpdbopt_install_srcfiles 0\ncollection-basic 1\ncollection-latex 1\ncollection-latexrecommended 1\ncollection-fontsrecommended 1\ncollection-luatex 1\ncollection-xetex 1\nbinary_{} 1\n", platform(architecture)?))
+  Ok(format!("selected_scheme scheme-small\nTEXDIR {root}\nTEXMFLOCAL {root}/texmf-local\nTEXMFSYSCONFIG {root}/texmf-config\nTEXMFSYSVAR {root}/texmf-var\nTEXMFCONFIG {root}/texmf-config\nTEXMFVAR {root}/texmf-var\nTEXMFHOME {root}/texmf-local\ninstopt_adjustpath 0\ninstopt_portable 1\ntlpdbopt_install_docfiles 0\ntlpdbopt_install_srcfiles 0\ncollection-basic 1\ncollection-latex 1\ncollection-latexrecommended 1\ncollection-fontsrecommended 1\ncollection-luatex 1\ncollection-xetex 1\nbinary_{} 1\n", texlive_platform(architecture)?))
 }
 
 fn unique_directory(parent: &Path, prefix: &str) -> Result<PathBuf, String> {
@@ -178,7 +191,7 @@ fn install(root: &Path) -> Result<TexLivePaths, String> {
     .lock()
     .map_err(|_| "TeX Live installer is unavailable")?;
   let architecture = std::env::consts::ARCH;
-  platform(architecture)?;
+  texlive_platform(architecture)?;
   let bootstrap = download_installer(root)?;
   let installer = fs::read_dir(&bootstrap.0)
     .map_err(|error| error.to_string())?
@@ -226,7 +239,7 @@ fn install(root: &Path) -> Result<TexLivePaths, String> {
   let result = file
     .write_all(installation.to_string_lossy().as_bytes())
     .and_then(|()| file.sync_all())
-    .and_then(|()| fs::rename(&temporary, metadata))
+    .and_then(|()| platform::replace_file(&temporary, &metadata))
     .map_err(|error| error.to_string());
   if temporary.exists() {
     let _ = fs::remove_file(&temporary);
@@ -239,20 +252,24 @@ fn update(root: &Path) -> Result<TexLivePaths, String> {
   let _guard = TEXLIVE_LOCK
     .lock()
     .map_err(|_| "TeX Live updater is unavailable")?;
-  let root = root
-    .canonicalize()
-    .map_err(|_| "No Papyri-managed TeX Live installation was found")?;
+  let root = platform::strip_verbatim(
+    &root
+      .canonicalize()
+      .map_err(|_| "No Papyri-managed TeX Live installation was found")?,
+  );
   let recorded = fs::read_to_string(root.join("current"))
     .map_err(|_| "No Papyri-managed TeX Live installation was found")?;
-  let installation = Path::new(&recorded)
-    .canonicalize()
-    .map_err(|error| error.to_string())?;
+  let installation = platform::strip_verbatim(
+    &Path::new(&recorded)
+      .canonicalize()
+      .map_err(|error| error.to_string())?,
+  );
   if !installation.starts_with(&root) || installation == root {
     return Err("Invalid managed TeX Live location".into());
   }
   let bin = installation
     .join("bin")
-    .join(platform(std::env::consts::ARCH)?);
+    .join(texlive_platform(std::env::consts::ARCH)?);
   let manager = bin.join("tlmgr");
   if !executables::is_executable(&manager) {
     return Err("The managed TeX Live updater is missing".into());
@@ -273,6 +290,12 @@ fn update(root: &Path) -> Result<TexLivePaths, String> {
 
 #[tauri::command]
 pub async fn manage_texlive(app: tauri::AppHandle, action: String) -> Result<TexLivePaths, String> {
+  if cfg!(target_os = "windows") {
+    return Err(
+      "Managed TeX Live installation is not available on Windows; install TeX Live separately."
+        .into(),
+    );
+  }
   let root = app
     .path()
     .app_data_dir()
@@ -294,13 +317,15 @@ mod tests {
   fn profile_is_private_and_enables_all_engines() {
     let value = profile(Path::new("/tmp/papyri tex"), "x86_64").unwrap();
     assert!(value.contains("TEXDIR /tmp/papyri tex\n"));
-    assert!(value.contains("binary_x86_64-linux 1\n"));
+    if cfg!(target_os = "linux") {
+      assert!(value.contains("binary_x86_64-linux 1\n"));
+    }
     assert!(value.contains("collection-luatex 1\n"));
     assert!(value.contains("collection-xetex 1\n"));
     assert!(value.contains("collection-basic 1\n"));
     assert!(value.contains("collection-latex 1\n"));
     assert!(profile(Path::new("/tmp/bad\npath"), "x86_64").is_err());
-    assert!(platform("unknown").is_err());
+    assert!(texlive_platform("unknown").is_err());
   }
   #[test]
   fn missing_installation_is_not_updated() {

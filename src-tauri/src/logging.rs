@@ -4,21 +4,15 @@
 //! whether that is necessary and connects the child's output to a terminal, a
 //! file, or a shell command.
 
+use crate::platform;
 use std::{
   env,
-  ffi::OsStr,
-  fs::{self, File, OpenOptions, Permissions},
-  io,
-  os::{
-    fd::OwnedFd,
-    unix::{
-      fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
-      net::UnixStream,
-      process::CommandExt,
-    },
-  },
+  fs::{File, OpenOptions},
+  io::{self, Read, Write},
   path::{Path, PathBuf},
   process::{Child, Command, Stdio},
+  sync::mpsc,
+  thread,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -89,37 +83,17 @@ pub fn select(log: Option<&str>, attached: bool, auto_detach: bool) -> Result<Mo
 
 /// Append-only log path used when no explicit target is supplied.
 pub fn default_file() -> PathBuf {
-  if let Some(base) = env::var_os("XDG_STATE_HOME")
-    .filter(|value| !value.is_empty())
-    .map(PathBuf::from)
-  {
-    return base.join("papyri").join("papyri.log");
-  }
-  if let Some(home) = env::var_os("HOME").filter(|value| !value.is_empty()) {
-    return PathBuf::from(home)
-      .join(".local")
-      .join("state")
-      .join("papyri")
-      .join("papyri.log");
-  }
-  if let Some(base) = env::var_os("XDG_CACHE_HOME")
-    .filter(|value| !value.is_empty())
-    .map(PathBuf::from)
-  {
-    return base.join("papyri").join("papyri.log");
-  }
-  let uid = fs::metadata("/proc/self")
-    .map(|metadata| metadata.uid())
-    .unwrap_or(0);
-  env::temp_dir()
-    .join(format!("papyri-{uid}"))
+  platform::state_dir()
+    .or_else(platform::cache_dir)
+    .unwrap_or_else(env::temp_dir)
+    .join("papyri")
     .join("papyri.log")
 }
 
 /// Spawn the GUI detached from the terminal, with both output streams routed to
 /// `target`. The returned child is normally dropped: the launcher exits and the
 /// GUI is reparented.
-pub fn spawn_detached(program: &OsStr, target: &Target) -> Result<Child, String> {
+pub fn spawn_detached(program: &std::ffi::OsStr, target: &Target) -> Result<Child, String> {
   spawn_detached_command(Command::new(program), target)
 }
 
@@ -137,25 +111,55 @@ fn spawn_detached_command(mut command: Command, target: &Target) -> Result<Child
         .stderr(Stdio::from(stderr));
     }
     Target::Command(sink) => {
-      let (reader, writer) =
-        UnixStream::pair().map_err(|error| format!("Could not create the log pipe: {error}"))?;
-      let stderr_writer = writer
-        .try_clone()
-        .map_err(|error| format!("Could not duplicate the log pipe: {error}"))?;
-      let mut sink_command = Command::new("sh");
+      // The sink owns the log stream, and both child streams feed it through a
+      // channel so a noisy stderr cannot block stdout (or vice versa).
+      let mut sink_command = if cfg!(windows) {
+        let mut command = Command::new("cmd");
+        command.arg("/C").arg(sink);
+        command
+      } else {
+        let mut command = Command::new("sh");
+        command.arg("-c").arg(sink);
+        command
+      };
       sink_command
-        .arg("-c")
-        .arg(sink)
-        .stdin(Stdio::from(file_from_stream(reader)))
+        .stdin(Stdio::piped())
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit());
       detach(&mut sink_command);
-      sink_command
+      let mut sink_child = sink_command
         .spawn()
         .map_err(|error| format!("Could not start log command `{sink}`: {error}"))?;
-      command
-        .stdout(Stdio::from(file_from_stream(writer)))
-        .stderr(Stdio::from(file_from_stream(stderr_writer)));
+      let sink_stdin = sink_child
+        .stdin
+        .take()
+        .ok_or_else(|| format!("Could not open the log command `{sink}`"))?;
+      command.stdout(Stdio::piped()).stderr(Stdio::piped());
+      let mut child = command
+        .spawn()
+        .map_err(|error| format!("Could not start Papyri: {error}"))?;
+      let stdout = child.stdout.take();
+      let stderr = child.stderr.take();
+      let (sender, receiver) = mpsc::channel::<Vec<u8>>();
+      if let Some(stdout) = stdout {
+        let sender = sender.clone();
+        thread::spawn(move || pump(stdout, sender));
+      }
+      if let Some(stderr) = stderr {
+        let sender = sender.clone();
+        thread::spawn(move || pump(stderr, sender));
+      }
+      drop(sender);
+      thread::spawn(move || {
+        let mut sink_stdin = sink_stdin;
+        for chunk in receiver {
+          if sink_stdin.write_all(&chunk).is_err() {
+            break;
+          }
+        }
+        let _ = sink_child.wait();
+      });
+      return Ok(child);
     }
   }
   detach(&mut command);
@@ -164,37 +168,60 @@ fn spawn_detached_command(mut command: Command, target: &Target) -> Result<Child
     .map_err(|error| format!("Could not start Papyri: {error}"))
 }
 
+fn pump(mut pipe: impl Read, sender: mpsc::Sender<Vec<u8>>) {
+  let mut buffer = [0u8; 8192];
+  loop {
+    match pipe.read(&mut buffer) {
+      Ok(0) | Err(_) => break,
+      Ok(read) => {
+        if sender.send(buffer[..read].to_vec()).is_err() {
+          break;
+        }
+      }
+    }
+  }
+}
+
 fn open_file(path: &Path) -> Result<File, String> {
   if let Some(parent) = path.parent() {
     if !parent.as_os_str().is_empty() && !parent.exists() {
-      fs::create_dir_all(parent)
+      platform::create_private_dir(parent)
         .map_err(|error| format!("Could not create {}: {error}", parent.display()))?;
-      fs::set_permissions(parent, Permissions::from_mode(0o700))
-        .map_err(|error| format!("Could not secure {}: {error}", parent.display()))?;
     }
   }
-  OpenOptions::new()
-    .create(true)
-    .append(true)
-    .mode(0o600)
+  let mut options = OpenOptions::new();
+  options.create(true).append(true);
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::OpenOptionsExt;
+    options.mode(0o600);
+  }
+  options
     .open(path)
     .map_err(|error| format!("Could not open log {}: {error}", path.display()))
 }
 
-fn file_from_stream(stream: UnixStream) -> File {
-  File::from(OwnedFd::from(stream))
-}
-
 fn detach(command: &mut Command) {
-  // A new session drops the controlling terminal and keeps terminal shutdown
-  // from taking the GUI or its logging command down with it.
-  unsafe {
-    command.pre_exec(|| {
-      if libc::setsid() == -1 {
-        return Err(io::Error::last_os_error());
-      }
-      Ok(())
-    });
+  #[cfg(unix)]
+  {
+    use std::os::unix::process::CommandExt;
+    // A new session drops the controlling terminal and keeps terminal shutdown
+    // from taking the GUI or its logging command down with it.
+    unsafe {
+      command.pre_exec(|| {
+        if libc::setsid() == -1 {
+          return Err(io::Error::last_os_error());
+        }
+        Ok(())
+      });
+    }
+  }
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+    command.creation_flags(DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP);
   }
 }
 
@@ -203,7 +230,6 @@ mod tests {
   use super::*;
   use std::{
     sync::atomic::{AtomicU64, Ordering},
-    thread,
     time::{Duration, Instant},
   };
 
@@ -216,30 +242,8 @@ mod tests {
       name,
       NEXT_DIRECTORY.fetch_add(1, Ordering::Relaxed)
     ));
-    fs::create_dir_all(&directory).unwrap();
+    std::fs::create_dir_all(&directory).unwrap();
     directory
-  }
-
-  fn writer_script(directory: &Path) -> PathBuf {
-    let script = directory.join("emit.sh");
-    fs::write(
-      &script,
-      "#!/bin/sh\nprintf 'stdout-line\\n'\nprintf 'stderr-line\\n' >&2\n",
-    )
-    .unwrap();
-    script
-  }
-
-  fn await_file(path: &Path, expected: &[&str]) {
-    let deadline = Instant::now() + Duration::from_secs(3);
-    loop {
-      let text = fs::read_to_string(path).unwrap_or_default();
-      if expected.iter().all(|line| text.contains(line)) {
-        return;
-      }
-      assert!(Instant::now() < deadline, "timed out waiting for {path:?}");
-      thread::sleep(Duration::from_millis(20));
-    }
   }
 
   #[test]
@@ -287,6 +291,31 @@ mod tests {
     assert_eq!(select(None, false, true).unwrap(), Mode::Attached);
   }
 
+  #[cfg(unix)]
+  fn writer_script(directory: &Path) -> PathBuf {
+    let script = directory.join("emit.sh");
+    std::fs::write(
+      &script,
+      "#!/bin/sh\nprintf 'stdout-line\\n'\nprintf 'stderr-line\\n' >&2\n",
+    )
+    .unwrap();
+    script
+  }
+
+  #[cfg(unix)]
+  fn await_file(path: &Path, expected: &[&str]) {
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+      let text = std::fs::read_to_string(path).unwrap_or_default();
+      if expected.iter().all(|line| text.contains(line)) {
+        return;
+      }
+      assert!(Instant::now() < deadline, "timed out waiting for {path:?}");
+      thread::sleep(Duration::from_millis(20));
+    }
+  }
+
+  #[cfg(unix)]
   #[test]
   fn detached_process_writes_both_streams_to_a_file() {
     let directory = test_directory("file");
@@ -296,12 +325,13 @@ mod tests {
     command.arg(&script);
     let mut child = spawn_detached_command(command, &Target::File(log.clone())).unwrap();
     assert!(child.wait().unwrap().success());
-    let text = fs::read_to_string(&log).unwrap();
+    let text = std::fs::read_to_string(&log).unwrap();
     assert!(text.contains("stdout-line"));
     assert!(text.contains("stderr-line"));
-    fs::remove_dir_all(directory).unwrap();
+    std::fs::remove_dir_all(directory).unwrap();
   }
 
+  #[cfg(unix)]
   #[test]
   fn detached_process_streams_both_streams_to_a_command() {
     let directory = test_directory("command");
@@ -313,6 +343,6 @@ mod tests {
     let mut child = spawn_detached_command(command, &Target::Command(sink_command)).unwrap();
     assert!(child.wait().unwrap().success());
     await_file(&sink, &["stdout-line", "stderr-line"]);
-    fs::remove_dir_all(directory).unwrap();
+    std::fs::remove_dir_all(directory).unwrap();
   }
 }

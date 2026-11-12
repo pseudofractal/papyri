@@ -26,7 +26,8 @@
     TEXT_FONT_PRESETS,
     UI_FONT_PRESETS,
   } from '../lib/fonts';
-  import { native } from '../lib/sources';
+  import { desktop } from '../lib/sources';
+  import { platform } from '../lib/platform';
   import { invokeHost } from '../lib/native';
   type SettingsTab = 'appearance' | 'reading' | 'documents' | 'compilers';
   type FontPreference = 'uiFont' | 'textFont' | 'codeFont' | 'mathFont';
@@ -74,7 +75,7 @@
     { language: 'latex', name: 'texlab', label: 'LaTeX · Texlab' },
   ];
   onMount(() => {
-    if (native)
+    if (desktop)
       void invokeHost<typeof engines>('latex_engines')
         .then((found) => {
           engines = found;
@@ -82,7 +83,7 @@
         .catch((reason) => {
           discoveryError = String(reason);
         });
-    if (native)
+    if (desktop)
       void invokeHost<string | null>('typst_binary')
         .then((found) => {
           typstBinary = found;
@@ -476,7 +477,7 @@
                 type="button"
                 class="btn btn-ghost btn-sm"
                 aria-label="Browse {server.label} executable"
-                disabled={!native || toolBusy}
+                disabled={!desktop || toolBusy}
                 onclick={() =>
                   void chooseExecutable((path) => setServerPath(server.language, path))}
                 >Browse</button
@@ -485,7 +486,7 @@
                 type="button"
                 class="btn btn-ghost btn-sm"
                 aria-label="Download or update {server.label}"
-                disabled={!native || toolBusy}
+                disabled={!desktop || !platform.managedTools || toolBusy}
                 onclick={() => void ondownloadtools([server.name])}>Download / update</button
               >
             </div>
@@ -495,7 +496,9 @@
         <label class="setting-row"
           ><span
             >Typst executable<small
-              >{native ? typstBinary || 'Not found on PATH' : 'Available in the Linux app'}</small
+              >{desktop
+                ? typstBinary || 'Not found on PATH'
+                : 'Available in the desktop app'}</small
             ></span
           >
           <input
@@ -511,14 +514,14 @@
           <button
             type="button"
             class="btn btn-ghost btn-sm"
-            disabled={!native || toolBusy}
+            disabled={!desktop || toolBusy}
             onclick={() => void chooseExecutable((path) => setPreference('typstPath', path))}
             >Browse Typst</button
           >
           <button
             type="button"
             class="btn btn-ghost btn-sm"
-            disabled={!native || toolBusy}
+            disabled={!desktop || !platform.managedTools || toolBusy}
             onclick={() => void ondownloadtools(['typst'])}>Download / update Typst</button
           >
         </div>
@@ -544,9 +547,9 @@
           <label class="setting-row"
             ><span
               >{engine} executable<small
-                >{native
+                >{desktop
                   ? engines.find((item) => item.name === name)?.path || 'Not found on PATH'
-                  : 'Available in the Linux app'}</small
+                  : 'Available in the desktop app'}</small
               ></span
             >
             <input
@@ -565,7 +568,7 @@
             <button
               type="button"
               class="btn btn-ghost btn-sm"
-              disabled={!native || toolBusy}
+              disabled={!desktop || toolBusy}
               onclick={() =>
                 void chooseExecutable((path) =>
                   setPreference('latexPaths', { ...preferences.latexPaths, [name]: path }),
@@ -583,19 +586,19 @@
           <button
             type="button"
             class="btn btn-ghost btn-sm"
-            disabled={!native || toolBusy}
+            disabled={!desktop || !platform.managedTexlive || toolBusy}
             onclick={() => void onmanagetexlive('install')}>Install managed TeX Live</button
           >
           <button
             type="button"
             class="btn btn-ghost btn-sm"
-            disabled={!native || toolBusy}
+            disabled={!desktop || !platform.managedTexlive || toolBusy}
             onclick={() => void onmanagetexlive('update')}>Update managed TeX Live</button
           >
           <button
             type="button"
             class="btn btn-ghost btn-sm"
-            disabled={!native || toolBusy}
+            disabled={!desktop || toolBusy}
             onclick={() =>
               void invokeHost('open_external', {
                 url: 'https://tug.org/texlive/acquire-netinstall.html',
@@ -606,13 +609,14 @@
           <button
             type="button"
             class="btn btn-primary btn-sm"
-            disabled={!native || toolBusy}
+            disabled={!desktop || !platform.managedTools || toolBusy}
             onclick={() => void ondownloadtools(['marksman', 'tinymist', 'texlab', 'typst'])}
             >Download / update standalone tools</button
           >
         </div>
-        {#if !native}<p class="hint">
-            Tool downloads and executable selection are available in the Linux app.
+        {#if !desktop || !platform.managedTools}<p class="hint">
+            Managed tool downloads are unavailable on this platform. Choose an installed executable
+            instead.
           </p>{/if}
         {#if toolMessage}<p class="hint" role="status">{toolMessage}</p>{/if}
         {#if toolError}<p class="error" role="alert" style="white-space: pre-wrap">

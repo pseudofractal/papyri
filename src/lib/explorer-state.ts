@@ -1,4 +1,4 @@
-import { normalize } from './paths';
+import { isAbsolutePath, normalize } from './paths';
 
 export interface ExplorerState {
   workingDirectory: string;
@@ -9,7 +9,7 @@ const MAX_EXPANDED = 500;
 function inside(root: string, value: unknown): value is string {
   return (
     typeof value === 'string' &&
-    value.startsWith('/') &&
+    isAbsolutePath(value) &&
     value.length <= 4096 &&
     !value.includes('\0') &&
     normalize(value) === value &&

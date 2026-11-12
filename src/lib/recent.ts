@@ -1,4 +1,4 @@
-import { normalize } from './paths';
+import { isAbsolutePath, isRootPath, normalize } from './paths';
 
 export interface RecentFolder {
   path: string;
@@ -13,7 +13,7 @@ export const MAX_RECENT_FOLDERS = 10;
 function validPath(value: unknown): value is string {
   return (
     typeof value === 'string' &&
-    value.startsWith('/') &&
+    isAbsolutePath(value) &&
     value.length <= MAX_PATH_LENGTH &&
     !value.includes('\0')
   );
@@ -22,11 +22,11 @@ function validPath(value: unknown): value is string {
 function validFolder(value: unknown): value is RecentFolder {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const folder = value as { path?: unknown; lastFile?: unknown };
-  if (!validPath(folder.path) || normalize(folder.path) === '/') return false;
+  if (!validPath(folder.path) || isRootPath(normalize(folder.path))) return false;
   if (
     folder.lastFile !== undefined &&
     folder.lastFile !== null &&
-    (!validPath(folder.lastFile) || normalize(folder.lastFile) === '/')
+    (!validPath(folder.lastFile) || isRootPath(normalize(folder.lastFile)))
   )
     return false;
   return true;

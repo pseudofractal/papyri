@@ -5,16 +5,13 @@
 //! that only need the native window are handled here. Events are pushed to
 //! subscribed connections as `{"event": "...", "data": ...}` lines.
 
+use crate::platform::control::Connection;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
   collections::HashMap,
   fs,
   io::{BufRead, BufReader, Write},
-  os::unix::{
-    fs::{MetadataExt, PermissionsExt},
-    net::{UnixListener, UnixStream},
-  },
   path::{Path, PathBuf},
   sync::{
     atomic::{AtomicU64, Ordering},
@@ -35,7 +32,7 @@ const RESPONSE_GRACE: Duration = Duration::from_secs(5);
 const READY_TIMEOUT: Duration = Duration::from_secs(20);
 const SUBSCRIBER_QUEUE: usize = 256;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Request {
   #[serde(default)]
   pub id: Value,
@@ -44,6 +41,9 @@ pub struct Request {
   pub params: Value,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub timeout_ms: Option<u64>,
+  /// Required when the platform transport is a loopback socket.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub token: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -179,51 +179,11 @@ fn event_matches(filter: &Option<Vec<String>>, event: &str) -> bool {
 }
 
 pub fn socket_path() -> PathBuf {
-  if let Some(value) = std::env::var_os("PAPYRI_CONTROL_SOCKET") {
-    if !value.is_empty() {
-      return PathBuf::from(value);
-    }
-  }
-  if let Some(base) = std::env::var_os("XDG_RUNTIME_DIR")
-    .filter(|value| !value.is_empty())
-    .map(PathBuf::from)
-  {
-    return base.join("papyri").join("control.sock");
-  }
-  if let Some(base) = std::env::var_os("XDG_CACHE_HOME")
-    .filter(|value| !value.is_empty())
-    .map(PathBuf::from)
-  {
-    return base.join("papyri").join("control.sock");
-  }
-  if let Some(home) = std::env::var_os("HOME").filter(|value| !value.is_empty()) {
-    return PathBuf::from(home)
-      .join(".cache")
-      .join("papyri")
-      .join("control.sock");
-  }
-  // Last resort for stripped-down sessions. Include the uid so users cannot
-  // collide in the shared temporary directory.
-  let uid = fs::metadata("/proc/self")
-    .map(|metadata| metadata.uid())
-    .unwrap_or(0);
-  std::env::temp_dir()
-    .join(format!("papyri-{uid}"))
-    .join("control.sock")
+  crate::platform::control::endpoint_path()
 }
 
 fn prepare_socket_path(path: &Path) -> Result<(), String> {
-  let parent = path
-    .parent()
-    .ok_or_else(|| format!("Invalid control socket path: {}", path.display()))?;
-  let existed = parent.exists();
-  fs::create_dir_all(parent)
-    .map_err(|error| format!("Could not create {}: {error}", parent.display()))?;
-  if !existed {
-    fs::set_permissions(parent, fs::Permissions::from_mode(0o700))
-      .map_err(|error| format!("Could not secure {}: {error}", parent.display()))?;
-  }
-  Ok(())
+  crate::platform::control::prepare_endpoint(path)
 }
 
 /// Start the control socket. A stale socket from a crashed process is replaced.
@@ -231,78 +191,48 @@ pub fn start(app: AppHandle) -> Result<PathBuf, String> {
   let path = socket_path();
   prepare_socket_path(&path)?;
   if path.exists() {
-    match UnixStream::connect(&path) {
-      Ok(_) => return Err(format!("Another Papyri instance owns {}", path.display())),
-      Err(error)
-        if matches!(
-          error.kind(),
-          std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused
-        ) =>
-      {
-        let _ = fs::remove_file(&path);
-      }
-      Err(error) => {
-        return Err(format!(
-          "Could not inspect the existing control socket at {}: {error}",
-          path.display()
-        ));
-      }
+    if crate::platform::control::is_running(&path) {
+      return Err(format!("Another Papyri instance owns {}", path.display()));
     }
+    let _ = fs::remove_file(&path);
   }
-  let listener = UnixListener::bind(&path)
-    .map_err(|error| format!("Could not listen on {}: {error}", path.display()))?;
-  fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
-    .map_err(|error| format!("Could not secure {}: {error}", path.display()))?;
+  let listener = crate::platform::control::bind(&path)?;
   let thread_app = app.clone();
   thread::Builder::new()
     .name("papyri-control".into())
-    .spawn(move || {
-      for stream in listener.incoming() {
-        let Ok(stream) = stream else { break };
-        let connection_app = thread_app.clone();
-        let _ = thread::Builder::new()
-          .name("papyri-control-client".into())
-          .spawn(move || handle_connection(connection_app, stream));
-      }
+    .spawn(move || loop {
+      let stream = match listener.accept() {
+        Ok(stream) => stream,
+        Err(_) => break,
+      };
+      let connection_app = thread_app.clone();
+      let _ = thread::Builder::new()
+        .name("papyri-control-client".into())
+        .spawn(move || handle_connection(connection_app, stream));
     })
     .map_err(|error| format!("Could not start the control listener: {error}"))?;
   Ok(path)
 }
 
 pub fn is_running() -> bool {
-  UnixStream::connect(socket_path()).is_ok()
+  crate::platform::control::is_running(&socket_path())
 }
 
-pub fn connect(wait: Duration) -> Result<UnixStream, String> {
-  let path = socket_path();
-  let deadline = Instant::now() + wait;
-  loop {
-    match UnixStream::connect(&path) {
-      Ok(stream) => return Ok(stream),
-      Err(error) if Instant::now() < deadline => {
-        if error.kind() == std::io::ErrorKind::NotFound
-          || error.kind() == std::io::ErrorKind::ConnectionRefused
-        {
-          thread::sleep(Duration::from_millis(50));
-        } else {
-          return Err(format!(
-            "Could not connect to Papyri at {}: {error}",
-            path.display()
-          ));
-        }
-      }
-      Err(error) => {
-        return Err(format!(
-          "Papyri is not running (no control socket at {}): {error}",
-          path.display()
-        ));
-      }
-    }
+pub fn connect(wait: Duration) -> Result<Connection, String> {
+  crate::platform::control::connect(&socket_path(), wait)
+}
+
+/// The token a client must present for the loopback transport.
+pub fn request_token() -> Option<String> {
+  crate::platform::control::request_token()
+}
+
+pub fn send_request(stream: &mut Connection, request: &Request) -> Result<(), String> {
+  let mut request = request.clone();
+  if request.token.is_none() {
+    request.token = request_token();
   }
-}
-
-pub fn send_request(stream: &mut UnixStream, request: &Request) -> Result<(), String> {
-  let line = serde_json::to_string(request).map_err(|error| error.to_string())?;
+  let line = serde_json::to_string(&request).map_err(|error| error.to_string())?;
   if line.len() > MAX_REQUEST_BYTES {
     return Err("Control request is too large.".into());
   }
@@ -329,6 +259,7 @@ pub fn request_with_timeout(
       method: method.to_string(),
       params,
       timeout_ms: Some(timeout.as_millis().min(u64::MAX as u128) as u64),
+      token: None,
     },
   )
   .map_err(|message| ProtocolError::new("io-error", message))?;
@@ -352,7 +283,7 @@ pub fn request_with_timeout(
   Ok(response.result.unwrap_or(Value::Null))
 }
 
-fn handle_connection(app: AppHandle, stream: UnixStream) {
+fn handle_connection(app: AppHandle, stream: Connection) {
   let connection = app
     .state::<ControlState>()
     .next_connection
@@ -405,6 +336,13 @@ fn handle_connection(app: AppHandle, stream: UnixStream) {
         continue;
       }
     };
+    if !crate::platform::control::authorize(request.token.as_deref()) {
+      let _ = sender.send(response_line(
+        request.id.clone(),
+        Reply::failure("unauthorized", "The control request token is invalid."),
+      ));
+      break;
+    }
     if request.id.is_null() {
       // Keep JSON-RPC-style clients working while still returning an id.
       let _ = sender.send(response_line(

@@ -74,7 +74,7 @@ it.each([
   for (const source of await documentSources(file))
     await expect(source.read('/' + name)).resolves.toMatchObject({
       text,
-      compilationError: expect.stringContaining('requires the Linux app'),
+      compilationError: expect.stringContaining('requires the desktop app'),
     });
 });
 
