@@ -1,7 +1,7 @@
 <script lang="ts">
   import { mount, onMount, unmount } from 'svelte';
   import { basicSetup } from 'codemirror';
-  import { redo, selectAll, undo } from '@codemirror/commands';
+  import { indentLess, insertTab, redo, selectAll, undo } from '@codemirror/commands';
   import { Compartment, EditorState, StateEffect, StateField } from '@codemirror/state';
   import {
     Decoration,
@@ -446,6 +446,8 @@
           buildFailureField,
           keymap.of([
             { key: 'Tab', run: acceptCompletion },
+            { key: 'Tab', run: insertTab },
+            { key: 'Shift-Tab', run: indentLess },
             { key: 'Alt-PageDown', run: (editor) => scrollCompletionDetails(editor, 1) },
             { key: 'Alt-PageUp', run: (editor) => scrollCompletionDetails(editor, -1) },
             {

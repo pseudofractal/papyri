@@ -2865,6 +2865,40 @@ test('uses theme-aware Catppuccin selection colors in the source editor', async 
   for (const background of activeLineBackgrounds) expect(background).toMatch(/0\.3\)$/);
 });
 
+test('inserts a tab in the source editor instead of moving focus', async ({ page }) => {
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace('__TAURI_SCRIPT_NONCE__', 'testnonce');
+    await route.fulfill({ response, body });
+  });
+  await page.addInitScript(() => {
+    const file = { text: 'alpha', stamp: '1' };
+    Object.defineProperty(window, '__PAPYRI_HOST_TOKEN__', { value: 'test-token' });
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (command: string) => {
+          if (command === 'initial_path') return { path: '/paper.md', directory: false };
+          if (command === 'read_document') return { ...file };
+          if (command === 'document_stamp') return file.stamp;
+          if (command === 'list_directory') return [];
+          throw new Error(`Unavailable native command: ${command}`);
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Edit source' }).click();
+  const editor = page.getByRole('textbox', { name: 'Source editor' });
+  await editor.click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('Tab');
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('beta');
+  await expect
+    .poll(() => editor.evaluate((element) => element.textContent))
+    .toContain('alpha\tbeta');
+});
+
 test('edits source, retains a draft across preview mode, and saves the captured version', async ({
   page,
 }) => {
