@@ -3365,7 +3365,8 @@ test('does not offer LaTeX math completions outside Markdown math', async ({ pag
   ).toHaveCount(0);
 });
 
-test('recompiles LaTeX drafts while retaining the previous PDF', async ({ page }) => {
+test('recompiles LaTeX drafts while retaining the previous PDF', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'PDF pointer-to-source synchronization is covered by the desktop project.');
   const pdf = (await readFile('e2e/fixtures/paged.pdf')).toString('base64');
   await page.route('**/', async (route) => {
     const response = await route.fetch();
