@@ -70,6 +70,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           mkdir -p artifacts
+          cp "src-tauri/target/${{ matrix.target }}/release/bundle/dmg/"*.dmg artifacts/
           ditto -c -k --sequesterRsrc --keepParent \
             "src-tauri/target/${{ matrix.target }}/release/bundle/macos/Papyri.app" \
             "artifacts/Papyri-${{ github.ref_name }}-${{ matrix.name }}.zip"

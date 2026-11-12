@@ -49,7 +49,7 @@
             version = manifest.version;
             src = webSource;
             nodejs = pkgs.nodejs_24;
-            npmDepsHash = "sha256-LpszxHwMdbBBLn2JR7sbASXvQ3mc59io8+XaK93cvsk=";
+            npmDepsHash = "sha256-rUOKGSEKHnVpTmQ30XsFH+WoiVRU1BkQHnbmf3Dy7B0=";
             npmFlags = [ "--ignore-scripts" ];
             installPhase = ''
               runHook preInstall

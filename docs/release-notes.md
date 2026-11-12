@@ -2,6 +2,12 @@
 
 Papyri is a Markdown, PDF, Typst, and LaTeX viewer and source editor. Releases include native builds for Linux, macOS, and Windows, plus a browser build.
 
+## What's new in v0.2.0
+
+- Native macOS and Windows builds, including the embedded browser panel, coordinate input, screen and window capture, managed tools, and TeX Live installation.
+- LaTeX, BibTeX, and Typst run directly with the selected user executables on every platform. The previous Linux compiler sandbox has been removed.
+- macOS and Windows packaging, application icons, and release builds across all three desktop platforms.
+
 ## Linux
 
 Download the x86_64 AppImage or `.deb` package.

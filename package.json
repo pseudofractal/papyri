@@ -1,6 +1,6 @@
 {
   "name": "papyri",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Markdown, PDF, Typst, and LaTeX viewer and source editor with offline math and diagrams",
   "license": "MIT",
   "repository": {
