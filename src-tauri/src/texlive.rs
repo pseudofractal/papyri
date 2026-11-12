@@ -3,13 +3,18 @@ use crate::{
   executables, platform,
   tools::{read_limited, verify_executable},
 };
+#[cfg(not(target_os = "windows"))]
 use flate2::read::GzDecoder;
 use serde::Serialize;
 use sha2::{Digest, Sha512};
+#[cfg(not(target_os = "windows"))]
+use std::io::Cursor;
+#[cfg(not(target_os = "windows"))]
+use std::path::Component;
 use std::{
   fs::{self, File, OpenOptions},
-  io::{Cursor, Read, Seek, SeekFrom, Write},
-  path::{Component, Path, PathBuf},
+  io::{Read, Seek, SeekFrom, Write},
+  path::{Path, PathBuf},
   process::{Command, Stdio},
   sync::Mutex,
   time::Duration,
@@ -18,6 +23,7 @@ use tauri::Manager;
 
 const REPOSITORY: &str = "https://ctan.math.illinois.edu/systems/texlive/tlnet";
 const INSTALLER_LIMIT: u64 = 32 * 1024 * 1024;
+#[cfg(not(target_os = "windows"))]
 const UNPACKED_LIMIT: u64 = 64 * 1024 * 1024;
 const LOG_TAIL: u64 = 8192;
 static TEXLIVE_LOCK: Mutex<()> = Mutex::new(());
@@ -52,8 +58,20 @@ fn texlive_platform(architecture: &str) -> Result<&'static str, String> {
   }
 }
 
+fn engine_bin(root: &Path, architecture: &str) -> PathBuf {
+  let platform = texlive_platform(architecture).unwrap_or("win32");
+  let primary = root.join("bin").join(platform);
+  if cfg!(target_os = "windows") {
+    let windows = root.join("bin").join("windows");
+    if windows.is_dir() {
+      return windows;
+    }
+  }
+  primary
+}
+
 fn engine_paths(root: &Path, architecture: &str) -> Result<TexLivePaths, String> {
-  let bin = root.join("bin").join(texlive_platform(architecture)?);
+  let bin = engine_bin(root, architecture);
   let mut paths = Vec::new();
   for name in ["lualatex", "pdflatex", "xelatex"] {
     let path = bin.join(name);
@@ -114,14 +132,18 @@ fn download_installer(parent: &Path) -> Result<Bootstrap, String> {
       .map_err(|error| format!("Could not download TeX Live installer: {error}"))?;
     read_limited(response, limit)
   };
-  let checksum = String::from_utf8(fetch("install-tl-unx.tar.gz.sha512", 4096)?)
-    .map_err(|error| error.to_string())?;
+  #[cfg(target_os = "windows")]
+  let (asset, checksum_name) = ("install-tl-windows.exe", "install-tl-windows.exe.sha512");
+  #[cfg(not(target_os = "windows"))]
+  let (asset, checksum_name) = ("install-tl-unx.tar.gz", "install-tl-unx.tar.gz.sha512");
+  let checksum =
+    String::from_utf8(fetch(checksum_name, 4096)?).map_err(|error| error.to_string())?;
   let expected = checksum
     .split_whitespace()
     .next()
     .filter(|value| value.len() == 128 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
     .ok_or("Invalid TeX Live installer checksum")?;
-  let bytes = fetch("install-tl-unx.tar.gz", INSTALLER_LIMIT)?;
+  let bytes = fetch(asset, INSTALLER_LIMIT)?;
   let actual: String = Sha512::digest(&bytes)
     .iter()
     .map(|byte| format!("{byte:02x}"))
@@ -130,28 +152,36 @@ fn download_installer(parent: &Path) -> Result<Bootstrap, String> {
     return Err("TeX Live installer checksum mismatch".into());
   }
   let directory = Bootstrap(unique_directory(parent, "installer")?);
-  let mut archive = tar::Archive::new(GzDecoder::new(Cursor::new(bytes)).take(UNPACKED_LIMIT));
-  for entry in archive
-    .entries()
-    .map_err(|error| format!("Invalid TeX Live installer archive: {error}"))?
+  #[cfg(target_os = "windows")]
   {
-    let mut entry = entry.map_err(|error| error.to_string())?;
-    let path = entry.path().map_err(|error| error.to_string())?;
-    let safe = path
-      .components()
-      .all(|component| matches!(component, Component::Normal(_)));
-    let kind = entry.header().entry_type();
-    if !safe || !(kind.is_file() || kind.is_dir()) {
-      return Err("Unsafe TeX Live installer archive entry".into());
-    }
-    if !entry
-      .unpack_in(&directory.0)
-      .map_err(|error| error.to_string())?
-    {
-      return Err("Unsafe TeX Live installer archive path".into());
-    }
+    fs::write(directory.0.join(asset), bytes).map_err(|error| error.to_string())?;
+    return Ok(directory);
   }
-  Ok(directory)
+  #[cfg(not(target_os = "windows"))]
+  {
+    let mut archive = tar::Archive::new(GzDecoder::new(Cursor::new(bytes)).take(UNPACKED_LIMIT));
+    for entry in archive
+      .entries()
+      .map_err(|error| format!("Invalid TeX Live installer archive: {error}"))?
+    {
+      let mut entry = entry.map_err(|error| error.to_string())?;
+      let path = entry.path().map_err(|error| error.to_string())?;
+      let safe = path
+        .components()
+        .all(|component| matches!(component, Component::Normal(_)));
+      let kind = entry.header().entry_type();
+      if !safe || !(kind.is_file() || kind.is_dir()) {
+        return Err("Unsafe TeX Live installer archive entry".into());
+      }
+      if !entry
+        .unpack_in(&directory.0)
+        .map_err(|error| error.to_string())?
+      {
+        return Err("Unsafe TeX Live installer archive path".into());
+      }
+    }
+    Ok(directory)
+  }
 }
 
 fn run(command: &mut Command, log: &Path, operation: &str) -> Result<(), String> {
@@ -193,6 +223,9 @@ fn install(root: &Path) -> Result<TexLivePaths, String> {
   let architecture = std::env::consts::ARCH;
   texlive_platform(architecture)?;
   let bootstrap = download_installer(root)?;
+  #[cfg(target_os = "windows")]
+  let installer = bootstrap.0.join("install-tl-windows.exe");
+  #[cfg(not(target_os = "windows"))]
   let installer = fs::read_dir(&bootstrap.0)
     .map_err(|error| error.to_string())?
     .filter_map(Result::ok)
@@ -204,9 +237,20 @@ fn install(root: &Path) -> Result<TexLivePaths, String> {
   fs::write(&profile_path, profile(&installation, architecture)?)
     .map_err(|error| error.to_string())?;
   let log = installation.join("papyri-install.log");
+  #[cfg(target_os = "windows")]
+  let mut installer_command = {
+    let mut command = Command::new(&installer);
+    command.args(["-gui", "text"]);
+    command
+  };
+  #[cfg(not(target_os = "windows"))]
+  let mut installer_command = {
+    let mut command = Command::new("perl");
+    command.arg(&installer);
+    command
+  };
   run(
-    Command::new("perl")
-      .arg(installer)
+    installer_command
       .arg("-profile")
       .arg(profile_path)
       .arg("-repository")
@@ -267,10 +311,8 @@ fn update(root: &Path) -> Result<TexLivePaths, String> {
   if !installation.starts_with(&root) || installation == root {
     return Err("Invalid managed TeX Live location".into());
   }
-  let bin = installation
-    .join("bin")
-    .join(texlive_platform(std::env::consts::ARCH)?);
-  let manager = bin.join("tlmgr");
+  let bin = engine_bin(&installation, std::env::consts::ARCH);
+  let manager = bin.join(platform::executable_name("tlmgr"));
   if !executables::is_executable(&manager) {
     return Err("The managed TeX Live updater is missing".into());
   }
@@ -290,12 +332,6 @@ fn update(root: &Path) -> Result<TexLivePaths, String> {
 
 #[tauri::command]
 pub async fn manage_texlive(app: tauri::AppHandle, action: String) -> Result<TexLivePaths, String> {
-  if cfg!(target_os = "windows") {
-    return Err(
-      "Managed TeX Live installation is not available on Windows; install TeX Live separately."
-        .into(),
-    );
-  }
   let root = app
     .path()
     .app_data_dir()

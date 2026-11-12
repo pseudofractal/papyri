@@ -1,8 +1,10 @@
 mod bibliography;
 #[cfg(target_os = "linux")]
 mod browser;
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 mod browser_stub;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod browser_tauri;
 mod cli;
 mod cli_args;
 mod cli_output;
@@ -26,8 +28,10 @@ mod security;
 mod texlive;
 mod tools;
 mod typst;
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 use browser_stub as browser;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use browser_tauri as browser;
 use tauri::Manager;
 
 fn trace_native_startup(stage: &str) {
@@ -44,6 +48,7 @@ pub fn run() {
   let mut bytes = [0u8; 32];
   getrandom::fill(&mut bytes).expect("Unable to create host session token");
   let token: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
+  let setup_token = token.clone();
   let handler: Box<dyn Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync> =
     Box::new(tauri::generate_handler![
       commands::initial_path,
@@ -109,12 +114,9 @@ pub fn run() {
     ]);
   trace_native_startup("builder");
   let builder = tauri::Builder::default();
-  #[cfg(not(target_os = "linux"))]
-  let builder = builder.append_invoke_initialization_script(include_str!("preview_zoom.js"));
   builder
     .manage(control::ControlState::default())
     .manage(lsp::ServerState::default())
-    .append_invoke_initialization_script(security::initialization(&token))
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_opener::init())
     .on_window_event(|window, event| {
@@ -125,13 +127,28 @@ pub fn run() {
         }
       }
     })
-    .setup(|app| {
+    .setup(move |app| {
       trace_native_startup("setup");
       #[cfg(not(any(target_os = "android", target_os = "ios")))]
       {
-        let window = app
-          .get_webview_window("main")
-          .ok_or("Main window is unavailable")?;
+        let config = app
+          .config()
+          .app
+          .windows
+          .iter()
+          .find(|window| window.label == "main")
+          .ok_or("Main window configuration is unavailable")?;
+        #[allow(unused_mut)]
+        let mut window_builder = tauri::WebviewWindowBuilder::from_config(app, config)?
+          .initialization_script(security::initialization(&setup_token));
+        #[cfg(not(target_os = "linux"))]
+        {
+          window_builder =
+            window_builder.initialization_script_for_all_frames(include_str!("preview_zoom.js"));
+        }
+        let window = window_builder
+          .build()
+          .map_err(|error| format!("Main window is unavailable: {error}"))?;
         #[cfg(target_os = "linux")]
         window.with_webview(|webview| {
           use webkit2gtk::{
@@ -152,21 +169,18 @@ pub fn run() {
           .default_window_icon()
           .ok_or("Application icon is unavailable")?;
         window.set_icon(icon.clone())?;
-        #[cfg(target_os = "linux")]
-        {
-          let data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|error| format!("Application data directory is unavailable: {error}"))?
-            .join("browser");
-          let cache_dir = app
-            .path()
-            .app_cache_dir()
-            .map_err(|error| format!("Application cache directory is unavailable: {error}"))?
-            .join("browser");
-          if let Err(error) = browser::install(&window, app.handle().clone(), data_dir, cache_dir) {
-            eprintln!("Papyri browser panel unavailable: {error}");
-          }
+        let data_dir = app
+          .path()
+          .app_data_dir()
+          .map_err(|error| format!("Application data directory is unavailable: {error}"))?
+          .join("browser");
+        let cache_dir = app
+          .path()
+          .app_cache_dir()
+          .map_err(|error| format!("Application cache directory is unavailable: {error}"))?
+          .join("browser");
+        if let Err(error) = browser::install(&window, app.handle().clone(), data_dir, cache_dir) {
+          eprintln!("Papyri browser panel unavailable: {error}");
         }
         if let Err(error) = control::start(app.handle().clone()) {
           eprintln!("Papyri control socket unavailable: {error}");

@@ -8,14 +8,14 @@ Papyri keeps the document, preview, editor, bibliography, and project code indep
 
 | Capability                            | Meaning                                                              |
 | ------------------------------------- | -------------------------------------------------------------------- |
-| `browserPanel`                        | Embedded GTK website tabs are available.                             |
-| `inputInjection`                      | Coordinate/keyboard input via X11 is available.                      |
+| `browserPanel`                        | Embedded child-webview website tabs are available.                   |
+| `inputInjection`                      | Native pointer/keyboard input is available (subject to OS grants).   |
 | `screenCapture`                       | Full-screen or rectangular screenshots are available.                |
-| `webviewCapture`                      | The application webview can be captured natively.                    |
-| `windowEnumeration` / `windowCapture` | External windows can be listed and captured.                         |
+| `webviewCapture`                      | The application webview can be captured.                             |
+| `windowEnumeration` / `windowCapture` | Desktop windows can be listed, focused, and captured.                |
 | `controlSocket`                       | `papyri ctl` can connect to the running window.                      |
 | `managedTools`                        | Language servers and Typst can be downloaded from upstream releases. |
-| `managedTexlive`                      | The private TeX Live installer is supported.                         |
+| `managedTexlive`                      | The private TeX Live installer is supported on all desktops.         |
 | `latex` / `typst`                     | Native compilation is available.                                     |
 | `sandboxedCompilation`                | Compilation has an OS sandbox.                                       |
 | `clipboardImages`                     | Image clipboard read/write is available.                             |
@@ -26,10 +26,11 @@ The frontend reads the injected object in `src/lib/platform.ts`. It hides embedd
 
 - `platform/control.rs`: Unix stream socket on Linux/macOS; loopback TCP endpoint with a per-process token on Windows.
 - `platform/sandbox.rs`: bubblewrap plus `prlimit` on Linux, `sandbox-exec` on macOS, direct execution on Windows. LaTeX and Typst share this interface, so adding another OS only requires a compiler-command implementation.
-- `platform/clipboard.rs`: `wl-copy`/`xclip` on Unix, `arboard` on macOS and Windows.
-- `screenshot.rs`: grim/ImageMagick on Linux, `screencapture` on macOS, PowerShell/System.Drawing on Windows. Webview capture remains Linux-only.
-- `input.rs` / `input_portable.rs`: X11 input and GTK window capture on Linux; Tauri window enumeration and focus elsewhere.
-- `browser.rs` / `browser_stub.rs`: the GTK child-webview panel on Linux; a typed "unavailable" command surface elsewhere.
+- `platform/clipboard.rs`: `wl-copy`/`xclip` on Linux, `arboard` on macOS and Windows.
+- `platform/window.rs`: `xcap` window enumeration and capture on macOS/Windows, with native focus calls.
+- `screenshot.rs`: grim/ImageMagick on Linux, `screencapture` on macOS, PowerShell/System.Drawing on Windows. App and browser capture use native Linux snapshots or a window-region capture on macOS/Windows.
+- `input.rs` / `input_portable.rs`: X11 input and GTK window capture on Linux; CoreGraphics (`platform/macos.rs`) and `SendInput` (`platform/windows.rs`) input on macOS/Windows.
+- `browser.rs` / `browser_tauri.rs`: the GTK child-webview panel on Linux; Tauri `Window::add_child` webviews on macOS/Windows with per-profile data storage, navigation, zoom, popups, DOM bridging, and capture.
 
 ## Building
 

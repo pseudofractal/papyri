@@ -2,7 +2,7 @@
 
 ## Scope and behavior
 
-- Open `.tex` entry points in the Linux app and render their compiled PDFs using the existing PDF viewer. In browser mode, explain that compilation requires the Linux app.
+- Open `.tex` entry points in the desktop app and render their compiled PDFs using the existing PDF viewer. In browser mode, explain that compilation requires the desktop app.
 - Offer LuaLaTeX, pdfLaTeX, and XeLaTeX as explicit choices, with LuaLaTeX as the default. Discover executables on the user's `PATH`, and allow executable paths to be configured in settings. Persist the choice and recompile open LaTeX previews when it changes.
 - Display useful compiler diagnostics on failure. Keep the last successful preview visible during refresh failures, and provide a way to retry an initial failure.
 - Treat the entry point's containing directory as the project root, consistent with Typst. Detect changes to files used by the last successful build, including imported TeX, images, and bibliography files.

@@ -13,6 +13,8 @@ use std::{
   process::{Command, Stdio},
   time::{SystemTime, UNIX_EPOCH},
 };
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use tauri::Manager;
 #[cfg(target_os = "linux")]
 use tauri::{AppHandle, Manager};
 
@@ -92,7 +94,76 @@ pub async fn capture_webview(
   .map_err(|error| error.to_string())?
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[tauri::command]
+pub async fn capture_webview(
+  app: tauri::AppHandle,
+  rect: Option<NormalizedRect>,
+  output: Option<String>,
+  clipboard: bool,
+  target: Option<String>,
+) -> Result<CaptureResult, String> {
+  let window = app
+    .get_webview_window("main")
+    .ok_or_else(|| "The main window is unavailable.".to_string())?;
+  let parent = window.as_ref().window();
+  let region = window_capture_region(&parent, rect)?;
+  let bytes = screen_png(Some(region))?;
+  finish(
+    bytes,
+    None,
+    output,
+    clipboard,
+    target.as_deref().unwrap_or("app"),
+  )
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn window_capture_region(
+  window: &tauri::Window,
+  rect: Option<NormalizedRect>,
+) -> Result<ScreenRegion, String> {
+  let position = window.inner_position().map_err(|error| error.to_string())?;
+  let size = window.inner_size().map_err(|error| error.to_string())?;
+  let scale = window.scale_factor().map_err(|error| error.to_string())?;
+  let width = size.width as f64 / scale;
+  let height = size.height as f64 / scale;
+  let (left, top, right, bottom) = match rect {
+    Some(rect) => {
+      if !rect.x.is_finite()
+        || !rect.y.is_finite()
+        || !rect.width.is_finite()
+        || !rect.height.is_finite()
+      {
+        return Err("The element rectangle is invalid.".into());
+      }
+      (
+        rect.x.clamp(0.0, 1.0) * width,
+        rect.y.clamp(0.0, 1.0) * height,
+        (rect.x + rect.width).clamp(0.0, 1.0) * width,
+        (rect.y + rect.height).clamp(0.0, 1.0) * height,
+      )
+    }
+    None => (0.0, 0.0, width, height),
+  };
+  #[cfg(target_os = "macos")]
+  let region = ScreenRegion {
+    x: (position.x as f64 / scale + left).round() as i32,
+    y: (position.y as f64 / scale + top).round() as i32,
+    width: (right - left).max(1.0).round() as u32,
+    height: (bottom - top).max(1.0).round() as u32,
+  };
+  #[cfg(target_os = "windows")]
+  let region = ScreenRegion {
+    x: (position.x as f64 + left * scale).round() as i32,
+    y: (position.y as f64 + top * scale).round() as i32,
+    width: ((right - left) * scale).max(1.0).round() as u32,
+    height: ((bottom - top) * scale).max(1.0).round() as u32,
+  };
+  Ok(region)
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 #[tauri::command]
 pub async fn capture_webview(
   _app: tauri::AppHandle,
@@ -101,7 +172,7 @@ pub async fn capture_webview(
   _clipboard: bool,
   _target: Option<String>,
 ) -> Result<CaptureResult, String> {
-  Err("App screenshots are only available in the Linux build.".into())
+  Err("App screenshots are unavailable on this platform.".into())
 }
 
 pub(crate) fn store_png(
@@ -239,6 +310,11 @@ fn screen_png(region: Option<ScreenRegion>) -> Result<Vec<u8>, String> {
 #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
 fn screen_png(_region: Option<ScreenRegion>) -> Result<Vec<u8>, String> {
   Err("Screen capture is unavailable on this platform.".into())
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) fn capture_region(region: ScreenRegion) -> Result<Vec<u8>, String> {
+  screen_png(Some(region))
 }
 
 #[cfg(target_os = "linux")]

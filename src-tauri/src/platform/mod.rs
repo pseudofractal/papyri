@@ -15,6 +15,8 @@ use std::{
 pub mod clipboard;
 pub mod control;
 pub mod sandbox;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub mod window;
 
 #[cfg(target_os = "linux")]
 pub mod linux;
@@ -57,15 +59,15 @@ pub fn capabilities() -> Capabilities {
     // The embedded web panel is implemented with GTK child webviews. Other
     // desktop shells use the system browser until a native child-webview
     // implementation is added.
-    browser_panel: linux,
-    input_injection: linux,
+    browser_panel: desktop,
+    input_injection: desktop,
     screen_capture: desktop,
-    webview_capture: linux,
-    window_enumeration: linux,
-    window_capture: linux,
+    webview_capture: desktop,
+    window_enumeration: desktop,
+    window_capture: desktop,
     control_socket: desktop,
     managed_tools: desktop,
-    managed_texlive: linux || macos,
+    managed_texlive: desktop,
     latex: desktop,
     typst: desktop,
     sandboxed_compilation: linux || (macos && Path::new("/usr/bin/sandbox-exec").is_file()),

@@ -1,60 +1,90 @@
 //! Input and window commands for non-Linux desktop builds.
 //!
-//! Tauri can enumerate and focus its own windows on every platform, while
-//! coordinate input injection remains a Linux/X11 capability. Returning a
-//! typed error keeps the control protocol stable and lets the capability flags
-//! hide unsupported commands.
+//! Input injection dispatches to CoreGraphics on macOS and `SendInput` on
+//! Windows. Window discovery/capture uses `xcap` on both platforms; mobile
+//! fallbacks can still enumerate Tauri's own windows.
 
-use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize};
 
-#[derive(Serialize)]
-struct WindowInfo {
+#[tauri::command]
+pub async fn input_inject(action: String, params: Value) -> Result<Value, String> {
+  tauri::async_runtime::spawn_blocking(move || {
+    #[cfg(target_os = "macos")]
+    {
+      return crate::platform::macos::inject(&action, &params);
+    }
+    #[cfg(target_os = "windows")]
+    {
+      return crate::platform::windows::inject(&action, &params);
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+      let _ = (action, params);
+      Err("Native input injection is unavailable on this platform.".into())
+    }
+  })
+  .await
+  .map_err(|error| error.to_string())?
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[tauri::command]
+pub async fn window_list(_app: tauri::AppHandle) -> Result<Value, String> {
+  tauri::async_runtime::spawn_blocking(crate::platform::window::list)
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[tauri::command]
+pub async fn window_focus(_app: tauri::AppHandle, id: String) -> Result<(), String> {
+  tauri::async_runtime::spawn_blocking(move || crate::platform::window::focus(&id))
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+#[tauri::command]
+pub async fn window_capture(
+  _app: tauri::AppHandle,
   id: String,
-  title: String,
-  role: String,
-  visible: bool,
-  active: bool,
-  width: i32,
-  height: i32,
-  x: i32,
-  y: i32,
+  output: Option<String>,
+  clipboard: bool,
+) -> Result<Value, String> {
+  let bytes = tauri::async_runtime::spawn_blocking(move || crate::platform::window::capture(&id))
+    .await
+    .map_err(|error| error.to_string())??;
+  crate::screenshot::store_png(bytes, output, clipboard, "window")
 }
 
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 #[tauri::command]
-pub async fn input_inject(_action: String, _params: Value) -> Result<Value, String> {
-  Err("Native input injection is only available in the Linux build.".into())
-}
-
-#[tauri::command]
-pub async fn window_list(app: AppHandle) -> Result<Value, String> {
+pub async fn window_list(app: tauri::AppHandle) -> Result<Value, String> {
+  use tauri::Manager;
   let windows = app
     .webview_windows()
     .into_iter()
     .map(|(label, window)| {
-      let position = window
-        .outer_position()
-        .unwrap_or(PhysicalPosition::new(0, 0));
-      let size = window.outer_size().unwrap_or(PhysicalSize::new(0, 0));
-      WindowInfo {
-        id: label,
-        title: window.title().unwrap_or_default(),
-        role: "window".into(),
-        visible: window.is_visible().unwrap_or(false),
-        active: window.is_focused().unwrap_or(false),
-        width: size.width as i32,
-        height: size.height as i32,
-        x: position.x,
-        y: position.y,
-      }
+      serde_json::json!({
+        "id": label,
+        "title": window.title().unwrap_or_default(),
+        "role": "window",
+        "visible": window.is_visible().unwrap_or(false),
+        "active": window.is_focused().unwrap_or(false),
+        "width": window.outer_size().map(|size| size.width).unwrap_or(0),
+        "height": window.outer_size().map(|size| size.height).unwrap_or(0),
+        "x": window.outer_position().map(|position| position.x).unwrap_or(0),
+        "y": window.outer_position().map(|position| position.y).unwrap_or(0),
+      })
     })
     .collect::<Vec<_>>();
-  serde_json::to_value(windows).map_err(|error| error.to_string())
+  Ok(Value::Array(windows))
 }
 
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 #[tauri::command]
-pub async fn window_focus(app: AppHandle, id: String) -> Result<(), String> {
+pub async fn window_focus(app: tauri::AppHandle, id: String) -> Result<(), String> {
+  use tauri::Manager;
   let window = app
     .get_webview_window(&id)
     .ok_or_else(|| format!("Window is no longer available: {id}"))?;
@@ -63,12 +93,13 @@ pub async fn window_focus(app: AppHandle, id: String) -> Result<(), String> {
   window.set_focus().map_err(|error| error.to_string())
 }
 
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 #[tauri::command]
 pub async fn window_capture(
-  _app: AppHandle,
+  _app: tauri::AppHandle,
   _id: String,
   _output: Option<String>,
   _clipboard: bool,
 ) -> Result<Value, String> {
-  Err("Window capture is only available in the Linux build.".into())
+  Err("Window capture is unavailable on this platform.".into())
 }
