@@ -5,6 +5,7 @@ import {
   isAbsolutePath,
   isRootPath,
   normalize,
+  relativeProjectPath,
   resolveLink,
 } from '../src/lib/paths';
 import { parseRecentFolders } from '../src/lib/recent';
@@ -34,6 +35,8 @@ describe('platform paths', () => {
       anchor: '',
     });
     expect(fileUri('C:/papers/main.md')).toBe('file:///C%3A/papers/main.md');
+    expect(relativeProjectPath('C:/', 'C:/papers/main.md')).toBe('papers/main.md');
+    expect(relativeProjectPath('C:/papers', 'C:/papers/main.md')).toBe('main.md');
   });
 
   it('restores Windows recent folders and explorer state', () => {

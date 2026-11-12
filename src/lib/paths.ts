@@ -63,7 +63,7 @@ export function relativeProjectPath(root: string, path: string): string {
   root = normalize(root);
   path = normalize(path);
   if (path === root) return '.';
-  const prefix = root === '/' ? '/' : `${root}/`;
+  const prefix = root.endsWith('/') ? root : `${root}/`;
   return path.startsWith(prefix) ? path.slice(prefix.length) : path;
 }
 export type Target =

@@ -68,7 +68,7 @@ pub fn capabilities() -> Capabilities {
     managed_texlive: linux || macos,
     latex: desktop,
     typst: desktop,
-    sandboxed_compilation: linux || macos,
+    sandboxed_compilation: linux || (macos && Path::new("/usr/bin/sandbox-exec").is_file()),
     clipboard_images: desktop,
   }
 }
@@ -258,4 +258,38 @@ pub fn unique_name(prefix: &str) -> String {
   let _ = getrandom::fill(&mut random);
   let suffix: String = random.iter().map(|byte| format!("{byte:02x}")).collect();
   format!("{prefix}-{suffix}")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn serializes_the_frontend_capability_contract() {
+    let value = serde_json::to_value(capabilities()).unwrap();
+    for key in [
+      "os",
+      "desktop",
+      "mobile",
+      "browserPanel",
+      "inputInjection",
+      "screenCapture",
+      "webviewCapture",
+      "windowEnumeration",
+      "windowCapture",
+      "controlSocket",
+      "managedTools",
+      "managedTexlive",
+      "latex",
+      "typst",
+      "sandboxedCompilation",
+      "clipboardImages",
+    ] {
+      assert!(value.get(key).is_some(), "missing capability: {key}");
+    }
+    assert_eq!(
+      value["desktop"].as_bool(),
+      Some(!value["mobile"].as_bool().unwrap())
+    );
+  }
 }

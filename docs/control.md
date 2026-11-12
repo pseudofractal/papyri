@@ -361,10 +361,13 @@ returns a compact role/name/value tree for all three frames.
 | `wait.idle`      | optional `timeoutMs`                      | Wait until document, editor, browser, and tools are idle. |
 | `wait.state`     | `path`, `equals`, optional `timeoutMs`    | Wait until a dotted state path equals a JSON value.       |
 
-`input.*` uses XTest and therefore requires an X11 display; Papyri should run
-with `GDK_BACKEND=x11` on Wayland desktops. `window.capture` uses the native
-window surface, so it includes browser-panel webviews. The CLI equivalents are
-`input`, `clipboard`, `window`, and `wait`.
+`input.*` uses XTest and therefore requires Linux with an X11 display; Papyri
+should run with `GDK_BACKEND=x11` on Wayland desktops. macOS and Windows return
+an unavailable error for coordinate input. `window.list` and `window.focus`
+cover Papyri's own windows on every desktop build; `window.capture` uses the
+native GTK window surface and remains Linux-only. Clipboard text and image
+methods work on all desktop builds. The CLI equivalents are `input`,
+`clipboard`, `window`, and `wait`.
 
 ```sh
 papyri ctl input click 400 300

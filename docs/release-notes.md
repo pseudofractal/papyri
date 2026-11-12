@@ -51,6 +51,16 @@ The browser build works on all three platforms and supports document viewing, ed
 | Coordinate input injection            | Yes   | No          | No          | No                     |
 | `papyri ctl`                          | Yes   | Yes         | Yes         | No                     |
 
+## Checksums
+
+Each release includes `SHA256SUMS.txt` covering every uploaded asset. Verify with:
+
+```sh
+sha256sum -c SHA256SUMS.txt
+```
+
+On Windows, compare `Get-FileHash <file> -Algorithm SHA256` with the manifest.
+
 ## Android
 
 Android is not part of this release. The native shell now reports platform capabilities and keeps document, preview, editor, and bibliography code independent of desktop-only subsystems so an Android shell can reuse them later.
