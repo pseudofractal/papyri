@@ -269,15 +269,19 @@ pub fn write_document(
     let name = CString::new(target.as_os_str().as_bytes()).map_err(|e| error(&path, e))?;
     let attribute_bytes = unsafe { libc::listxattr(name.as_ptr(), std::ptr::null_mut(), 0) };
     if attribute_bytes < 0 {
-      return Err(error(
-        &path,
-        format!(
-          "Cannot inspect extended attributes: {}",
-          std::io::Error::last_os_error()
-        ),
-      ));
-    }
-    if attribute_bytes > 0 {
+      let failure = std::io::Error::last_os_error();
+      // Some Nix build sandboxes and network filesystems do not support
+      // extended attributes at all. There is nothing to discard there.
+      if !matches!(
+        failure.raw_os_error(),
+        Some(libc::EOPNOTSUPP | libc::ENOSYS)
+      ) {
+        return Err(error(
+          &path,
+          format!("Cannot inspect extended attributes: {failure}"),
+        ));
+      }
+    } else if attribute_bytes > 0 {
       return Err(error(
         &path,
         "Cannot safely replace a file with extended attributes or ACLs",
@@ -304,12 +308,12 @@ pub fn write_document(
       .open(&temporary)
       .map_err(|e| error(&path, e))?;
     created = true;
-    let replacement_metadata = file.metadata().map_err(|e| error(&path, e))?;
+    let _replacement_metadata = file.metadata().map_err(|e| error(&path, e))?;
     #[cfg(unix)]
     {
       use std::os::unix::fs::MetadataExt;
-      if replacement_metadata.uid() != metadata.uid()
-        || replacement_metadata.gid() != metadata.gid()
+      if _replacement_metadata.uid() != metadata.uid()
+        || _replacement_metadata.gid() != metadata.gid()
       {
         return Err(error(&path, "Cannot preserve source file ownership"));
       }

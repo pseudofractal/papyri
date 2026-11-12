@@ -281,9 +281,9 @@ fn bibliography_tool(compiler: &Path, search_path: &OsStr, name: &str) -> Result
 fn tex_search_path(project: &Path, output: &Path) -> String {
   let separator = if cfg!(windows) { ";" } else { ":" };
   format!(
-    "{}{separator}{}{separator}",
-    format!("{}//", crate::platform::path_string(output)),
-    format!("{}//", crate::platform::path_string(project))
+    "{}//{separator}{}//{separator}",
+    crate::platform::path_string(output),
+    crate::platform::path_string(project)
   )
 }
 
@@ -900,6 +900,7 @@ mod tests {
     assert!(compile_status().is_none());
   }
 
+  #[cfg(unix)]
   #[test]
   fn cancelling_wait_kills_the_child() {
     let mut child = Command::new("sleep").arg("10").spawn().unwrap();
@@ -914,6 +915,7 @@ mod tests {
     request.join().unwrap();
   }
 
+  #[cfg(unix)]
   #[test]
   fn waiting_times_out_and_kills_the_child() {
     let mut child = Command::new("sleep").arg("10").spawn().unwrap();
@@ -926,6 +928,7 @@ mod tests {
     assert!(matches!(outcome, WaitOutcome::TimedOut));
   }
 
+  #[cfg(unix)]
   #[test]
   #[ignore = "Requires user namespaces and PAPYRI_TEST_TEX_BIN containing the three engines"]
   fn sandboxed_engines_compile_and_report_errors() {

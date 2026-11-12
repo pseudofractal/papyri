@@ -291,7 +291,7 @@ pub fn compile(path: String, configured_path: String) -> Result<Vec<u8>, String>
   Ok(bytes)
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
   use super::*;
   use std::os::unix::fs::PermissionsExt;

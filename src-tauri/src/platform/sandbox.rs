@@ -12,10 +12,14 @@ use std::{
   process::Command,
 };
 
+#[cfg(target_os = "linux")]
 pub const MEMORY_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+#[cfg(target_os = "linux")]
 pub const CPU_SECONDS: u64 = 25;
+#[cfg(target_os = "linux")]
 pub const FILE_SIZE: u64 = 64 * 1024 * 1024;
 
+#[cfg(target_os = "linux")]
 fn tex_distribution_root<'a>(executable: &'a Path, home: Option<&Path>) -> Option<&'a Path> {
   executable.ancestors().find(|parent| {
     parent.is_absolute()

@@ -1,7 +1,8 @@
 //! Locate user-configured or PATH-provided executables.
+#[cfg(unix)]
+use std::fs;
 use std::{
   ffi::OsStr,
-  fs,
   path::{Path, PathBuf},
 };
 
@@ -59,6 +60,7 @@ pub fn find_in_path(name: &str, search_path: &OsStr) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use std::fs;
 
   #[test]
   fn ignores_missing_and_non_executable_candidates() {

@@ -212,7 +212,7 @@ mod imp {
     let deadline = Instant::now() + wait;
     let address = format!("127.0.0.1:{}", endpoint.port);
     loop {
-      match TcpStream::connect(&address) {
+      match TcpStream::connect(address.as_str()) {
         Ok(stream) => {
           let _ = stream.set_nodelay(true);
           return Ok(stream);

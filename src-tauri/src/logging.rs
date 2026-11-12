@@ -8,7 +8,7 @@ use crate::platform;
 use std::{
   env,
   fs::{File, OpenOptions},
-  io::{self, Read, Write},
+  io::{Read, Write},
   path::{Path, PathBuf},
   process::{Child, Command, Stdio},
   sync::mpsc,
@@ -204,6 +204,7 @@ fn open_file(path: &Path) -> Result<File, String> {
 fn detach(command: &mut Command) {
   #[cfg(unix)]
   {
+    use std::io;
     use std::os::unix::process::CommandExt;
     // A new session drops the controlling terminal and keeps terminal shutdown
     // from taking the GUI or its logging command down with it.

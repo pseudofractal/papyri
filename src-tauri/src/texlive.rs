@@ -313,6 +313,7 @@ pub async fn manage_texlive(app: tauri::AppHandle, action: String) -> Result<Tex
 #[cfg(test)]
 mod tests {
   use super::*;
+  #[cfg(not(target_os = "windows"))]
   #[test]
   fn profile_is_private_and_enables_all_engines() {
     let value = profile(Path::new("/tmp/papyri tex"), "x86_64").unwrap();
@@ -331,6 +332,7 @@ mod tests {
   fn missing_installation_is_not_updated() {
     assert!(update(Path::new("/path/that/does/not/exist")).is_err());
   }
+  #[cfg(unix)]
   #[test]
   #[ignore = "Downloads the official TeX Live installer"]
   fn downloads_and_verifies_upstream_installer() {

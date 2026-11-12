@@ -74,21 +74,21 @@ pub fn capabilities() -> Capabilities {
 }
 
 pub fn home_dir() -> Option<PathBuf> {
+  if cfg!(target_os = "windows") {
+    return env::var_os("USERPROFILE")
+      .filter(|value| !value.is_empty())
+      .map(PathBuf::from)
+      .or_else(|| {
+        let drive = env::var_os("HOMEDRIVE")?;
+        let path = env::var_os("HOMEPATH")?;
+        let mut combined = drive;
+        combined.push(path);
+        Some(PathBuf::from(combined))
+      });
+  }
   env::var_os("HOME")
     .filter(|value| !value.is_empty())
     .map(PathBuf::from)
-    .or_else(|| {
-      env::var_os("USERPROFILE")
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-    })
-    .or_else(|| {
-      let drive = env::var_os("HOMEDRIVE")?;
-      let path = env::var_os("HOMEPATH")?;
-      let mut combined = drive;
-      combined.push(path);
-      Some(PathBuf::from(combined))
-    })
 }
 
 /// Per-user configuration root used by launchers and the CLI.
@@ -139,12 +139,12 @@ pub fn state_dir() -> Option<PathBuf> {
 }
 
 pub fn path_string(path: &Path) -> String {
-  let text = path.to_string_lossy();
+  let original = path.to_string_lossy();
   if cfg!(target_os = "windows") {
-    let text = text.strip_prefix(r"\\?\").unwrap_or(&text);
+    let text = original.strip_prefix(r"\\?\").unwrap_or(original.as_ref());
     text.replace('\\', "/")
   } else {
-    text.into_owned()
+    original.into_owned()
   }
 }
 

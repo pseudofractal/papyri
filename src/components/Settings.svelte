@@ -605,6 +605,10 @@
               }).catch((reason) => ontoolerror(String(reason)))}>TeX Live download page</button
           >
         </div>
+        {#if platform.os === 'windows'}<p class="hint">
+            Managed TeX Live is unavailable on Windows. Install TeX Live separately and select its
+            executable above.
+          </p>{/if}
         <div class="tool-actions">
           <button
             type="button"

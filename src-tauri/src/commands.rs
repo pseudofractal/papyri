@@ -25,6 +25,7 @@ pub fn declarative_preferences(app: tauri::AppHandle) -> Result<Option<serde_jso
     .config_dir()
     .map_err(|error| error.to_string())?
     .join("papyri/config.json");
+  #[cfg_attr(not(unix), allow(unused_mut))]
   let mut paths = vec![user];
   #[cfg(unix)]
   {

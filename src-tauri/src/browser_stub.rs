@@ -10,6 +10,7 @@ use tauri::AppHandle;
 
 const UNAVAILABLE: &str = "The embedded browser panel is only available in the Linux build.";
 
+#[allow(dead_code)]
 pub fn install(
   _window: &tauri::WebviewWindow,
   _app: AppHandle,

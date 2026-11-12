@@ -5,7 +5,9 @@
 //! `arboard` clipboard, including RGBA image support.
 
 use serde_json::Value;
+#[cfg(target_os = "linux")]
 use std::io::Write;
+#[cfg(target_os = "linux")]
 use std::process::{Command, Stdio};
 
 #[cfg(target_os = "linux")]

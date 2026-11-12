@@ -2,18 +2,22 @@
 
 use crate::platform;
 use serde::{Deserialize, Serialize};
+#[cfg(target_os = "linux")]
+use std::sync::mpsc;
+#[cfg(target_os = "linux")]
+use std::time::Duration;
 use std::{
   fs,
   io::Write,
   path::PathBuf,
   process::{Command, Stdio},
-  sync::mpsc,
-  time::{Duration, SystemTime, UNIX_EPOCH},
+  time::{SystemTime, UNIX_EPOCH},
 };
 #[cfg(target_os = "linux")]
 use tauri::{AppHandle, Manager};
 
 const MAX_CAPTURE_BYTES: usize = 128 * 1024 * 1024;
+#[cfg(target_os = "linux")]
 const CAPTURE_TIMEOUT: Duration = Duration::from_secs(20);
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
@@ -26,6 +30,7 @@ pub struct ScreenRegion {
 
 /// Coordinates are fractions of the visible webview viewport.
 #[derive(Clone, Copy, Debug, Deserialize)]
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 pub struct NormalizedRect {
   pub x: f64,
   pub y: f64,
@@ -271,6 +276,7 @@ fn import_png(region: Option<ScreenRegion>) -> Result<Vec<u8>, String> {
   result
 }
 
+#[cfg(target_os = "linux")]
 fn run_capture(mut command: Command, label: &str) -> Result<Vec<u8>, String> {
   let output = command
     .stdout(Stdio::piped())
@@ -415,6 +421,7 @@ fn default_path() -> PathBuf {
   base.join(format!("screenshot-{stamp}-{}.png", std::process::id()))
 }
 
+#[cfg(target_os = "linux")]
 fn command_available(name: &str) -> bool {
   std::env::var_os("PATH").is_some_and(|paths| {
     std::env::split_paths(&paths).any(|path| {
