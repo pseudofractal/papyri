@@ -27,6 +27,7 @@ const view = {
   settings: false,
   palette: false,
   search: false,
+  log: false,
   split: false,
   decorationless: false,
   query: '',

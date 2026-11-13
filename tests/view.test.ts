@@ -51,6 +51,8 @@ describe('view preferences', () => {
     expect(loadPreferences().pdfZoom).toBe(100);
     expect(loadPreferences().paletteWidth).toBe(defaults.paletteWidth);
     expect(loadPreferences().paletteHeight).toBe(defaults.paletteHeight);
+    expect(loadPreferences().logWidth).toBe(defaults.logWidth);
+    expect(loadPreferences().logHeight).toBe(defaults.logHeight);
     expect(loadPreferences().uiFont).toBe(defaults.uiFont);
     expect(loadPreferences().mathFont).toBe('');
     vi.unstubAllGlobals();
@@ -62,6 +64,8 @@ describe('view preferences', () => {
           delimiters: defaults.delimiters,
           paletteWidth: 900,
           paletteHeight: 1,
+          logWidth: 900,
+          logHeight: 1,
           paletteMaxWidth: 5000,
           paletteMaxHeight: 10,
           uiFont: 'serif; color: red',
@@ -75,6 +79,8 @@ describe('view preferences', () => {
     const loaded = loadPreferences();
     expect(loaded.paletteWidth).toBe(100);
     expect(loaded.paletteHeight).toBe(40);
+    expect(loaded.logWidth).toBe(100);
+    expect(loaded.logHeight).toBe(40);
     expect(loaded.paletteMaxWidth).toBe(2000);
     expect(loaded.paletteMaxHeight).toBe(240);
     expect(loaded.uiFont).toBe(defaults.uiFont);

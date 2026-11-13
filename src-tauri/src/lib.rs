@@ -9,7 +9,9 @@ mod cli;
 mod cli_args;
 mod cli_output;
 mod commands;
+mod compile_log;
 mod control;
+mod diagnostics;
 mod executables;
 mod files;
 #[cfg(target_os = "linux")]
@@ -70,6 +72,7 @@ pub fn run() {
       commands::latex_sync_release,
       commands::latex_engines,
       commands::latex_compile_status,
+      commands::compile_log,
       commands::latex_cancel_compile,
       commands::typst_binary,
       commands::read_asset,

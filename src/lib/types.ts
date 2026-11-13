@@ -53,6 +53,8 @@ export interface Preferences {
   paletteHeight: number;
   paletteMaxWidth: number;
   paletteMaxHeight: number;
+  logWidth: number;
+  logHeight: number;
   uiFont: string;
   textFont: string;
   codeFont: string;

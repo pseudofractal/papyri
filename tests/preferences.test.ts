@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { defaults, mergePreferences, withoutConfiguredPreferences } from '../src/lib/preferences';
 
 describe('preference updates', () => {
+  it('uses the command-palette proportions for the compile log', () => {
+    expect(defaults.logWidth).toBe(70);
+    expect(defaults.logHeight).toBe(60);
+  });
+
   it('persists preference objects containing reactive proxies', () => {
     const next = {
       ...structuredClone(defaults),
@@ -43,6 +48,8 @@ describe('preference updates', () => {
       paletteHeight: 80,
       paletteMaxWidth: 1100,
       paletteMaxHeight: 900,
+      logWidth: 82,
+      logHeight: 70,
       uiFont: "'Noto Sans', sans-serif",
       textFont: "'Noto Serif', serif",
       codeFont: "'JetBrains Mono', monospace",
@@ -64,6 +71,8 @@ describe('preference updates', () => {
       paletteHeight: 80,
       paletteMaxWidth: 1100,
       paletteMaxHeight: 900,
+      logWidth: 82,
+      logHeight: 70,
       uiFont: "'Noto Sans', sans-serif",
       textFont: "'Noto Serif', serif",
       codeFont: "'JetBrains Mono', monospace",
@@ -94,6 +103,8 @@ describe('preference updates', () => {
       browserWidth: 50000,
       paletteWidth: 1,
       paletteHeight: 999,
+      logWidth: 1,
+      logHeight: 999,
       paletteMaxWidth: 10,
       paletteMaxHeight: 5000,
     });
@@ -104,6 +115,8 @@ describe('preference updates', () => {
     expect(next.browserWidth).toBe(10000);
     expect(next.paletteWidth).toBe(40);
     expect(next.paletteHeight).toBe(100);
+    expect(next.logWidth).toBe(40);
+    expect(next.logHeight).toBe(100);
     expect(next.paletteMaxWidth).toBe(320);
     expect(next.paletteMaxHeight).toBe(1600);
   });

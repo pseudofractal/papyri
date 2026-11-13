@@ -34,6 +34,7 @@
     Pencil,
     Trash2,
     ExternalLink,
+    SquareTerminal,
   } from '@lucide/svelte';
   import ZoomControls from './components/ZoomControls.svelte';
   import SidebarResize from './components/SidebarResize.svelte';
@@ -68,6 +69,7 @@
   import { loadLatexProject, type LatexProjectMetadata } from './lib/latex-project';
   import type { PreviewLocation } from './lib/typst-live-preview';
   import Settings from './components/Settings.svelte';
+  import CompileLog from './components/CompileLog.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { invokeHost } from './lib/native';
   import { SITES, isSiteTab, type RightTab, type SiteId } from './lib/sites';
@@ -257,6 +259,7 @@
   let copyState = $state<'idle' | 'copied' | 'error'>('idle');
   let copyTimer: ReturnType<typeof setTimeout> | undefined;
   let settings = $state(false);
+  let compileLogOpen = $state(false);
   let help = $state(false);
   let searchOpen = $state(false);
   let paletteOpen = $state(false);
@@ -448,6 +451,16 @@
     previewJumpRequest++;
     return true;
   };
+  const hasCompilableTab = $derived(
+    workspace.tabs.some((tab) => isLatex(tab.path) || isTypst(tab.path)),
+  );
+  const hasCompilableContext = $derived(
+    hasCompilableTab ||
+      (workspace.busy && (isLatex(workspace.openingPath) || isTypst(workspace.openingPath))),
+  );
+  $effect(() => {
+    if (compileLogOpen && !hasCompilableContext) compileLogOpen = false;
+  });
   const editorVisible = $derived(
     editing &&
       editorSource === workspace.source &&
@@ -709,7 +722,7 @@
   const browserWidth = $derived(Math.min(preferences.browserWidth, maximumBrowserWidth));
   const panelWidth = $derived(browserWidth);
   const browserVisible = $derived(
-    !settings && !help && !trustDialog && !paletteOpen && !decorationless,
+    !settings && !help && !trustDialog && !paletteOpen && !compileLogOpen && !decorationless,
   );
   let previousLayoutWidth: number | undefined;
   $effect(() => {
@@ -988,6 +1001,14 @@
   async function openDocument(path: string) {
     await workspace.open(path);
     if (window.innerWidth < NARROW_VIEWPORT) sidebar = false;
+  }
+  async function cancelOpeningCompile() {
+    if (!isLatex(workspace.openingPath)) return;
+    try {
+      await invokeHost('latex_cancel_compile', { path: workspace.openingPath });
+    } catch (reason) {
+      workspace.error = String(reason);
+    }
   }
   async function entryCreated(
     source: Source,
@@ -1454,6 +1475,16 @@
         keywords: 'outline headings',
         run: toggleOutlinePanel,
       },
+      ...(desktop && hasCompilableTab
+        ? [
+            {
+              id: 'compile-log',
+              label: 'Open compilation log',
+              keywords: 'log compile latex typst diagnostics',
+              run: () => (compileLogOpen = true),
+            },
+          ]
+        : []),
       ...(browserAvailable()
         ? [
             {
@@ -2481,7 +2512,7 @@
     if (decorationless) decorationless = false;
   }
   function keyboard(event: KeyboardEvent) {
-    if (paletteOpen) return;
+    if (paletteOpen || compileLogOpen) return;
     const command = viewShortcut(event);
     if (command) {
       event.preventDefault();
@@ -2750,6 +2781,7 @@
         settings,
         palette: paletteOpen,
         search: searchOpen,
+        log: compileLogOpen,
         split: !!workspace.secondary,
         decorationless,
         query,
@@ -2803,6 +2835,12 @@
     },
     set palette(value) {
       paletteOpen = value;
+    },
+    get log() {
+      return compileLogOpen;
+    },
+    set log(value) {
+      compileLogOpen = value;
     },
     get search() {
       return searchOpen;
@@ -3150,7 +3188,7 @@
         )
       )
         return;
-      if (settings || help || trustDialog || paletteOpen) return;
+      if (settings || compileLogOpen || help || trustDialog || paletteOpen) return;
       const tab = target?.closest('.tab-item[data-path]') as HTMLElement | null;
       if (tab?.dataset.path) {
         openContextMenu({ kind: 'tab', path: tab.dataset.path }, event.clientX, event.clientY);
@@ -3852,6 +3890,14 @@
                 <div class="compile-papyrus" aria-hidden="true"><span></span></div>
                 <strong>Preparing your document</strong>
                 <span>Compiling {basename(workspace.openingPath)}…</span>
+                {#if desktop}<button
+                    class="btn btn-ghost btn-xs"
+                    onclick={() => (compileLogOpen = true)}>Open log</button
+                  >{/if}
+                {#if desktop && isLatex(workspace.openingPath)}<button
+                    class="btn btn-ghost btn-xs"
+                    onclick={() => void cancelOpeningCompile()}>Cancel</button
+                  >{/if}
               </div>
             {/if}
           </div>
@@ -3902,6 +3948,13 @@
           >{:else}<span>No document</span>{/if}
       </div>
       <div class="status-controls">
+        {#if desktop && hasCompilableTab}<button
+            class="status-log"
+            aria-label="Open compilation log"
+            title="Compilation log"
+            onclick={() => (compileLogOpen = true)}
+            ><SquareTerminal size={11} /><span>Log</span></button
+          >{/if}
         <button
           class="status-fit"
           class:enabled={preferences.fitWidth}
@@ -4158,6 +4211,12 @@
     ontoolerror={(message) => (toolError = message)}
     onclose={() => (settings = false)}
     onchange={updatePreferences}
+  />{/if}
+{#if desktop && compileLogOpen}<CompileLog
+    width={preferences.logWidth}
+    height={preferences.logHeight}
+    oncopy={writeClipboard}
+    onclose={() => (compileLogOpen = false)}
   />{/if}
 {#if paletteOpen && workspace.source}<CommandPalette
     source={workspace.source}

@@ -136,6 +136,7 @@ export interface ControlState {
     settings: boolean;
     palette: boolean;
     search: boolean;
+    log: boolean;
     split: boolean;
     decorationless: boolean;
     query: string;
@@ -174,7 +175,8 @@ export interface ControlTab {
 }
 
 export type ControlPane = 'main' | 'secondary';
-export type ControlPanel = 'sidebar' | 'outline' | 'settings' | 'palette' | 'search' | 'split';
+export type ControlPanel =
+  'sidebar' | 'outline' | 'settings' | 'palette' | 'search' | 'split' | 'log';
 export type ToggleAction = 'on' | 'off' | 'toggle';
 
 export type ScrollTarget = { y: number } | { dy: number } | { top: true } | { bottom: true };
@@ -306,7 +308,15 @@ export interface ControlActions {
   }): Promise<unknown>;
 }
 
-const PANELS: ControlPanel[] = ['sidebar', 'outline', 'settings', 'palette', 'search', 'split'];
+const PANELS: ControlPanel[] = [
+  'sidebar',
+  'outline',
+  'settings',
+  'palette',
+  'search',
+  'split',
+  'log',
+];
 const ACTIONS = ['on', 'off', 'toggle'] as const;
 const PANES = ['main', 'secondary'] as const;
 const ZOOM_TARGETS = ['document', 'ui'] as const;

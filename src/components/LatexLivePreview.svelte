@@ -11,6 +11,10 @@
   import type { Tab } from '../lib/workspace.svelte';
   import { parseSyncPdf, parseSyncSource, type SyncPdfLocation } from '../lib/synctex';
 
+  const INITIAL_COMPILE_POLL_MS = 100;
+  // Covers three engine passes and BibTeX at the per-subprocess limit, plus margin.
+  const MAX_INITIAL_COMPILE_WAIT_MS = 21 * 60 * 1000;
+
   let {
     path,
     text,
@@ -231,10 +235,11 @@
       // The workspace may already be compiling this document for its initial
       // preview. Wait for that compile instead of racing it and reporting a
       // misleading "another preview is compiling" error.
-      for (let attempt = 0; attempt < 350 && !disposed && !bytes; attempt++) {
+      const deadline = Date.now() + MAX_INITIAL_COMPILE_WAIT_MS;
+      while (Date.now() < deadline && !disposed && !bytes) {
         const status = await invokeHost<CompileStatus | null>('latex_compile_status');
         if (!status || status.path !== path) break;
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, INITIAL_COMPILE_POLL_MS));
       }
     } catch (reason) {
       console.error('Could not read LaTeX compile status:', reason);

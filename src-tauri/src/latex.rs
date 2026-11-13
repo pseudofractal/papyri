@@ -1,5 +1,7 @@
 //! Discover user-installed LaTeX engines and compile documents.
 use crate::{
+  compile_log::{self, CompileOutcome},
+  diagnostics,
   executables::{find_in_path, is_executable as executable},
   files, typst,
 };
@@ -13,7 +15,7 @@ use std::{
   process::{Command, Stdio},
   sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
-    Arc, LazyLock, Mutex, TryLockError,
+    Arc, LazyLock, Mutex, MutexGuard, TryLockError,
   },
   thread,
   time::{Duration, Instant},
@@ -21,7 +23,12 @@ use std::{
 
 const ENGINES: [&str; 3] = ["lualatex", "pdflatex", "xelatex"];
 const DIAGNOSTIC_LIMIT: usize = 32 * 1024;
-const COMPILER_TIMEOUT: Duration = Duration::from_secs(30);
+// The first LuaLaTeX run can spend minutes building its font cache, and large
+// documents can legitimately take longer than a typical interactive wait.
+const COMPILER_TIMEOUT: Duration = Duration::from_secs(300);
+const SYNCTEX_TIMEOUT: Duration = Duration::from_secs(30);
+const MAX_PAGE_DIGITS: usize = 4;
+const CANCELLED_ERROR: &str = "LaTeX compilation cancelled.";
 static COMPILER: Mutex<()> = Mutex::new(());
 static NEXT_COMPILE_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -31,6 +38,7 @@ struct ActiveCompile {
   engine: String,
   started: Instant,
   cancel: Arc<AtomicBool>,
+  log_id: u64,
 }
 
 static ACTIVE_COMPILE: Mutex<Option<ActiveCompile>> = Mutex::new(None);
@@ -47,7 +55,7 @@ pub struct CompileStatus {
 struct ActiveCompileGuard(u64);
 
 impl ActiveCompileGuard {
-  fn install(id: u64, path: String, engine: String, cancel: Arc<AtomicBool>) -> Self {
+  fn install(id: u64, path: String, engine: String, cancel: Arc<AtomicBool>, log_id: u64) -> Self {
     let mut active = lock_active();
     *active = Some(ActiveCompile {
       id,
@@ -55,6 +63,7 @@ impl ActiveCompileGuard {
       engine,
       started: Instant::now(),
       cancel,
+      log_id,
     });
     Self(id)
   }
@@ -69,6 +78,15 @@ impl Drop for ActiveCompileGuard {
   }
 }
 
+fn status_snapshot(compile: &ActiveCompile) -> CompileStatus {
+  CompileStatus {
+    id: compile.id,
+    path: compile.path.clone(),
+    engine: compile.engine.clone(),
+    elapsed_seconds: compile.started.elapsed().as_secs_f64(),
+  }
+}
+
 fn lock_active() -> std::sync::MutexGuard<'static, Option<ActiveCompile>> {
   ACTIVE_COMPILE
     .lock()
@@ -77,12 +95,93 @@ fn lock_active() -> std::sync::MutexGuard<'static, Option<ActiveCompile>> {
 
 /// Return the LaTeX preview currently being compiled, if any.
 pub fn compile_status() -> Option<CompileStatus> {
-  lock_active().as_ref().map(|compile| CompileStatus {
-    id: compile.id,
-    path: compile.path.clone(),
-    engine: compile.engine.clone(),
-    elapsed_seconds: compile.started.elapsed().as_secs_f64(),
-  })
+  lock_active().as_ref().map(status_snapshot)
+}
+
+fn set_compile_phase(phase: &str, detail: impl Into<String>) {
+  let active = lock_active();
+  if let Some(compile) = active.as_ref() {
+    compile_log::phase(compile.log_id, phase, detail);
+  }
+}
+
+fn reset_compile_page() {
+  let active = lock_active();
+  if let Some(compile) = active.as_ref() {
+    compile_log::reset_page(compile.log_id);
+  }
+}
+
+fn page_marker_at(bytes: &[u8], open_bracket_index: usize) -> Option<u64> {
+  let mut value = 0u64;
+  let mut digits = 0;
+  for next in &bytes[open_bracket_index + 1..] {
+    if !next.is_ascii_digit() {
+      break;
+    }
+    value = value
+      .saturating_mul(10)
+      .saturating_add((next - b'0') as u64);
+    digits += 1;
+    if digits == MAX_PAGE_DIGITS {
+      break;
+    }
+  }
+  let terminator = bytes.get(open_bracket_index + 1 + digits)?;
+  (digits > 0 && matches!(terminator, b']' | b'{')).then_some(value)
+}
+
+/// TeX emits page progress as bracketed numbers at a word boundary, such as `[1]` or `[1{...}]`.
+fn page_markers(line: &str) -> Vec<u64> {
+  let bytes = line.as_bytes();
+  bytes
+    .iter()
+    .enumerate()
+    .filter(|(index, byte)| {
+      **byte == b'[' && (*index == 0 || matches!(bytes[*index - 1], b' ' | b'\t' | b']'))
+    })
+    .filter_map(|(index, _)| page_marker_at(bytes, index))
+    .collect()
+}
+
+fn output_page_count(line: &str) -> Option<u64> {
+  let rest = line.strip_prefix("Output written on ")?;
+  let (_, counts) = rest.rsplit_once(" (")?;
+  counts.split_whitespace().next()?.parse().ok()
+}
+
+fn record_compile_line(line: &str) {
+  let line = line.trim_end_matches('\r');
+  if line.is_empty() {
+    return;
+  }
+  let log_id = match lock_active().as_ref() {
+    Some(compile) => compile.log_id,
+    None => return,
+  };
+  compile_log::line(log_id, line);
+
+  for marker in page_markers(line) {
+    compile_log::page_marker(log_id, marker);
+  }
+
+  // LuaLaTeX announces a first-run font cache build on stderr; surface it as the phase.
+  if line.contains("luaotfload | db : Font names database not found")
+    || line.contains("This can take several minutes")
+  {
+    compile_log::phase(
+      log_id,
+      "Building font cache",
+      "First LuaLaTeX run — this can take several minutes",
+    );
+  } else if line.starts_with("Output written on ") {
+    compile_log::phase(log_id, "Writing PDF", "Finalizing output");
+    if let Some(pages) = output_page_count(line) {
+      compile_log::total_pages(log_id, pages);
+    }
+  } else if line.starts_with("This is BibTeX") {
+    compile_log::phase(log_id, "BibTeX", "Resolving bibliography");
+  }
 }
 
 fn compile_busy_error() -> String {
@@ -285,18 +384,20 @@ fn tex_search_path(project: &Path, output: &Path) -> String {
   )
 }
 
-fn diagnostic_tail(mut pipe: impl Read) -> Result<Vec<u8>, String> {
-  let mut result = Vec::new();
-  let mut buffer = [0; 4096];
-  loop {
-    let read = pipe.read(&mut buffer).map_err(|error| error.to_string())?;
-    if read == 0 {
-      return Ok(result);
+/// TeX wraps diagnostics at fixed columns; widen them so each message stays on one log line.
+fn widen_tex_diagnostics(command: &mut Command) {
+  command
+    .env("max_print_line", "1000")
+    .env("error_line", "254")
+    .env("half_error_line", "127");
+}
+
+fn diagnostic_stream(pipe: impl Read, record_lines: bool) -> Result<Vec<u8>, String> {
+  diagnostics::stream(pipe, DIAGNOSTIC_LIMIT, |line| {
+    if record_lines {
+      record_compile_line(&String::from_utf8_lossy(line));
     }
-    let excess = (result.len() + read).saturating_sub(DIAGNOSTIC_LIMIT);
-    result.drain(..excess);
-    result.extend_from_slice(&buffer[..read]);
-  }
+  })
 }
 
 fn run_bibtex(
@@ -306,6 +407,8 @@ fn run_bibtex(
   job_name: &str,
   cancel: &AtomicBool,
 ) -> Result<(), String> {
+  set_compile_phase("BibTeX", "Resolving bibliography");
+  reset_compile_page();
   let search_path = tex_search_path(project, output);
   let mut command = Command::new(binary);
   command
@@ -313,6 +416,7 @@ fn run_bibtex(
     .env("BIBINPUTS", &search_path)
     .env("BSTINPUTS", &search_path)
     .arg(job_name);
+  widen_tex_diagnostics(&mut command);
   let mut child = command
     .stdin(Stdio::null())
     .stdout(Stdio::piped())
@@ -327,8 +431,8 @@ fn run_bibtex(
     .stderr
     .take()
     .ok_or("BibTeX diagnostic pipe unavailable")?;
-  let out = thread::spawn(move || diagnostic_tail(stdout));
-  let err = thread::spawn(move || diagnostic_tail(stderr));
+  let out = thread::spawn(move || diagnostic_stream(stdout, true));
+  let err = thread::spawn(move || diagnostic_stream(stderr, true));
   let status = wait_with_cancel(&mut child, COMPILER_TIMEOUT, cancel);
   let stdout = out.join().map_err(|_| "BibTeX output thread failed")??;
   let stderr = err
@@ -336,8 +440,13 @@ fn run_bibtex(
     .map_err(|_| "BibTeX diagnostic thread failed")??;
   let status = match status? {
     WaitOutcome::Completed(status) => status,
-    WaitOutcome::TimedOut => return Err("BibTeX compilation exceeded 30 seconds".into()),
-    WaitOutcome::Cancelled => return Err("LaTeX compilation cancelled.".into()),
+    WaitOutcome::TimedOut => {
+      return Err(format!(
+        "BibTeX compilation exceeded {} seconds",
+        COMPILER_TIMEOUT.as_secs()
+      ))
+    }
+    WaitOutcome::Cancelled => return Err(CANCELLED_ERROR.into()),
   };
   let output_text = String::from_utf8_lossy(&stdout);
   if !status.success() || output_text.contains("Warning--I didn't find a database entry") {
@@ -362,7 +471,14 @@ pub fn compile_snapshot(
   configured_path: String,
   draft: Option<String>,
 ) -> Result<Vec<u8>, String> {
-  compile_internal(path, engine, configured_path, draft, Vec::new(), false)
+  compile_internal(CompileRequest {
+    path,
+    engine,
+    configured_path,
+    draft,
+    overlays: Vec::new(),
+    retain_sync: false,
+  })
 }
 
 pub fn compile_preview(
@@ -372,31 +488,77 @@ pub fn compile_preview(
   draft: String,
   overlays: Vec<(String, String)>,
 ) -> Result<Vec<u8>, String> {
-  compile_internal(path, engine, configured_path, Some(draft), overlays, true)
+  compile_internal(CompileRequest {
+    path,
+    engine,
+    configured_path,
+    draft: Some(draft),
+    overlays,
+    retain_sync: true,
+  })
 }
 
-fn compile_internal(
+struct CompileRequest {
   path: String,
   engine: String,
   configured_path: String,
   draft: Option<String>,
   overlays: Vec<(String, String)>,
   retain_sync: bool,
-) -> Result<Vec<u8>, String> {
-  if !is_latex(&path) {
-    return Err("Expected a .tex document".into());
-  }
-  let _compiler = match COMPILER.try_lock() {
+}
+
+fn compile_internal(request: CompileRequest) -> Result<Vec<u8>, String> {
+  let path = request.path.clone();
+  let engine = request.engine.clone();
+  // Acquire the compiler lock before replacing the log so a rejected concurrent
+  // compile leaves the active compile's log intact.
+  let compiler = match COMPILER.try_lock() {
     Ok(guard) => guard,
     Err(TryLockError::Poisoned(poisoned)) => poisoned.into_inner(),
     Err(TryLockError::WouldBlock) => return Err(compile_busy_error()),
   };
-  let compile_id = NEXT_COMPILE_ID.fetch_add(1, Ordering::Relaxed);
+  let log_id = compile_log::begin(path, engine);
   let cancel = Arc::new(AtomicBool::new(false));
-  let _active =
-    ActiveCompileGuard::install(compile_id, path.clone(), engine.clone(), cancel.clone());
+  let result = compile_internal_impl(request, log_id, compiler, cancel.clone());
+  compile_log::finish(
+    log_id,
+    match &result {
+      Ok(_) => CompileOutcome::Success,
+      Err(_) if cancel.load(Ordering::Relaxed) => CompileOutcome::Cancelled,
+      Err(error) => CompileOutcome::Failed(error.clone()),
+    },
+  );
+  result
+}
+
+fn compile_internal_impl(
+  request: CompileRequest,
+  log_id: u64,
+  compiler: MutexGuard<'static, ()>,
+  cancel: Arc<AtomicBool>,
+) -> Result<Vec<u8>, String> {
+  let CompileRequest {
+    path,
+    engine,
+    configured_path,
+    draft,
+    overlays,
+    retain_sync,
+  } = request;
+  let _compiler = compiler;
+  if !is_latex(&path) {
+    return Err("Expected a .tex document".into());
+  }
+  let compile_id = NEXT_COMPILE_ID.fetch_add(1, Ordering::Relaxed);
+  let _active = ActiveCompileGuard::install(
+    compile_id,
+    path.clone(),
+    engine.clone(),
+    cancel.clone(),
+    log_id,
+  );
   if cancel.load(Ordering::Relaxed) {
-    return Err("LaTeX compilation cancelled.".into());
+    return Err(CANCELLED_ERROR.into());
   }
   let search_path = std::env::var_os("PATH").unwrap_or_default();
   let configured = if configured_path.is_empty() {
@@ -463,8 +625,10 @@ fn compile_internal(
   let mut pass = 0;
   while pass < passes {
     if cancel.load(Ordering::Relaxed) {
-      return Err("LaTeX compilation cancelled.".into());
+      return Err(CANCELLED_ERROR.into());
     }
+    set_compile_phase("LaTeX", format!("Pass {} · typesetting", pass + 1));
+    reset_compile_page();
     let mut command = Command::new(&compiler);
     let previewing = draft_path.is_some() || !overlay_paths.is_empty();
     if previewing {
@@ -482,6 +646,7 @@ fn compile_internal(
         .env("BSTINPUTS", &search_path);
     }
     command.current_dir(project);
+    widen_tex_diagnostics(&mut command);
     command.args([
       "-interaction=nonstopmode",
       "-halt-on-error",
@@ -503,15 +668,20 @@ fn compile_internal(
       .stderr
       .take()
       .ok_or("LaTeX diagnostic pipe unavailable")?;
-    let out = thread::spawn(move || diagnostic_tail(stdout));
-    let err = thread::spawn(move || diagnostic_tail(stderr));
+    let out = thread::spawn(move || diagnostic_stream(stdout, true));
+    let err = thread::spawn(move || diagnostic_stream(stderr, true));
     let status = wait_with_cancel(&mut child, COMPILER_TIMEOUT, &cancel);
     let stdout = out.join().map_err(|_| "LaTeX output thread failed")??;
     let stderr = err.join().map_err(|_| "LaTeX diagnostic thread failed")??;
     let status = match status? {
       WaitOutcome::Completed(status) => status,
-      WaitOutcome::TimedOut => return Err("LaTeX compilation exceeded 30 seconds".into()),
-      WaitOutcome::Cancelled => return Err("LaTeX compilation cancelled.".into()),
+      WaitOutcome::TimedOut => {
+        return Err(format!(
+          "LaTeX compilation exceeded {} seconds",
+          COMPILER_TIMEOUT.as_secs()
+        ))
+      }
+      WaitOutcome::Cancelled => return Err(CANCELLED_ERROR.into()),
     };
     if !status.success() {
       return Err(format!(
@@ -576,7 +746,7 @@ fn compile_internal(
       }
       if needs_bibtex {
         if cancel.load(Ordering::Relaxed) {
-          return Err("LaTeX compilation cancelled.".into());
+          return Err(CANCELLED_ERROR.into());
         }
         let tool = bibliography_tool(&compiler, &search_path, "bibtex")?;
         run_bibtex(project, &output.0, &tool, job_name, &cancel)?;
@@ -729,9 +899,9 @@ pub fn sync_query(
     .stderr
     .take()
     .ok_or("SyncTeX diagnostic pipe unavailable")?;
-  let out = thread::spawn(move || diagnostic_tail(stdout));
-  let err = thread::spawn(move || diagnostic_tail(stderr));
-  let status = typst::wait_with_timeout(&mut child, COMPILER_TIMEOUT);
+  let out = thread::spawn(move || diagnostic_stream(stdout, false));
+  let err = thread::spawn(move || diagnostic_stream(stderr, false));
+  let status = typst::wait_with_timeout(&mut child, SYNCTEX_TIMEOUT);
   let stdout = out.join().map_err(|_| "SyncTeX output thread failed")??;
   let stderr = err
     .join()
@@ -789,9 +959,32 @@ mod tests {
   fn retains_the_end_of_long_diagnostics() {
     let mut message = vec![b'x'; DIAGNOSTIC_LIMIT];
     message.extend_from_slice(b"error at end");
-    let result = diagnostic_tail(&message[..]).unwrap();
-    assert_eq!(result.len(), DIAGNOSTIC_LIMIT);
+    let result = diagnostic_stream(&message[..], false).unwrap();
+    assert!(result.len() <= DIAGNOSTIC_LIMIT);
+    assert!(result.starts_with(b"[truncated] "));
     assert!(result.ends_with(b"error at end"));
+  }
+
+  #[test]
+  fn reads_compile_progress_markers() {
+    assert_eq!(page_markers("[1{font.map}] [2] [3]"), vec![1, 2, 3]);
+    assert_eq!(
+      page_markers("[2025/01/01] package banner"),
+      Vec::<u64>::new()
+    );
+    assert_eq!(
+      page_markers("l.12 \\newcommand{\\x}[1]{...}"),
+      Vec::<u64>::new()
+    );
+    assert_eq!(
+      output_page_count("Output written on paper.pdf (12 pages, 70496 bytes)."),
+      Some(12)
+    );
+    assert_eq!(
+      output_page_count("Output written on paper (draft).pdf (12 pages, 70496 bytes)."),
+      Some(12)
+    );
+    assert_eq!(output_page_count("not an output line"), None);
   }
 
   #[cfg(unix)]
@@ -810,6 +1003,7 @@ mod tests {
       "/tmp/one.tex".into(),
       "lualatex".into(),
       cancel.clone(),
+      0,
     );
     let status = compile_status().expect("active compile");
     assert_eq!(status.path, "/tmp/one.tex");

@@ -1280,6 +1280,8 @@ pub(crate) enum PanelName {
   Search,
   /// Secondary split pane
   Split,
+  /// Compilation log
+  Log,
 }
 
 impl PanelName {
@@ -1291,6 +1293,7 @@ impl PanelName {
       Self::Palette => "palette",
       Self::Search => "search",
       Self::Split => "split",
+      Self::Log => "log",
     }
   }
 }

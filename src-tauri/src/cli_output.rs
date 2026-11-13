@@ -186,14 +186,15 @@ fn print_view_flags(output: &mut String, view: &serde_json::Map<String, Value>) 
   };
   let _ = writeln!(
     output,
-    "View: sidebar={} outline={} split={} decorationless={} palette={} search={} settings={}",
+    "View: sidebar={} outline={} split={} decorationless={} palette={} search={} settings={} log={}",
     flag("sidebar"),
     flag("outline"),
     flag("split"),
     flag("decorationless"),
     flag("palette"),
     flag("search"),
-    flag("settings")
+    flag("settings"),
+    flag("log")
   );
 }
 

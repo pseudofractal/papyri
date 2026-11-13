@@ -182,38 +182,38 @@ while work already underway may finish after the client has timed out.
 
 ## Methods
 
-| Method                         | Parameters                                                                                              | Description                                                       |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `ping`                         | none                                                                                                    | Version, protocol, PID, socket path and readiness.                |
-| `state`                        | none                                                                                                    | Active document, tabs, PDF page, view flags, preferences, source. |
-| `headings`                     | none                                                                                                    | Headings for the active document.                                 |
-| `commands`                     | none                                                                                                    | Palette commands available with `command`.                        |
-| `open`                         | `path`, optional `pane` (`main`/`secondary`), `anchor`, `directory`                                     | Open a document, folder, or split pane.                           |
-| `close`                        | optional `path`                                                                                         | Close a tab, defaulting to the active tab.                        |
-| `focus`                        | `path`                                                                                                  | Focus an open tab, opening it first if needed.                    |
-| `tab.next` / `tab.previous`    | none                                                                                                    | Cycle tabs.                                                       |
-| `tab.activate`                 | `path`                                                                                                  | Focus an open tab.                                                |
-| `tab.close`                    | optional `path`                                                                                         | Close a tab.                                                      |
-| `scroll.to`                    | `y`, optional `pane`                                                                                    | Scroll to an absolute pixel position.                             |
-| `scroll.by`                    | `dy`, optional `pane`                                                                                   | Scroll by a relative amount.                                      |
-| `scroll.top` / `scroll.bottom` | optional `pane`                                                                                         | Jump to an end.                                                   |
-| `zoom`                         | `target` (`document`/`ui`), either `action` (`in`/`out`/`reset`) or `value`                             | Change zoom.                                                      |
-| `fit-width`                    | optional `enabled` boolean                                                                              | Toggle or set fit-to-width.                                       |
-| `decorationless`               | optional `enabled` boolean                                                                              | Toggle or set decoration-less reading mode.                       |
-| `theme`                        | `theme` (`latte`/`mocha`/`toggle`)                                                                      | Change the color theme.                                           |
-| `panel`                        | `name` (`sidebar`, `outline`, `settings`, `palette`, `search`, `split`), `action` (`on`/`off`/`toggle`) | Show or hide UI surfaces.                                         |
-| `search`                       | `query`                                                                                                 | Set document search; an empty query clears it.                    |
-| `heading`                      | `id`                                                                                                    | Scroll to a heading or PDF outline target.                        |
-| `page`                         | `page`                                                                                                  | Go to a PDF page.                                                 |
-| `command`                      | `id`                                                                                                    | Run a palette command by id.                                      |
-| `preferences.set`              | `patch` object                                                                                          | Merge validated preference changes.                               |
-| `refresh`                      | none                                                                                                    | Refresh the active document and explorer.                         |
-| `latex.status`                 | none                                                                                                    | Path, engine, and elapsed time of the active LaTeX compile.       |
-| `latex.cancel`                 | optional `path`                                                                                         | Cancel the active LaTeX compile (optionally only that path).      |
-| `raise`                        | none                                                                                                    | Focus and show the main window (native).                          |
-| `quit`                         | none                                                                                                    | Exit Papyri (native).                                             |
-| `subscribe`                    | optional `events` array                                                                                 | Register for events; returns the initial state.                   |
-| `unsubscribe`                  | none                                                                                                    | Stop events on the current connection.                            |
+| Method                         | Parameters                                                                                                     | Description                                                               |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `ping`                         | none                                                                                                           | Version, protocol, PID, socket path and readiness.                        |
+| `state`                        | none                                                                                                           | Active document, tabs, PDF page, view flags, preferences, source.         |
+| `headings`                     | none                                                                                                           | Headings for the active document.                                         |
+| `commands`                     | none                                                                                                           | Palette commands available with `command`.                                |
+| `open`                         | `path`, optional `pane` (`main`/`secondary`), `anchor`, `directory`                                            | Open a document, folder, or split pane.                                   |
+| `close`                        | optional `path`                                                                                                | Close a tab, defaulting to the active tab.                                |
+| `focus`                        | `path`                                                                                                         | Focus an open tab, opening it first if needed.                            |
+| `tab.next` / `tab.previous`    | none                                                                                                           | Cycle tabs.                                                               |
+| `tab.activate`                 | `path`                                                                                                         | Focus an open tab.                                                        |
+| `tab.close`                    | optional `path`                                                                                                | Close a tab.                                                              |
+| `scroll.to`                    | `y`, optional `pane`                                                                                           | Scroll to an absolute pixel position.                                     |
+| `scroll.by`                    | `dy`, optional `pane`                                                                                          | Scroll by a relative amount.                                              |
+| `scroll.top` / `scroll.bottom` | optional `pane`                                                                                                | Jump to an end.                                                           |
+| `zoom`                         | `target` (`document`/`ui`), either `action` (`in`/`out`/`reset`) or `value`                                    | Change zoom.                                                              |
+| `fit-width`                    | optional `enabled` boolean                                                                                     | Toggle or set fit-to-width.                                               |
+| `decorationless`               | optional `enabled` boolean                                                                                     | Toggle or set decoration-less reading mode.                               |
+| `theme`                        | `theme` (`latte`/`mocha`/`toggle`)                                                                             | Change the color theme.                                                   |
+| `panel`                        | `name` (`sidebar`, `outline`, `settings`, `palette`, `search`, `split`, `log`), `action` (`on`/`off`/`toggle`) | Show or hide UI surfaces. `log` requires an open LaTeX or Typst document. |
+| `search`                       | `query`                                                                                                        | Set document search; an empty query clears it.                            |
+| `heading`                      | `id`                                                                                                           | Scroll to a heading or PDF outline target.                                |
+| `page`                         | `page`                                                                                                         | Go to a PDF page.                                                         |
+| `command`                      | `id`                                                                                                           | Run a palette command by id.                                              |
+| `preferences.set`              | `patch` object                                                                                                 | Merge validated preference changes.                                       |
+| `refresh`                      | none                                                                                                           | Refresh the active document and explorer.                                 |
+| `latex.status`                 | none                                                                                                           | Path, engine, and elapsed time of the active LaTeX compile.               |
+| `latex.cancel`                 | optional `path`                                                                                                | Cancel the active LaTeX compile (optionally only that path).              |
+| `raise`                        | none                                                                                                           | Focus and show the main window (native).                                  |
+| `quit`                         | none                                                                                                           | Exit Papyri (native).                                                     |
+| `subscribe`                    | optional `events` array                                                                                        | Register for events; returns the initial state.                           |
+| `unsubscribe`                  | none                                                                                                           | Stop events on the current connection.                                    |
 
 `papyri ctl raw METHOD '{"key":1}'` sends any method directly, so integrations
 can use new methods without waiting for a CLI update. `papyri ctl socket` and
@@ -487,6 +487,7 @@ is view state rather than a preference, so it is not persisted across restarts.
     "settings": false,
     "palette": false,
     "search": false,
+    "log": false,
     "split": false,
     "decorationless": false,
     "query": "",
@@ -565,11 +566,12 @@ the live `BrowserState` in the Linux app and null elsewhere.
 `preferences.set` accepts a partial object. Unknown keys are rejected. Supported
 keys are `theme`, `network`, `fitWidth`, `documentZoom`, `pdfZoom`, `uiZoom`,
 `sidebarWidth`, `browserWidth`, `browserUrl`, `paletteWidth`, `paletteHeight`,
-`paletteMaxWidth`, `paletteMaxHeight`, `uiFont`, `textFont`, `codeFont`,
-`mathFont`, `typstPath`, `latexEngine`, `latexPaths`, and `delimiters`. Palette
-percentages range from 40 to 100. Palette pixel limits range from 320 to 2000
-wide and 240 to 1600 tall. `browserWidth` ranges from 280 to 1000, and
-`browserUrl` must be an HTTP(S) address or `about:blank`.
+`logWidth`, `logHeight`, `paletteMaxWidth`, `paletteMaxHeight`, `uiFont`,
+`textFont`, `codeFont`, `mathFont`, `typstPath`, `latexEngine`, `latexPaths`, and
+`delimiters`. Palette percentages range from 40 to 100; `logWidth` and `logHeight`
+use the same range. Palette pixel limits range from 320 to 2000 wide and 240 to
+1600 tall. `browserWidth` ranges from 280 to 1000, and `browserUrl` must be an
+HTTP(S) address or `about:blank`.
 Font values are CSS `font-family` lists; `mathFont` may be empty to keep KaTeX's
 bundled fonts.
 Numeric zoom and sidebar values are clamped to the same limits as the settings

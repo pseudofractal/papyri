@@ -19,7 +19,7 @@ import type {
 } from './control';
 import { HEADINGS_POLL_MS, HEADINGS_READY_TIMEOUT_MS } from './control-timings';
 import { listDirectory } from './directories';
-import { isDocument, normalize } from './paths';
+import { isDocument, isLatex, isTypst, normalize } from './paths';
 import type { PaletteCommand } from './palette';
 import { mergePreferences } from './preferences';
 import { scrollPreview, waitForPreview, type PreviewControls } from './preview-control';
@@ -43,6 +43,7 @@ export interface ControlViewState {
   settings: boolean;
   palette: boolean;
   search: boolean;
+  log: boolean;
   decorationless: boolean;
   query: string;
 }
@@ -376,6 +377,12 @@ export function createControlActions(context: ControlContext): ControlActions {
         case 'search':
           view.search = desired(view.search);
           if (!view.search) view.query = '';
+          break;
+        case 'log':
+          await context.workspaceReady;
+          if (!workspace.tabs.some((tab) => isLatex(tab.path) || isTypst(tab.path)))
+            throw new Error('Open a LaTeX or Typst document first.');
+          view.log = desired(view.log);
           break;
         case 'split':
           await context.workspaceReady;

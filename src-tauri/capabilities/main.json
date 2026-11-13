@@ -29,6 +29,7 @@
     "allow-latex-sync-release",
     "allow-latex-engines",
     "allow-latex-compile-status",
+    "allow-compile-log",
     "allow-latex-cancel-compile",
     "allow-typst-binary",
     "allow-read-asset",

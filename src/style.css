@@ -501,6 +501,10 @@ textarea:focus-visible {
   color: var(--color-base-content);
   font-size: 15px;
 }
+.compile-loading .btn {
+  margin-top: 4px;
+  pointer-events: auto;
+}
 .compile-papyrus {
   width: 44px;
   height: 50px;
@@ -2287,6 +2291,7 @@ textarea:focus-visible {
   gap: 8px;
   flex-shrink: 0;
 }
+.status-bar .status-log,
 .status-bar .status-fit {
   height: 18px;
   padding: 0 5px;
@@ -2297,9 +2302,15 @@ textarea:focus-visible {
   font-size: 9px;
   line-height: 9px;
 }
+.status-bar .status-log span,
 .status-bar .status-fit span {
   display: block;
   line-height: 9px;
+}
+.status-bar .status-log svg {
+  width: 10px;
+  height: 10px;
+  transform: translateY(-0.5px);
 }
 .status-bar .status-fit svg,
 .status-bar .zoom-controls .icon-button svg,
@@ -2310,6 +2321,7 @@ textarea:focus-visible {
   width: 9px;
   height: 9px;
 }
+.status-bar .status-log:hover,
 .status-bar .status-fit:hover,
 .status-bar .status-fit.enabled {
   background: var(--line);
@@ -2592,6 +2604,7 @@ textarea:focus-visible {
   }
 }
 @container app-main (max-width: 620px) {
+  .status-bar .status-log span,
   .status-bar .status-fit span {
     display: none;
   }

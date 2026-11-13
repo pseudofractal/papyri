@@ -121,6 +121,10 @@ pub fn latex_compile_status() -> Option<latex::CompileStatus> {
   latex::compile_status()
 }
 #[tauri::command]
+pub async fn compile_log() -> Result<Option<crate::compile_log::CompileLogSnapshot>, String> {
+  blocking(|| Ok(crate::compile_log::snapshot())).await
+}
+#[tauri::command]
 pub async fn latex_cancel_compile(path: Option<String>) -> Result<bool, String> {
   blocking(move || Ok(latex::cancel_compile(path))).await
 }

@@ -36,6 +36,8 @@ export const defaults: Preferences = {
   paletteHeight: DEFAULT_PALETTE_HEIGHT_PERCENT,
   paletteMaxWidth: DEFAULT_PALETTE_MAX_WIDTH,
   paletteMaxHeight: DEFAULT_PALETTE_MAX_HEIGHT,
+  logWidth: DEFAULT_PALETTE_WIDTH_PERCENT,
+  logHeight: DEFAULT_PALETTE_HEIGHT_PERCENT,
   uiFont: 'Inter, ui-sans-serif, system-ui, sans-serif',
   textFont: 'system-ui, sans-serif',
   codeFont: 'ui-monospace, monospace',
@@ -166,6 +168,12 @@ export function loadPreferences(): Preferences {
       paletteMaxHeight: Number.isFinite(stored.paletteMaxHeight)
         ? clampPaletteMaxHeight(stored.paletteMaxHeight)
         : DEFAULT_PALETTE_MAX_HEIGHT,
+      logWidth: Number.isFinite(stored.logWidth)
+        ? clampPalettePercent(stored.logWidth)
+        : DEFAULT_PALETTE_WIDTH_PERCENT,
+      logHeight: Number.isFinite(stored.logHeight)
+        ? clampPalettePercent(stored.logHeight)
+        : DEFAULT_PALETTE_HEIGHT_PERCENT,
       uiFont: loadFont(stored.uiFont, defaults.uiFont),
       textFont: loadFont(stored.textFont, defaults.textFont),
       codeFont: loadFont(stored.codeFont, defaults.codeFont),
@@ -249,6 +257,12 @@ export function mergePreferences(
         break;
       case 'paletteMaxHeight':
         next.paletteMaxHeight = clampPaletteMaxHeight(finitePreference(value, 'paletteMaxHeight'));
+        break;
+      case 'logWidth':
+        next.logWidth = clampPalettePercent(finitePreference(value, 'logWidth'));
+        break;
+      case 'logHeight':
+        next.logHeight = clampPalettePercent(finitePreference(value, 'logHeight'));
         break;
       case 'uiFont':
         next.uiFont = validateFontFamily(value, 'uiFont');

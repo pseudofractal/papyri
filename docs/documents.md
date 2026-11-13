@@ -34,7 +34,11 @@ The entry point's containing directory is the project root. Compilation uses two
 
 Papyri uses the installed TeX distribution rather than downloading packages. It does not run Biber, makeindex, latexmk, or other build tools. Documents requiring Biber report an error; documents requiring other tools may have unresolved references or indexes. The compiler runs with the current user's permissions and can use the installed TeX distribution, user packages, fonts, wrapper scripts, network access, and shell facilities according to its configuration. Compiler diagnostics explain failures; an exported PDF remains an alternative.
 
-Compilation runs directly on every platform with the current user's permissions. Every platform uses a private temporary output directory and a 30-second elapsed-time limit with a 64 MiB per-file output limit.
+Compilation runs directly on every platform with the current user's permissions. Every platform uses a private temporary output directory and a 64 MiB per-file output limit. LaTeX allows 5 minutes per compiler subprocess; Typst allows 30 seconds.
+
+## Compilation log
+
+In the desktop app, when a LaTeX or Typst document is open, the **Log** button at the bottom of the window opens the most recent compilation. The floating log dims the workspace, shows the current phase and page progress, and retains up to 400 lines of the newest compiler output for copying. Typst compilations report a single-pass progress state instead of page counts. A new compilation from either engine replaces the previous log. The window defaults to 70% width and 60% height, follows the command palette's UI-scale handling, and is capped by the same maximum dimensions as the palette; both percentages are configurable under Settings → Compilers.
 
 ## Static web build
 

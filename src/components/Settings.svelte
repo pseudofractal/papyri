@@ -120,7 +120,10 @@
       fontError = String(reason);
     }
   }
-  function updatePalettePercent(key: 'paletteWidth' | 'paletteHeight', value: string) {
+  function updatePercent(
+    key: 'paletteWidth' | 'paletteHeight' | 'logWidth' | 'logHeight',
+    value: string,
+  ) {
     const number = Number(value);
     if (Number.isFinite(number)) setPreference(key, clampPalettePercent(number));
   }
@@ -235,7 +238,7 @@
             step="1"
             aria-label="Command palette width percentage"
             value={preferences.paletteWidth}
-            onchange={(event) => updatePalettePercent('paletteWidth', event.currentTarget.value)}
+            onchange={(event) => updatePercent('paletteWidth', event.currentTarget.value)}
           />
         </label>
         <label class="setting-row"
@@ -248,7 +251,7 @@
             step="1"
             aria-label="Command palette height percentage"
             value={preferences.paletteHeight}
-            onchange={(event) => updatePalettePercent('paletteHeight', event.currentTarget.value)}
+            onchange={(event) => updatePercent('paletteHeight', event.currentTarget.value)}
           />
         </label>
         <label class="setting-row"
@@ -454,6 +457,36 @@
         aria-labelledby="settings-tab-compilers"
         hidden={activeTab !== 'compilers'}
       >
+        {#if desktop}
+          <h3>Compile log</h3>
+          <p class="hint">Configure the floating compilation log.</p>
+          <label class="setting-row"
+            ><span>Log width<small>{preferences.logWidth}% of the window.</small></span>
+            <input
+              class="input input-sm numeric-input"
+              type="number"
+              min={MIN_PALETTE_PERCENT}
+              max={MAX_PALETTE_PERCENT}
+              step="1"
+              aria-label="Compilation log width percentage"
+              value={preferences.logWidth}
+              onchange={(event) => updatePercent('logWidth', event.currentTarget.value)}
+            />
+          </label>
+          <label class="setting-row"
+            ><span>Log height<small>{preferences.logHeight}% of the window.</small></span>
+            <input
+              class="input input-sm numeric-input"
+              type="number"
+              min={MIN_PALETTE_PERCENT}
+              max={MAX_PALETTE_PERCENT}
+              step="1"
+              aria-label="Compilation log height percentage"
+              value={preferences.logHeight}
+              onchange={(event) => updatePercent('logHeight', event.currentTarget.value)}
+            />
+          </label>
+        {/if}
         <h3>Language servers</h3>
         <p class="hint">
           Choose an executable, or download a managed copy from its official release. Downloads

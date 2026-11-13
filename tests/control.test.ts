@@ -24,6 +24,7 @@ function sampleState(): ControlState {
       settings: false,
       palette: false,
       search: false,
+      log: false,
       split: false,
       decorationless: false,
       query: '',

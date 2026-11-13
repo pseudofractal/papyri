@@ -1,12 +1,15 @@
 //! Compile with the official Typst CLI.
-use crate::{executables, files};
+use crate::{
+  compile_log::{self, CompileOutcome},
+  diagnostics, executables, files,
+};
 use std::{
   collections::HashMap,
   fs,
   io::{Read, Write},
   path::{Path, PathBuf},
   process::{Child, Command, ExitStatus, Stdio},
-  sync::{LazyLock, Mutex},
+  sync::{LazyLock, Mutex, MutexGuard},
   thread,
   time::{Duration, Instant},
 };
@@ -113,12 +116,40 @@ pub(crate) fn wait_with_timeout(
 }
 
 pub fn compile(path: String, configured_path: String) -> Result<Vec<u8>, String> {
+  // Acquire the compiler lock before replacing the log so a rejected concurrent
+  // compile leaves the active compile's log intact.
+  let compiler = COMPILER
+    .try_lock()
+    .map_err(|_| "Another Typst preview is compiling. Try opening this document again.")?;
+  let log_id = compile_log::begin(path.clone(), "typst".into());
+  let result = compile_impl(path, configured_path, log_id, compiler);
+  compile_log::finish(
+    log_id,
+    match &result {
+      Ok(_) => CompileOutcome::Success,
+      Err(error) => CompileOutcome::Failed(error.clone()),
+    },
+  );
+  result
+}
+
+fn diagnostic_stream(pipe: impl Read, log_id: u64) -> Result<Vec<u8>, String> {
+  diagnostics::stream(pipe, DIAGNOSTIC_LIMIT, |line| {
+    compile_log::line(log_id, &String::from_utf8_lossy(line));
+  })
+}
+
+fn compile_impl(
+  path: String,
+  configured_path: String,
+  log_id: u64,
+  compiler: MutexGuard<'static, ()>,
+) -> Result<Vec<u8>, String> {
+  let _compiler = compiler;
+  compile_log::phase(log_id, "Typst", "Compiling document");
   if !is_typst(&path) {
     return Err("Expected a .typ document".into());
   }
-  let _compiler = COMPILER
-    .try_lock()
-    .map_err(|_| "Another Typst preview is compiling. Try opening this document again.")?;
   let canonical = crate::platform::strip_verbatim(
     &fs::canonicalize(&path).map_err(|error| format!("{path}: {error}"))?,
   );
@@ -164,7 +195,7 @@ pub fn compile(path: String, configured_path: String) -> Result<Vec<u8>, String>
     stdin.write_all(&source)
   });
   let pdf = thread::spawn(move || drain_bounded(stdout, files::PDF_LIMIT as usize));
-  let diagnostics = thread::spawn(move || drain_bounded(stderr, DIAGNOSTIC_LIMIT));
+  let diagnostics = thread::spawn(move || diagnostic_stream(stderr, log_id));
   let status = wait_with_timeout(&mut child, COMPILE_TIMEOUT);
   let input_result = input.join().map_err(|_| "Typst input thread failed")?;
   let bytes = pdf.join().map_err(|_| "Typst output thread failed")??;
