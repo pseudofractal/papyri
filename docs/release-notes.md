@@ -2,8 +2,9 @@
 
 Papyri is a Markdown, PDF, Typst, and LaTeX viewer and source editor. Releases include native builds for Linux, macOS, and Windows. The browser build runs from source.
 
-## What's new in v0.2.1
+## What's new in v0.2.2
 
+- Fixed the Nix npm dependency hash so flake checks and the release verification pass. The v0.2.1 tag was not published.
 - Added the **Compilation log**: a desktop Log window for the most recent LaTeX or Typst compile, with phase and page progress, diagnostics, copy-to-clipboard, and command-palette defaults of 70% width and 60% height. The size is configurable under **Settings → Compilers**.
 - Cancelled builds are reported as **Cancelled** instead of failed, and only the newest compiler output is retained.
 - Removed the temporary compile-log design lab and the header Designs button.
