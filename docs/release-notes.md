@@ -2,20 +2,13 @@
 
 Papyri is a Markdown, PDF, Typst, and LaTeX viewer and source editor. Releases include native builds for Linux, macOS, and Windows. The browser build runs from source.
 
-> **macOS v0.2.0 notice:** The v0.2.0 macOS bundles were not ad-hoc signed, so macOS may report them as damaged. Repair a downloaded copy with:
->
-> ```sh
-> xattr -cr /Applications/Papyri.app
-> codesign --force --deep --sign - /Applications/Papyri.app
-> ```
->
-> Then approve Papyri in **System Settings → Privacy & Security**. Later builds are ad-hoc signed and do not need the repair step.
+## What's new in v0.2.1
 
-## What's new in v0.2.0
-
-- Native macOS and Windows builds, including the embedded browser panel, coordinate input, screen and window capture, managed tools, and TeX Live installation.
-- LaTeX, BibTeX, and Typst run directly with the selected user executables on every platform. The previous Linux compiler sandbox has been removed.
-- macOS and Windows packaging, application icons, and release builds across all three desktop platforms.
+- Added the **Compilation log**: a desktop Log window for the most recent LaTeX or Typst compile, with phase and page progress, diagnostics, copy-to-clipboard, and command-palette defaults of 70% width and 60% height. The size is configurable under **Settings → Compilers**.
+- Cancelled builds are reported as **Cancelled** instead of failed, and only the newest compiler output is retained.
+- Removed the temporary compile-log design lab and the header Designs button.
+- LaTeX compilation now allows 5 minutes per compiler subprocess for first-run font-cache builds and large documents; Typst remains at 30 seconds.
+- Includes the macOS ad-hoc signing fix added after v0.2.0, so downloads no longer need the previous manual `codesign` repair.
 
 ## Linux
 
