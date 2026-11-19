@@ -76,86 +76,35 @@ expects `preview.attach`; an older Papyri build gets a warning.
     Subcommands: open, root, toggle, close, detach, reveal, follow,
     scroll-sync, tabs, outline, search, zoom, theme, decorationless,
     live, takeover, start, refresh, status, focus, quit, raw, help.
-    Unknown names are sent as raw control methods. The capitalized
-    commands below remain available as aliases.
+    Unknown names are sent as raw control methods.
 
-                                                            *:PapyriOpen*
-:PapyriOpen [path]   Attach the current Markdown or Typst buffer, or open
-                      `path` in Papyri.
+  :Papyri open [path]       Attach the current Markdown or Typst buffer, or
+                            open a path.
+  :Papyri root              Preview the current Typst buffer itself.
+  :Papyri toggle            Open or close the companion preview.
+  :Papyri close             Detach and close the companion tab.
+  :Papyri detach            Release text ownership but leave the tab open.
+  :Papyri reveal            Reveal the cursor line now.
+  :Papyri follow [value]    Set or toggle cursor following.
+  :Papyri scroll-sync [value]
+                            Set or toggle Markdown viewport mirroring.
+  :Papyri tabs              Pick an open Papyri tab.
+  :Papyri outline           Pick a heading from the active document.
+  :Papyri search [query]    Search Papyri.
+  :Papyri zoom [value]      Change document zoom.
+  :Papyri theme [value]     Change the Papyri theme.
+  :Papyri decorationless [value]
+                            Set or toggle decoration-less mode.
+  :Papyri live [value]      Set or toggle the Typst live pane.
+  :Papyri takeover          Force a takeover for the current buffer.
+  :Papyri start             Connect or launch Papyri.
+  :Papyri refresh           Request a document refresh.
+  :Papyri status            Show connection and attachment state.
+  :Papyri focus             Raise the Papyri window.
+  :Papyri quit              Quit Papyri.
+  :Papyri raw METHOD [json] Send a raw control method.
+  :Papyri help              Print the subcommand list.
 
-                                                            *:PapyriRoot*
-:PapyriRoot          Preview the current Typst buffer itself instead of
-                     its resolved main document.
-
-                                                            *:PapyriToggle*
-:PapyriToggle        Open the companion preview or close it.
-
-                                                             *:PapyriClose*
-:PapyriClose         Detach and close the companion tab.
-
-                                                            *:PapyriDetach*
-:PapyriDetach        Release text ownership but leave the tab open.
-
-                                                            *:PapyriReveal*
-:PapyriReveal        Reveal the cursor line in Papyri now.
-
-                                                            *:PapyriFollow*
-:PapyriFollow [on|off|toggle]
-                      Set or toggle cursor following.
-
-                                                        *:PapyriScrollSync*
-:PapyriScrollSync [on|off|toggle]
-                      Set or toggle Markdown viewport mirroring.
-
-                                                             *:PapyriTabs*
-:PapyriTabs          Pick an open Papyri tab.
-
-                                                          *:PapyriOutline*
-:PapyriOutline       Pick a heading from the active document.
-
-                                                           *:PapyriSearch*
-:PapyriSearch [query]
-                      Search Papyri. With no argument, uses the visual
-                      selection or prompts.
-
-                                                             *:PapyriZoom*
-:PapyriZoom [in|out|reset|PERCENT]
-                      Change document zoom.
-
-                                                            *:PapyriTheme*
-:PapyriTheme [latte|mocha|toggle]
-                      Change the Papyri theme.
-
-                                                    *:PapyriDecorationless*
-:PapyriDecorationless [on|off|toggle]
-                      Toggle decoration-less reading mode.
-
-                                                             *:PapyriLive*
-:PapyriLive [on|off|toggle]
-                      Toggle the Typst live pane.
-
-                                                         *:PapyriTakeover*
-:PapyriTakeover      Force a takeover for the current buffer.
-
-                                                            *:PapyriStart*
-:PapyriStart         Connect or launch Papyri without a document.
-
-                                                           *:PapyriRefresh*
-:PapyriRefresh       Request a document refresh.
-
-                                                            *:PapyriStatus*
-:PapyriStatus        Show connection and attachment state.
-
-                                                             *:PapyriFocus*
-:PapyriFocus         Raise the Papyri window.
-
-                                                              *:PapyriQuit*
-:PapyriQuit          Quit Papyri.
-
-:Papyri raw {method} [json]
-                      Send a raw control method. Example: >
-                        :Papyri raw scroll.by {"dy":200}
-<
 ==============================================================================
 4. LUA API                                                      *papyri-api*
 

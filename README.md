@@ -202,7 +202,7 @@ Use a function for anything more involved; it runs inside the Neovim process.
 
 ## Commands
 
-Use `:Papyri <subcommand>`; the capitalized commands remain aliases.
+Use `:Papyri <subcommand>`.
 
 | Command                              | Behaviour                                                       |
 | ------------------------------------ | --------------------------------------------------------------- |
