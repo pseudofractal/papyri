@@ -127,7 +127,7 @@ default. `:Papyri open` is the manual fallback after `:Papyri detach`, or when
   for reveal. Switching between chapters
   in the same project keeps one preview.
 - If Papyri is not running, the first attach launches it with decorationless
-  mode on and waits up to seven seconds for its control socket.
+  mode on and waits up to `launch_timeout` for its control socket.
 - Unsaved buffer text is streamed to Papyri as a preview-only overlay. It never
   touches disk and never opens Papyri's own editor.
 - Moving the cursor reveals the matching block in the preview. Insert mode
@@ -154,6 +154,7 @@ require('papyri').setup({
   follow_insert = false,
   debounce_ms = 120,
   launch = true,
+  launch_timeout = 15000,
   decorationless = true, -- hide Papyri chrome when connecting
   takeover = 'prompt', -- prompt | always | never
   papyri = 'papyri',

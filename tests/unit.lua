@@ -54,6 +54,7 @@ test('config defaults include Typst, scroll sync, and optional hooks', function(
   equal(cfg.follow_insert, false)
   equal(cfg.scroll_debounce_ms, 80)
   equal(cfg.takeover, 'prompt')
+  equal(cfg.launch_timeout, 15000)
   equal(cfg.focus_command, nil)
   equal(cfg.typst_root, nil)
 end)
@@ -80,6 +81,9 @@ test('config rejects unknown, invalid, and malformed options', function()
   throws(function()
     config.merge({ follow_insert = 'yes' })
   end, 'follow_insert')
+  throws(function()
+    config.merge({ launch_timeout = 50 })
+  end, 'launch_timeout')
   truthy(config.merge({ focus_command = function() end }).focus_command ~= nil)
   truthy(config.merge({ typst_root = function() end }).typst_root ~= nil)
 end)
@@ -542,6 +546,55 @@ test('utf16 column fallback works without the newer API', function()
   equal(text.utf16_column('é Updated', 3), 2)
   equal(text.utf16_column('𝔸b', 4), 2)
   vim.str_utfindex = saved
+end)
+
+test('health probes a running server and checks preview support', function()
+  local server = fake.new():start()
+  server.state.version = '0.2.2'
+  server.state.build = 'abc123'
+  server.state.features = { 'preview.attach' }
+  local saved_env = vim.env.PAPYRI_CONTROL_SOCKET
+  vim.env.PAPYRI_CONTROL_SOCKET = server.path
+  local messages = {}
+  local saved_health = vim.health
+  local saved_executable = vim.fn.executable
+  vim.health = {
+    start = function() end,
+    ok = function(message)
+      table.insert(messages, { level = 'ok', message = message })
+    end,
+    warn = function(message)
+      table.insert(messages, { level = 'warn', message = message })
+    end,
+    error = function(message)
+      table.insert(messages, { level = 'error', message = message })
+    end,
+    info = function(message)
+      table.insert(messages, { level = 'info', message = message })
+    end,
+  }
+  vim.fn.executable = function()
+    return 1
+  end
+  local ok, err = pcall(health.check)
+  vim.health = saved_health
+  vim.fn.executable = saved_executable
+  vim.env.PAPYRI_CONTROL_SOCKET = saved_env
+  server:stop()
+  if not ok then
+    error(err)
+  end
+  local identity, feature = false, false
+  for _, entry in ipairs(messages) do
+    if entry.message:find('0.2.2%+abc123') then
+      identity = true
+    end
+    if entry.message:find('Preview attachment feature') then
+      feature = true
+    end
+  end
+  truthy(identity, 'build identity')
+  truthy(feature, 'preview feature')
 end)
 
 local failures = 0

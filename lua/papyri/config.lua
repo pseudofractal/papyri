@@ -7,6 +7,7 @@ M.defaults = {
   follow_insert = false,
   debounce_ms = 120,
   launch = true,
+  launch_timeout = 15000,
   decorationless = true,
   takeover = 'prompt',
   papyri = 'papyri',
@@ -69,6 +70,13 @@ function M.merge(opts)
   end
   if type(config.launch) ~= 'boolean' then
     fail('`launch` must be a boolean')
+  end
+  if
+    type(config.launch_timeout) ~= 'number'
+    or config.launch_timeout < 100
+    or config.launch_timeout > 60000
+  then
+    fail('`launch_timeout` must be between 100 and 60000 milliseconds')
   end
   if type(config.decorationless) ~= 'boolean' then
     fail('`decorationless` must be a boolean')

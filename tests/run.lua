@@ -626,6 +626,9 @@ test('first-class commands forward app controls', function()
   wait_until(function()
     return papyri.client.connected
   end, 'start command')
+  wait_until(function()
+    return papyri.status():find('attach=yes', 1, true) ~= nil
+  end, 'status features')
 
   vim.cmd('Papyri zoom in')
   wait_until(function()

@@ -43,6 +43,7 @@ All options are optional:
   follow_insert   boolean  Reveal while typing in insert mode. Default false.
   debounce_ms     number   Coalesce updates and reveals, 0-5000. Default 120.
   launch          boolean  Launch Papyri when the socket is absent. Default true.
+  launch_timeout  number   Launch wait in milliseconds, 100-60000. Default 15000.
   decorationless  boolean  Hide Papyri chrome when connecting. Default true.
   takeover        string   "prompt", "always", or "never". Default "prompt".
   papyri          string   Executable name or path. Default "papyri".
