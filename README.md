@@ -1,6 +1,6 @@
 # papyri.nvim
 
-A Neovim companion for [Papyri](../../README.md). Papyri stays the preview
+A Neovim companion for [Papyri](https://github.com/pseudofractal/papyri). Papyri stays the preview
 window; Neovim owns the text while a buffer is attached.
 
 Papyri's Neovim companion supports Markdown and Typst on Linux. Typst uses Papyri's Tinymist live
