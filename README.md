@@ -21,7 +21,7 @@ scrolling only, because Tinymist does not report preview scroll position.
 ## Download
 
 The plugin source lives in `editors/nvim` on Papyri's `main` branch. CI
-publishes it as a standalone plugin repository on the `nvim-plugin` branch, so
+publishes it with a standalone plugin layout on the `nvim-plugin` branch, so
 plugin managers can track it with normal Git updates:
 
 ```sh
@@ -173,9 +173,9 @@ require('papyri').setup({
 ```
 
 `root_markers` uses `vim.fs.root`; a buffer outside the detected root is not
-auto-attached. Set `auto_attach = false` to require `:PapyriOpen`.
-`:PapyriDetach` suppresses auto-attach for that document (or Typst project root)
-until `:PapyriOpen`.
+auto-attached. Set `auto_attach = false` to require `:Papyri open`.
+`:Papyri detach` suppresses auto-attach for that document (or Typst project
+root) until `:Papyri open`.
 `decorationless = true` also applies when connecting to an already-running
 Papyri window; use `:Papyri decorationless off` to restore the chrome for the
 session. `takeover = 'prompt'` asks before replacing another Neovim session's
@@ -234,9 +234,9 @@ Use `:Papyri <subcommand>`; the capitalized commands remain aliases.
 There are no default keymaps. A suggested mapping:
 
 ```lua
-vim.keymap.set('n', '<leader>po', '<cmd>PapyriOpen<cr>', { desc = 'Papyri: open preview' })
-vim.keymap.set('n', '<leader>pc', '<cmd>PapyriClose<cr>', { desc = 'Papyri: close preview' })
-vim.keymap.set('n', '<leader>pr', '<cmd>PapyriReveal<cr>', { desc = 'Papyri: reveal cursor' })
+vim.keymap.set('n', '<leader>po', '<cmd>Papyri open<cr>', { desc = 'Papyri: open preview' })
+vim.keymap.set('n', '<leader>pc', '<cmd>Papyri close<cr>', { desc = 'Papyri: close preview' })
+vim.keymap.set('n', '<leader>pr', '<cmd>Papyri reveal<cr>', { desc = 'Papyri: reveal cursor' })
 ```
 
 ## Lua API
