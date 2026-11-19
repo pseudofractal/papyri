@@ -1,0 +1,25 @@
+name: nvim-plugin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - editors/nvim/**
+      - .github/workflows/nvim-plugin.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Publish editors/nvim to the nvim-plugin branch
+        run: |
+          git branch -D nvim-plugin 2>/dev/null || true
+          git subtree split --prefix=editors/nvim -b nvim-plugin
+          git push --force origin nvim-plugin

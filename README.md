@@ -27,12 +27,13 @@ nix run github:pseudofractal/papyri -- path/to/document.md
 
 ### Neovim plugin
 
-Papyri includes a companion plugin in the source checkout at
-[`editors/nvim`](editors/nvim/README.md). It attaches Markdown and Typst buffers,
-streams unsaved text into the preview, follows the cursor, and supports both
-lazy.nvim and Neovim's built-in `vim.pack`. See the
-[Neovim plugin README](editors/nvim/README.md) for download, install, setup, and
-command details.
+Papyri ships a companion plugin from [`editors/nvim`](editors/nvim/README.md).
+It is published to the `nvim-plugin` branch so lazy.nvim and `vim.pack` can
+install and update it like any other Git plugin, independently of Papyri
+releases. It attaches Markdown and Typst buffers, streams unsaved text into the
+preview, and follows the cursor. See the
+[Neovim plugin README](editors/nvim/README.md) for install, setup, and command
+details.
 
 ## Build
 

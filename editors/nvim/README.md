@@ -20,86 +20,88 @@ scrolling only, because Tinymist does not report preview scroll position.
 
 ## Download
 
-The plugin is developed in the Papyri repository rather than a separate
-release. Clone the repository and point your plugin manager at
-`editors/nvim`:
+The plugin source lives in `editors/nvim` on Papyri's `main` branch. CI
+publishes it as a standalone plugin repository on the `nvim-plugin` branch, so
+plugin managers can track it with normal Git updates:
 
 ```sh
-git clone https://github.com/pseudofractal/papyri.git ~/GitHub/papyri
+git clone --branch nvim-plugin https://github.com/pseudofractal/papyri.git
 ```
 
-If you already have a checkout, use its `editors/nvim` directory. Papyri
-releases do not include the Neovim plugin files, so a source checkout is
-required.
+That branch contains only the plugin files. It is regenerated whenever
+`editors/nvim` changes, so plugin updates do not require a Papyri release.
 
 ## Install
 
-The plugin lives in the Papyri repository under `editors/nvim`. `setup()` is
-required; it creates the commands and autocommands, and does not connect to
-Papyri until a document needs it.
+`setup()` is required; it creates the commands and autocommands and does not
+connect to Papyri until a document needs it.
 
 ### lazy.nvim
 
-Point lazy.nvim at the local plugin directory:
-
 ```lua
 {
-  dir = vim.fn.expand('~/path/to/papyri/editors/nvim'),
-  name = 'papyri.nvim',
-  opts = {},
-}
-```
-
-`opts = {}` makes lazy.nvim call `require('papyri').setup({})`. To load it only
-when a supported buffer opens:
-
-```lua
-{
-  dir = vim.fn.expand('~/path/to/papyri/editors/nvim'),
+  url = 'https://github.com/pseudofractal/papyri.git',
+  branch = 'nvim-plugin',
   name = 'papyri.nvim',
   event = 'BufReadPre *.md,*.typ',
   opts = {},
 }
 ```
 
-If you keep the checkout somewhere else, change `dir`. No build step or
-external Lua dependency is required.
+`opts = {}` makes lazy.nvim call `require('papyri').setup({})`. lazy.nvim's
+checker reports when the `nvim-plugin` branch moves; update with
+`:Lazy update papyri.nvim`.
 
 ### Built-in `vim.pack` (Neovim 0.12+)
-
-`vim.pack.add()` expects a repository root, but this plugin is a subdirectory
-of the Papyri repository. Add the checkout and append its plugin directory in
-the load hook:
 
 ```lua
 vim.pack.add({
   {
-    src = 'file:///absolute/path/to/papyri',
-    name = 'papyri',
+    src = 'https://github.com/pseudofractal/papyri',
+    version = 'nvim-plugin',
+    name = 'papyri.nvim',
   },
-}, {
-  load = function(plugin)
-    vim.opt.runtimepath:append(plugin.path .. '/editors/nvim')
-  end,
 })
 require('papyri').setup({})
 ```
 
-Use an absolute `file://` URL for a local checkout. `vim.pack` installs from
-Git, so commit the plugin files before installing; for uncommitted local work,
-use the manual runtime-path method below. If `:help papyri` does not resolve,
-generate the help tags once:
-
-```vim
-:helptags ~/.local/share/nvim/site/pack/core/opt/papyri/editors/nvim/doc
-```
+Then use `vim.pack.update()` to fetch plugin changes.
 
 ### Manual runtime path
 
+```sh
+git clone --branch nvim-plugin \
+  https://github.com/pseudofractal/papyri.git \
+  ~/.local/share/nvim/site/pack/papyri/start/papyri.nvim
+```
+
+Then add:
+
 ```lua
-vim.opt.runtimepath:append(vim.fn.expand('~/path/to/papyri/editors/nvim'))
 require('papyri').setup({})
 ```
+
+If `:help papyri` does not resolve, generate the help tags once:
+
+```vim
+:helptags ~/.local/share/nvim/site/pack/papyri/start/papyri.nvim/doc
+```
+
+### Local development
+
+For editing the plugin itself, point lazy.nvim at the checkout:
+
+```lua
+{
+  dir = vim.fn.expand('~/GitHub/papyri/editors/nvim'),
+  name = 'papyri.nvim',
+  event = 'BufReadPre *.md,*.typ',
+  opts = {},
+}
+```
+
+This uses the working tree instead of the published branch; normal plugin
+updates are tracked through `nvim-plugin`.
 
 ## Quick start
 
