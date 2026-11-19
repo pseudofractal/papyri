@@ -152,7 +152,6 @@ expects `preview.attach`; an older Papyri build gets a warning.
                                                               *:PapyriQuit*
 :PapyriQuit          Quit Papyri.
 
-                                                                 *:Papyri*
 :Papyri raw {method} [json]
                       Send a raw control method. Example: >
                         :Papyri raw scroll.by {"dy":200}
