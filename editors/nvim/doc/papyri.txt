@@ -193,7 +193,7 @@ Run `:checkhealth papyri` to inspect Neovim, the executable, and the socket.
 - A five-second heartbeat keeps the attachment alive. Papyri drops the overlay
   after fifteen seconds without one, so a crashed Neovim cannot leave stale
   text in the preview.
-- Quitting Neovim detaches but leaves Papyri running. Use |:PapyriQuit| to
+- Quitting Neovim detaches but leaves Papyri running. Use `:Papyri quit` to
   close the window.
 - Typst root resolution checks `typst_root(bufnr)`, a buffer named
   `typst_main`, a sibling `typst_main`, a `typst.toml` package entrypoint, a
