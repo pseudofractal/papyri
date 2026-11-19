@@ -10,6 +10,7 @@
           pkgs = import nixpkgs { inherit system; };
           lib = pkgs.lib;
           manifest = builtins.fromJSON (builtins.readFile ./package.json);
+          buildCommit = self.shortRev or self.dirtyShortRev or "unknown";
           source = lib.cleanSourceWith {
             src = ./.;
             filter = path: type:
@@ -49,6 +50,7 @@
             version = manifest.version;
             src = webSource;
             nodejs = pkgs.nodejs_24;
+            PAPYRI_BUILD_COMMIT = buildCommit;
             npmDepsHash = "sha256-qfo3MX11o1oZaC9ciFIGbLJMsXXrqeYNQnmYVnCNmrE=";
             npmFlags = [ "--ignore-scripts" ];
             installPhase = ''
@@ -71,6 +73,7 @@
             nativeBuildInputs = with pkgs; [ pkg-config cmake wrapGAppsHook3 rustfmt desktop-file-utils ];
             buildInputs = nativeLibraries;
             PAPYRI_TYPST_BINARY = "${pkgs.typst}/bin/typst";
+            PAPYRI_BUILD_COMMIT = buildCommit;
             postPatch = ''
               substituteInPlace tauri.conf.json --replace-fail '"../dist"' '"${web}/dist"'
             '';
@@ -145,6 +148,7 @@
       devShells = eachSystem (system: let p = forSystem system; in { default = p.pkgs.mkShell {
         packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config cmake chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst tinymist marksman texlab texliveMedium xdotool neovim stylua lua51Packages.luacheck p.tauriDriver ];
         PAPYRI_TYPST_BINARY = "${p.pkgs.typst}/bin/typst";
+        PAPYRI_BUILD_COMMIT = self.shortRev or self.dirtyShortRev or "unknown";
         buildInputs = p.nativeLibraries;
         LD_LIBRARY_PATH = p.pkgs.lib.makeLibraryPath p.nativeLibraries;
         GIO_EXTRA_MODULES = "${p.pkgs.glib-networking}/lib/gio/modules";

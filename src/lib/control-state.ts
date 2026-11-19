@@ -99,6 +99,8 @@ export function buildControlState({
   const activeText = activeTab?.previewText ?? activeTab?.text ?? '';
   return {
     protocol: CONTROL_PROTOCOL,
+    version: __APP_VERSION__,
+    build: __APP_BUILD__,
     features: [...CONTROL_FEATURES],
     active: workspace.active || null,
     secondary: workspace.secondary || null,

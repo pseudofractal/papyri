@@ -10,6 +10,8 @@ import { defaults } from '../src/lib/preferences';
 function sampleState(): ControlState {
   return {
     protocol: 1,
+    version: '0.2.2',
+    build: 'test',
     features: [],
     active: '/notes.md',
     secondary: null,

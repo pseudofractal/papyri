@@ -84,7 +84,8 @@ The completion script is written to stdout; redirect it to the location your
 shell loads. `papyri completions --help` lists the supported shells. Common
 aliases are `status`, `tabs`, `fit`, and `prefs`; `decoration-less` is accepted
 for `decorationless`. `-j` is shorthand for `--json` and `-s` for `--socket`.
-`papyri --version` and `papyri ctl --version` print the application version.
+`papyri --version` and `papyri ctl --version` print the application version and
+build identity.
 
 ## Launch output and logging
 
@@ -184,7 +185,7 @@ while work already underway may finish after the client has timed out.
 
 | Method                         | Parameters                                                                                                     | Description                                                               |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `ping`                         | none                                                                                                           | Version, protocol, PID, socket path and readiness.                        |
+| `ping`                         | none                                                                                                           | Version, build, protocol, PID, socket path and readiness.                 |
 | `state`                        | none                                                                                                           | Active document, tabs, PDF page, view flags, preferences, source.         |
 | `headings`                     | none                                                                                                           | Headings for the active document.                                         |
 | `commands`                     | none                                                                                                           | Palette commands available with `command`.                                |
@@ -592,12 +593,15 @@ is view state rather than a preference, so it is not persisted across restarts.
 ```json
 {
   "protocol": 1,
+  "version": "0.2.2",
+  "build": "5812300",
   "features": [
     "preview.attach",
     "preview.detach",
     "preview.heartbeat",
     "preview.update",
     "preview.reveal",
+    "preview.jump",
     "preview.viewport",
     "attachment.markdown",
     "attachment.typst"

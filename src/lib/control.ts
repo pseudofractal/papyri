@@ -207,6 +207,8 @@ export interface ControlStats {
 /** State exposed to the control socket and `papyri ctl state`. */
 export interface ControlState {
   protocol: number;
+  version: string;
+  build: string;
   features: string[];
   active: string | null;
   secondary: string | null;

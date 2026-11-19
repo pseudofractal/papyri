@@ -8,6 +8,7 @@ use std::path::PathBuf;
 #[command(
   name = "papyri",
   version,
+  long_version = concat!(env!("CARGO_PKG_VERSION"), "+", env!("PAPYRI_BUILD_COMMIT")),
   about = "Read Markdown, PDF, Typst, and LaTeX documents",
   long_about = "Papyri is a local-first Markdown, PDF, Typst, and LaTeX viewer and source editor.\n\nRun `papyri ctl --help` to control a running window over its local socket, `papyri skill` to print a compact guide for AI agents, or `papyri completions <shell>` to install shell completions.",
   after_help = "Examples:\n  papyri notes.md\n  papyri --decorationless notes.md\n  papyri --log terminal notes.md\n  papyri ctl state --json\n  papyri ctl scroll by 400\n  papyri skill\n  papyri completions bash\n\nSee docs/control.md for the control protocol and docs/agent-guide.md for agent workflows."
@@ -46,7 +47,7 @@ pub(crate) enum TopCommand {
 }
 
 #[derive(Args, Debug)]
-#[command(version, display_name = "papyri ctl")]
+#[command(version, long_version = concat!(env!("CARGO_PKG_VERSION"), "+", env!("PAPYRI_BUILD_COMMIT")), display_name = "papyri ctl")]
 pub(crate) struct CtlArgs {
   /// Print one compact JSON object instead of a human-readable summary (watch always streams JSONL)
   #[arg(short = 'j', long, global = true, help_heading = "Output")]

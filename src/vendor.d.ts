@@ -34,3 +34,6 @@ declare module 'nspell' {
     dictionaries: Array<{ aff?: string | Uint8Array; dic?: string | Uint8Array }>,
   ): NSpell;
 }
+
+declare const __APP_VERSION__: string;
+declare const __APP_BUILD__: string;

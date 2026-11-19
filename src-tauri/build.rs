@@ -1,4 +1,7 @@
 fn main() {
+  println!("cargo:rerun-if-env-changed=PAPYRI_BUILD_COMMIT");
+  let commit = std::env::var("PAPYRI_BUILD_COMMIT").unwrap_or_else(|_| "unknown".into());
+  println!("cargo:rustc-env=PAPYRI_BUILD_COMMIT={commit}");
   tauri_build::try_build(tauri_build::Attributes::new().app_manifest(
     tauri_build::AppManifest::new().commands(&[
       "initial_path",

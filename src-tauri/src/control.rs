@@ -380,6 +380,7 @@ fn handle_connection(app: AppHandle, stream: Connection) {
         let result = json!({
           "app": "papyri",
           "version": env!("CARGO_PKG_VERSION"),
+          "build": env!("PAPYRI_BUILD_COMMIT"),
           "protocol": PROTOCOL_VERSION,
           "pid": std::process::id(),
           "socket": socket_path().to_string_lossy(),
