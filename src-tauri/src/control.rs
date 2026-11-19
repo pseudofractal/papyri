@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 use std::{
   collections::HashMap,
   fs,
-  io::{BufRead, BufReader, Write},
+  io::{BufRead, BufReader, Read, Write},
   path::{Path, PathBuf},
   sync::{
     atomic::{AtomicU64, Ordering},
@@ -25,8 +25,22 @@ use tauri::{AppHandle, Emitter, Manager};
 /// Keep in sync with `CONTROL_PROTOCOL` in `src/lib/control.ts`.
 pub const PROTOCOL_VERSION: u64 = 1;
 pub const REQUEST_EVENT: &str = "papyri-control-request";
-const MAX_REQUEST_BYTES: usize = 256 * 1024;
+/// Document overlays are sent as one JSON request. Keep enough headroom for
+/// an 8 MiB document plus JSON escaping and protocol fields.
+/// Keep in sync with `MAX_ATTACHMENT_REQUEST_BYTES` in `src/lib/limits.ts` and
+/// `max_request_bytes` in `editors/nvim/lua/papyri/config.lua`.
+const MAX_REQUEST_BYTES: usize = 32 * 1024 * 1024;
 const MAX_EVENT_BYTES: usize = 1024 * 1024;
+
+/// Read one request line while bounding the allocation before `read_line`.
+/// Bytes are used so a multi-byte character split at the cap is reported as an
+/// oversized request rather than an I/O error.
+fn read_request_line(reader: &mut impl BufRead, buffer: &mut Vec<u8>) -> std::io::Result<usize> {
+  reader
+    .by_ref()
+    .take((MAX_REQUEST_BYTES + 1) as u64)
+    .read_until(b'\n', buffer)
+}
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 const RESPONSE_GRACE: Duration = Duration::from_secs(5);
 const READY_TIMEOUT: Duration = Duration::from_secs(20);
@@ -309,23 +323,32 @@ fn handle_connection(app: AppHandle, stream: Connection) {
       }
     });
   let mut reader = BufReader::new(stream);
-  let mut line = String::new();
+  let mut buffer = Vec::new();
   loop {
-    line.clear();
-    match reader.read_line(&mut line) {
+    buffer.clear();
+    // Bound the buffer before reading can grow it: a same-user client must not
+    // be able to allocate an unbounded request line.
+    match read_request_line(&mut reader, &mut buffer) {
       Ok(0) | Err(_) => break,
       Ok(_) => {}
     }
-    if line.len() > MAX_REQUEST_BYTES {
+    if buffer.len() > MAX_REQUEST_BYTES {
+      // The reader caps the line before JSON parsing, so an oversized line may
+      // be truncated and its id cannot be recovered here. Clients treat a
+      // null-id `request-too-large` response as terminal for the connection.
       let _ = sender.send(response_line(
         Value::Null,
         Reply::failure(
           "request-too-large",
-          format!("Control request exceeds {} KiB.", MAX_REQUEST_BYTES / 1024),
+          format!(
+            "Control request exceeds {} MiB.",
+            MAX_REQUEST_BYTES / (1024 * 1024)
+          ),
         ),
       ));
       break;
     }
+    let line = String::from_utf8_lossy(&buffer);
     let request: Request = match serde_json::from_str(line.trim()) {
       Ok(request) => request,
       Err(error) => {
@@ -595,12 +618,13 @@ pub fn control_respond(
   ok: bool,
   result: Value,
   error: Option<String>,
+  code: Option<String>,
 ) -> bool {
   let reply = if ok {
     Reply::success(result)
   } else {
     Reply::failure(
-      "app-error",
+      code.as_deref().unwrap_or("app-error"),
       error.unwrap_or_else(|| "The Papyri window rejected the request.".into()),
     )
   };
@@ -671,6 +695,40 @@ mod tests {
     assert_eq!(response.id, json!(7));
     assert_eq!(response.result, Some(json!({ "ok": true })));
     assert!(response.error.is_none());
+  }
+
+  #[test]
+  fn caps_oversized_request_lines() {
+    let mut input = std::io::Cursor::new(vec![b'x'; MAX_REQUEST_BYTES + 1024]);
+    let mut buffer = Vec::new();
+    let read = read_request_line(&mut input, &mut buffer).unwrap();
+    assert_eq!(read, MAX_REQUEST_BYTES + 1);
+    assert_eq!(buffer.len(), MAX_REQUEST_BYTES + 1);
+  }
+
+  #[test]
+  fn caps_multibyte_request_lines_without_io_error() {
+    let mut input = std::io::Cursor::new([0xC3, 0xA9].repeat(MAX_REQUEST_BYTES / 2 + 2));
+    let mut buffer = Vec::new();
+    let read = read_request_line(&mut input, &mut buffer).unwrap();
+    assert_eq!(read, MAX_REQUEST_BYTES + 1);
+    assert_eq!(buffer.len(), MAX_REQUEST_BYTES + 1);
+  }
+
+  #[test]
+  fn oversized_document_request_fits_transport_budget() {
+    let text = "x".repeat(8 * 1024 * 1024);
+    let request = json!({
+      "id": 1,
+      "method": "preview.update",
+      "params": {
+        "owner": "test",
+        "revision": 1,
+        "documents": [{ "path": "/notes.md", "text": text }]
+      }
+    });
+    let line = serde_json::to_string(&request).unwrap();
+    assert!(line.len() < MAX_REQUEST_BYTES);
   }
 
   #[test]

@@ -633,13 +633,21 @@ window.addEventListener('message', (event) => {
   if (event.data?.type === 'source-reveal' && Number.isSafeInteger(event.data.line)) {
     const line = event.data.line;
     const blocks = [...root.querySelectorAll<HTMLElement>('[data-source-start][data-source-end]')];
-    const match = blocks
-      .filter(
-        (block) =>
-          Number(block.dataset.sourceStart) <= line && line < Number(block.dataset.sourceEnd),
-      )
-      .at(-1);
-    match?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const containing = blocks.filter(
+      (block) =>
+        Number(block.dataset.sourceStart) <= line && line < Number(block.dataset.sourceEnd),
+    );
+    // Blank lines, front matter, and reference definitions can fall between
+    // mapped blocks; keep the preview near the requested line by using the
+    // nearest preceding block, or the first block for line zero.
+    const preceding = blocks.filter((block) => Number(block.dataset.sourceStart) <= line);
+    const match = containing.at(-1) ?? preceding.at(-1) ?? blocks[0];
+    match?.scrollIntoView({
+      block: event.data.align === 'top' ? 'start' : 'center',
+      behavior: 'auto',
+    });
+    if (Number.isSafeInteger(event.data.request))
+      notifyHost({ type: 'source-reveal-done', request: event.data.request, y: window.scrollY });
     return;
   }
   if (event.data?.type === 'scroll' && Number.isSafeInteger(event.data.request)) {
@@ -800,15 +808,47 @@ window.addEventListener('message', (event) => {
     });
   }
 });
+/** Probe the first pixel row at the horizontal center of the viewport. */
+const VIEWPORT_PROBE_Y = 1;
+function sourceViewport(): { line: number; offset: number } | null {
+  const blocks = root.querySelectorAll<HTMLElement>('[data-source-start][data-source-end]');
+  if (!blocks.length) return null;
+  const element = document.elementFromPoint(window.innerWidth / 2, VIEWPORT_PROBE_Y);
+  let block = element?.closest<HTMLElement>('[data-source-start][data-source-end]') ?? null;
+  if (!block) {
+    for (const candidate of blocks) {
+      if (candidate.getBoundingClientRect().bottom > 0) {
+        block = candidate;
+        break;
+      }
+    }
+  }
+  if (!block) return null;
+  const line = Number(block.dataset.sourceStart);
+  if (!Number.isInteger(line)) return null;
+  const rect = block.getBoundingClientRect();
+  const offset = Math.max(0, Math.min(1, -rect.top / Math.max(1, rect.height)));
+  return { line, offset };
+}
 function notifyScrollPosition() {
+  const viewport = sourceViewport();
   notifyHost({
     type: 'scroll',
     y: window.scrollY,
     max: Math.max(0, document.documentElement.scrollHeight - window.innerHeight),
+    ...(viewport ?? {}),
   });
 }
-window.addEventListener('scroll', notifyScrollPosition, { passive: true });
-window.addEventListener('resize', notifyScrollPosition, { passive: true });
+let scrollNotificationFrame = 0;
+function scheduleScrollPosition() {
+  if (scrollNotificationFrame) return;
+  scrollNotificationFrame = requestAnimationFrame(() => {
+    scrollNotificationFrame = 0;
+    notifyScrollPosition();
+  });
+}
+window.addEventListener('scroll', scheduleScrollPosition, { passive: true });
+window.addEventListener('resize', scheduleScrollPosition, { passive: true });
 window.addEventListener('resize', scheduleMathOverflowUpdate, { passive: true });
 window.addEventListener('load', notifyScrollPosition);
 // Hidden loading frames can suspend animation callbacks. Styles and DOM are ready here.

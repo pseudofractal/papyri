@@ -59,6 +59,7 @@ Inspect recent commit messages and follow the repository convention. Use `type(s
 - `src/render/` — preview frame runtime, sandbox policy, PDF renderer, and DOM inspector.
 - `src-tauri/src/` — Rust/Tauri backend, commands, CLI, control socket, compilers, and managed tools.
 - `src-tauri/src/platform/` — Linux, macOS, Windows, and shared platform implementations.
+- `editors/nvim/` — Neovim companion plugin, help docs, and headless tests.
 - `tests/` — Vitest unit and integration tests.
 - `e2e/` — Playwright browser tests.
 - `examples/showcase/` — representative documents and fixtures.

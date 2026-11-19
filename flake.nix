@@ -143,7 +143,7 @@
       apps = eachSystem (system: { default = { type = "app"; meta.description = "Open Markdown, PDF, Typst, LaTeX, or a directory"; program = "${self.packages.${system}.default}/bin/papyri"; }; });
       checks = eachSystem (system: let p = forSystem system; in { inherit (p) web quality packaging; linux = p.desktop; });
       devShells = eachSystem (system: let p = forSystem system; in { default = p.pkgs.mkShell {
-        packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config cmake chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst tinymist marksman texlab texliveMedium xdotool p.tauriDriver ];
+        packages = with p.pkgs; [ nodejs_24 rustc cargo rustfmt clippy pkg-config cmake chromium prefetch-npm-deps python3 xvfb-run librsvg desktop-file-utils typst tinymist marksman texlab texliveMedium xdotool neovim stylua lua51Packages.luacheck p.tauriDriver ];
         PAPYRI_TYPST_BINARY = "${p.pkgs.typst}/bin/typst";
         buildInputs = p.nativeLibraries;
         LD_LIBRARY_PATH = p.pkgs.lib.makeLibraryPath p.nativeLibraries;

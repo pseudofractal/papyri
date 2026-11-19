@@ -112,8 +112,9 @@
     zoomPreview(action);
   }
 
-  /** Reveal an editor location in the rendered document. */
-  export function reveal(documentPath: string, line: number, character: number) {
+  /** Dispatch a Tinymist reveal; returns false until the live preview is ready. */
+  export function reveal(documentPath: string, line: number, character: number): boolean {
+    if (!client || !ready || !url || disposed) return false;
     clearTimeout(positionTimer);
     positionTimer = setTimeout(() => {
       if (!client || !url || disposed) return;
@@ -127,6 +128,7 @@
           if (!disposed) status = `Could not navigate preview: ${String(error)}`;
         });
     }, 100);
+    return true;
   }
 
   onMount(() => {

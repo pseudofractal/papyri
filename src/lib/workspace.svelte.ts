@@ -12,6 +12,8 @@ function describeCompilationFailure(error: string | undefined, retained: boolean
 export interface Tab {
   path: string;
   text: string;
+  /** Preview-only text pushed by an external editor; never written to disk. */
+  previewText?: string;
   bytes?: Uint8Array;
   stamp: string;
   scroll: number;

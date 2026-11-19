@@ -11,6 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
       - run: nix flake check --print-build-logs --cores 4
+      - run: nix develop --command editors/nvim/tests/check.sh
   desktop:
     strategy:
       fail-fast: false

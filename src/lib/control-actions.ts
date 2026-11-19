@@ -9,6 +9,9 @@ import type {
   ControlMenuState,
   ControlNoteState,
   ControlPanel,
+  ControlPreviewAttachOptions,
+  ControlPreviewDocument,
+  ControlRevealAlign,
   ControlSelectionKind,
   ControlSettingsTab,
   ControlScreenshotOptions,
@@ -132,6 +135,29 @@ export interface ControlLivePreviewContext {
   split(value: number): Promise<void>;
 }
 
+export interface ControlAttachmentContext {
+  attach(options: ControlPreviewAttachOptions): Promise<void>;
+  detach(owner: string): Promise<void>;
+  heartbeat(owner: string): Promise<void>;
+  update(owner: string, revision: number, documents: ControlPreviewDocument[]): Promise<void>;
+  reveal(
+    owner: string,
+    path: string,
+    line: number,
+    character: number,
+    align: ControlRevealAlign,
+  ): Promise<ControlRevealResult>;
+}
+
+export interface ControlRevealResult {
+  path: string;
+  line: number;
+  character: number;
+  y: number;
+  skipped: boolean;
+  reason?: 'inactive' | 'hidden' | 'starting';
+}
+
 export interface ControlSelectionContext {
   get(): Promise<{ text: string; source: string; preview: string }>;
   copy(kind: ControlSelectionKind): Promise<void>;
@@ -213,6 +239,7 @@ export interface ControlContext {
   search: ControlSearchContext;
   pdf: ControlPdfContext;
   livePreview: ControlLivePreviewContext;
+  attachment: ControlAttachmentContext;
   selection: ControlSelectionContext;
   menu: ControlMenuContext;
   dom: ControlDomContext;
@@ -688,6 +715,30 @@ export function createControlActions(context: ControlContext): ControlActions {
       await context.workspaceReady;
       await context.livePreview.split(value);
       return context.state();
+    },
+    previewAttach: async (options) => {
+      await context.workspaceReady;
+      await context.attachment.attach(options);
+      return context.state();
+    },
+    previewDetach: async (owner) => {
+      await context.workspaceReady;
+      await context.attachment.detach(owner);
+      return context.state();
+    },
+    previewHeartbeat: async (owner) => {
+      await context.workspaceReady;
+      await context.attachment.heartbeat(owner);
+      return { ok: true };
+    },
+    previewUpdate: async (owner, revision, documents) => {
+      await context.workspaceReady;
+      await context.attachment.update(owner, revision, documents);
+      return context.state();
+    },
+    previewReveal: async (owner, path, line, character, align) => {
+      await context.workspaceReady;
+      return context.attachment.reveal(owner, path, line, character, align);
     },
     selectionGet: async () => {
       await context.workspaceReady;

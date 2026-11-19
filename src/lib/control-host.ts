@@ -1,4 +1,5 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { ControlActionError } from './control';
 import { createMutationQueue } from './control-queue';
 import { invokeHost } from './native';
 
@@ -54,6 +55,7 @@ export async function installControl(execute: ControlExecutor): Promise<Unlisten
     'live-preview',
     'live-preview.zoom',
     'live-preview.fit',
+    'preview.heartbeat',
     'selection.copy',
     'document.copy',
     'settings.tab',
@@ -96,6 +98,10 @@ export async function installControl(execute: ControlExecutor): Promise<Unlisten
     'explorer.delete',
     'search.next',
     'search.previous',
+    'preview.attach',
+    'preview.detach',
+    'preview.update',
+    'preview.reveal',
     'dom.focus',
     'dom.click',
     'dom.type',
@@ -131,11 +137,14 @@ export async function installControl(execute: ControlExecutor): Promise<Unlisten
         const result = await dispatch(method, params ?? {}, deadline);
         await invokeHost('control_respond', { id, ok: true, result: result ?? null });
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const code = error instanceof ControlActionError ? error.code : 'app-error';
         await invokeHost('control_respond', {
           id,
           ok: false,
           result: null,
-          error: error instanceof Error ? error.message : String(error),
+          error: message,
+          code,
         }).catch(() => {});
       }
     })();

@@ -22,7 +22,7 @@
   import { mayContainMath, warmMathFonts } from '../render/math-fonts';
   import { loadPdfResource } from '../render/pdf-resources';
   import { parseBuildFailure } from '../lib/build-diagnostics';
-  import { SCROLL_ACK_TIMEOUT_MS } from '../lib/control-timings';
+  import { PREVIEW_ACK_TIMEOUT_MS, PREVIEW_FRAME_WAIT_MS } from '../lib/control-timings';
   import { PreviewNotReadyError } from '../lib/preview-control';
   import { MAX_SCROLL_POSITION } from '../lib/view';
   let {
@@ -44,6 +44,7 @@
     onheadings,
     onscroll,
     onscrollprogress,
+    onsourceviewport,
     oncommand,
     onpdfscale,
     onpdfpage,
@@ -83,6 +84,7 @@
     onheadings: (headings: Heading[]) => void;
     onscroll: (path: string, y: number) => void;
     onscrollprogress?: (path: string, progress: number) => void;
+    onsourceviewport?: (path: string, line: number, offset: number) => void;
     oncommand: (command: ViewCommand) => void;
     onpdfscale?: (value: number) => void;
     onpdfpage?: (path: string, page: number, total: number) => void;
@@ -102,6 +104,13 @@
   let frames = $state<
     { channel: string; document: string; trusted: boolean; bytes?: Uint8Array }[]
   >([]);
+  let awaitingFrame = false;
+  let frameWaiters: (() => void)[] = [];
+  function flushFrameWaiters() {
+    const waiters = frameWaiters;
+    frameWaiters = [];
+    for (const resolve of waiters) resolve();
+  }
   const frameElements = new Map<string, HTMLIFrameElement>();
   let pendingChannel = '';
   function registerFrame(element: HTMLIFrameElement, channel: string) {
@@ -118,6 +127,15 @@
   let retryRequest = $state(0);
   let scrollRequest = 0;
   const pendingScrolls = new Map<
+    number,
+    {
+      resolve: (y: number) => void;
+      reject: (error: Error) => void;
+      timeout: ReturnType<typeof setTimeout>;
+    }
+  >();
+  let revealRequest = 0;
+  const pendingReveals = new Map<
     number,
     {
       resolve: (y: number) => void;
@@ -154,7 +172,7 @@
       const timeout = setTimeout(() => {
         pendingDom.delete(request);
         reject(new Error('The preview did not answer the DOM request.'));
-      }, SCROLL_ACK_TIMEOUT_MS);
+      }, PREVIEW_ACK_TIMEOUT_MS);
       pendingDom.set(request, { resolve, reject, timeout });
       frame?.contentWindow?.postMessage({ type: 'dom-request', request, action, params }, '*');
     });
@@ -181,7 +199,7 @@
       const timeout = setTimeout(() => {
         pendingSelections.delete(request);
         reject(new Error('The preview did not answer the selection request.'));
-      }, SCROLL_ACK_TIMEOUT_MS);
+      }, PREVIEW_ACK_TIMEOUT_MS);
       pendingSelections.set(request, { resolve, reject, timeout });
       frame?.contentWindow?.postMessage({ type: 'selection-request', request }, '*');
     });
@@ -197,7 +215,7 @@
       const timeout = setTimeout(() => {
         pendingSelectionSets.delete(request);
         reject(new Error('The preview did not answer the selection request.'));
-      }, SCROLL_ACK_TIMEOUT_MS);
+      }, PREVIEW_ACK_TIMEOUT_MS);
       pendingSelectionSets.set(request, { resolve, reject, timeout });
       frame?.contentWindow?.postMessage({ type: 'selection-set', request, text }, '*');
     });
@@ -210,7 +228,7 @@
       const timeout = setTimeout(() => {
         pendingSelectionClears.delete(request);
         reject(new Error('The preview did not answer the selection request.'));
-      }, SCROLL_ACK_TIMEOUT_MS);
+      }, PREVIEW_ACK_TIMEOUT_MS);
       pendingSelectionClears.set(request, { resolve, timeout });
       frame?.contentWindow?.postMessage({ type: 'selection-clear', request }, '*');
     });
@@ -232,13 +250,45 @@
   export function documentPath() {
     return tab.path;
   }
-  export function revealSource(line: number) {
-    if (frameReady) frame?.contentWindow?.postMessage({ type: 'source-reveal', line }, '*');
+  export async function revealSource(
+    line: number,
+    align: 'center' | 'top' = 'center',
+  ): Promise<number> {
+    if (awaitingFrame) {
+      const ready = await new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => {
+          frameWaiters = frameWaiters.filter((waiter) => waiter !== wake);
+          resolve(false);
+        }, PREVIEW_FRAME_WAIT_MS);
+        function wake() {
+          clearTimeout(timer);
+          resolve(true);
+        }
+        frameWaiters.push(wake);
+      });
+      if (!ready || !frameReady) throw new PreviewNotReadyError();
+    }
+    if (!frame || !frameReady) throw new PreviewNotReadyError();
+    const request = ++revealRequest;
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        pendingReveals.delete(request);
+        reject(new Error('The preview did not acknowledge the reveal.'));
+      }, PREVIEW_ACK_TIMEOUT_MS);
+      pendingReveals.set(request, { resolve, reject, timeout });
+      frame?.contentWindow?.postMessage({ type: 'source-reveal', request, line, align }, '*');
+    });
   }
   export function revealPdf(location: { page: number; x: number; y: number }) {
     if (frameReady)
       frame?.contentWindow?.postMessage({ type: 'pdf-source-reveal', ...location }, '*');
   }
+  // The frame-ready handler enables source navigation for the initial render;
+  // this effect covers a callback that arrives or changes after the frame is ready.
+  $effect(() => {
+    if (!frameReady || !onsourcejump) return;
+    frame?.contentWindow?.postMessage({ type: 'source-navigation', enabled: true }, '*');
+  });
   function requestScroll(payload: { y?: number; dy?: number }): Promise<number> {
     if (!frame || !frameReady) return Promise.reject(new PreviewNotReadyError());
     const request = ++scrollRequest;
@@ -246,7 +296,7 @@
       const timeout = setTimeout(() => {
         pendingScrolls.delete(request);
         reject(new Error('The preview did not acknowledge the scroll.'));
-      }, SCROLL_ACK_TIMEOUT_MS);
+      }, PREVIEW_ACK_TIMEOUT_MS);
       pendingScrolls.set(request, { resolve, reject, timeout });
       frame?.contentWindow?.postMessage({ type: 'scroll', request, ...payload }, '*');
     });
@@ -257,6 +307,13 @@
       pending.reject(new Error(reason));
     }
     pendingScrolls.clear();
+  }
+  function cancelReveals(reason: string) {
+    for (const pending of pendingReveals.values()) {
+      clearTimeout(pending.timeout);
+      pending.reject(new PreviewNotReadyError(reason));
+    }
+    pendingReveals.clear();
   }
   const networkAllowed = $derived(preferences.network);
   const presentationKey = $derived(
@@ -290,10 +347,12 @@
   const failedSource = $derived(!!buildFailure && !tab.bytes);
   const buildMode = $derived(buildModes[tab.path] ?? buildModeStore.get(tab.path) ?? 'inline');
   $effect(() => {
-    const text = tab.text;
+    const text = tab.previewText ?? tab.text;
     const bytes = tab.bytes;
     const path = tab.path;
     const initialScroll = untrack(() => scrollPosition ?? tab.scroll);
+    // Reactive dependency only: revision changes must re-render even when the
+    // preview text is identical.
     void tab.revision;
     void retryRequest;
     const delimiters = bytes ? [] : JSON.parse(delimiterKey);
@@ -325,8 +384,10 @@
       frames = untrack(() => frames.filter((item) => item.channel === activeChannel));
     }
     loading = !keepVisible;
+    awaitingFrame = true;
     error = '';
     cancelScrolls('The preview changed.');
+    cancelReveals('The preview changed.');
     (async () => {
       try {
         traceStartup('preview-start');
@@ -383,6 +444,8 @@
         if (!controller.signal.aborted) {
           error = String(reason);
           loading = false;
+          awaitingFrame = false;
+          flushFrameWaiters();
           if (bytes && language) onrendererror?.(path, error);
         }
       }
@@ -464,6 +527,8 @@
       pendingChannel = '';
       frames = [pending];
       frameReady = true;
+      awaitingFrame = false;
+      flushFrameWaiters();
       if (onsourcejump)
         frame?.contentWindow?.postMessage({ type: 'source-navigation', enabled: true }, '*');
       if (onpdfsourcejump)
@@ -772,10 +837,26 @@
       if (pending) {
         pendingScrolls.delete(data.request);
         clearTimeout(pending.timeout);
-        pending.resolve(data.y);
+        const y = Math.max(0, Math.min(data.y, MAX_SCROLL_POSITION));
+        pending.resolve(y);
         // Trusted frames acknowledge control scrolling but do not update the
         // host's scroll bookmark; that policy keeps scripted documents inert.
-        if (allowsMessages) onscroll(tab.path, Math.max(0, Math.min(data.y, MAX_SCROLL_POSITION)));
+        if (allowsMessages) onscroll(tab.path, y);
+      }
+      return;
+    }
+    if (
+      data.type === 'source-reveal-done' &&
+      Number.isSafeInteger(data.request) &&
+      Number.isFinite(data.y)
+    ) {
+      const pending = pendingReveals.get(data.request);
+      if (pending) {
+        pendingReveals.delete(data.request);
+        clearTimeout(pending.timeout);
+        const y = Math.max(0, Math.min(data.y, MAX_SCROLL_POSITION));
+        pending.resolve(y);
+        if (allowsMessages) onscroll(tab.path, y);
       }
       return;
     }
@@ -820,6 +901,8 @@
           tab.path,
           data.max > 1 ? Math.max(0, Math.min(1, data.y / data.max)) : 1,
         );
+      if (Number.isInteger(data.line) && Number.isFinite(data.offset))
+        onsourceviewport?.(tab.path, data.line, data.offset);
     }
   }
   // WebKitGTK retargets wheel events over an iframe to the host without scrolling

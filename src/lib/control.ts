@@ -1,9 +1,45 @@
 import type { Preferences } from './types';
 import type { BrowserState } from './browser';
 import type { RightTab } from './sites';
+import { dirname, isMarkdown, isTypst, normalize } from './paths';
+import {
+  MAX_ATTACHMENT_DOCUMENTS,
+  MAX_ATTACHMENT_PATHS,
+  MAX_ATTACHMENT_REQUEST_BYTES,
+  MAX_DOCUMENT_BYTES,
+} from './limits';
+
+const utf8Encoder = new TextEncoder();
+
+/** Error carrying a stable control-protocol code for integrations. */
+export class ControlActionError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'ControlActionError';
+    this.code = code;
+  }
+}
 
 /** Keep in sync with `PROTOCOL_VERSION` in `src-tauri/src/control.rs`. */
 export const CONTROL_PROTOCOL = 1;
+
+/**
+ * Optional control capabilities. Clients feature-detect these instead of
+ * assuming that every protocol-1 build understands preview attachments.
+ */
+export const CONTROL_FEATURES = [
+  'preview.attach',
+  'preview.detach',
+  'preview.update',
+  'preview.reveal',
+  'preview.heartbeat',
+  'preview.jump',
+  'preview.viewport',
+  'attachment.markdown',
+  'attachment.typst',
+] as const;
 
 export type ControlLanguage = 'markdown' | 'typst' | 'latex';
 export type ControlEntryKind = 'folder' | 'markdown' | 'typst' | 'latex';
@@ -67,6 +103,51 @@ export interface ControlLivePreviewState {
   split: number;
 }
 
+/**
+ * The document a control client currently owns. While an attachment is
+ * active, the external editor is the only writer for `paths`; Papyri's editor
+ * and explorer rename/delete operations reject those paths.
+ */
+export interface ControlAttachmentState {
+  active: boolean;
+  owner: string | null;
+  kind: 'markdown' | 'typst' | null;
+  root: string | null;
+  paths: string[];
+  revision: number;
+  /** Why an inactive attachment ended: expired, detached, replaced, or closed. */
+  reason?: 'expired' | 'detached' | 'replaced' | 'closed' | null;
+}
+
+/** Return an inactive attachment with an independent path list. */
+export function emptyAttachment(): ControlAttachmentState {
+  return {
+    active: false,
+    owner: null,
+    kind: null,
+    root: null,
+    paths: [],
+    revision: 0,
+    reason: null,
+  };
+}
+
+export interface ControlPreviewDocument {
+  path: string;
+  text: string;
+}
+
+export interface ControlPreviewAttachOptions {
+  owner: string;
+  path: string;
+  kind?: 'markdown' | 'typst';
+  paths?: string[];
+  documents?: ControlPreviewDocument[];
+  takeover?: boolean;
+}
+
+export type ControlRevealAlign = 'center' | 'top';
+
 export interface ControlToolsState {
   busy: boolean;
   message: string;
@@ -126,6 +207,7 @@ export interface ControlStats {
 /** State exposed to the control socket and `papyri ctl state`. */
 export interface ControlState {
   protocol: number;
+  features: string[];
   active: string | null;
   secondary: string | null;
   tabs: ControlTab[];
@@ -149,6 +231,7 @@ export interface ControlState {
   trust: ControlTrustState;
   browser: BrowserState | null;
   livePreview: ControlLivePreviewState;
+  attachment: ControlAttachmentState;
   tools: ControlToolsState;
   stats: ControlStats;
   selection: { words: number; characters: number } | null;
@@ -263,6 +346,21 @@ export interface ControlActions {
   livePreviewZoom(action: 'in' | 'out' | 'reset'): Promise<unknown>;
   livePreviewFit(): Promise<unknown>;
   livePreviewSplit(value: number): Promise<unknown>;
+  previewAttach(options: ControlPreviewAttachOptions): Promise<unknown>;
+  previewDetach(owner: string): Promise<unknown>;
+  previewHeartbeat(owner: string): Promise<unknown>;
+  previewUpdate(
+    owner: string,
+    revision: number,
+    documents: ControlPreviewDocument[],
+  ): Promise<unknown>;
+  previewReveal(
+    owner: string,
+    path: string,
+    line: number,
+    character: number,
+    align: ControlRevealAlign,
+  ): Promise<unknown>;
   selectionGet(): Promise<unknown>;
   selectionCopy(kind: ControlSelectionKind): Promise<unknown>;
   selectionSet(text: string): Promise<unknown>;
@@ -334,6 +432,8 @@ const MENU_KINDS: ControlMenuKind[] = ['app', 'document', 'tab', 'file', 'select
 const SCREENSHOT_TARGETS: ControlScreenshotTarget[] = ['screen', 'app', 'element', 'rect'];
 const DOM_FRAMES: ControlDomFrame[] = ['main', 'preview', 'browser'];
 const INPUT_ACTIONS = ['move', 'click', 'drag', 'scroll', 'key', 'type'] as const;
+const REVEAL_ALIGNMENTS: ControlRevealAlign[] = ['center', 'top'];
+const PREVIEW_KINDS = ['markdown', 'typst'] as const;
 
 /** Validate a control request and invoke the corresponding host action. */
 export function createControlExecutor(
@@ -531,6 +631,33 @@ export function createControlExecutor(
         if (value < 10 || value > 90) throw new Error('`value` must be between 10 and 90.');
         return actions.livePreviewSplit(value);
       }
+      case 'preview.attach':
+        return actions.previewAttach({
+          owner: requiredString(params, 'owner'),
+          path: requiredString(params, 'path'),
+          kind: optionalEnum(params, 'kind', PREVIEW_KINDS, undefined),
+          paths: optionalStringList(params, 'paths'),
+          documents: optionalDocuments(params, 'documents'),
+          takeover: optionalBoolean(params, 'takeover') ?? false,
+        });
+      case 'preview.detach':
+        return actions.previewDetach(requiredString(params, 'owner'));
+      case 'preview.heartbeat':
+        return actions.previewHeartbeat(requiredString(params, 'owner'));
+      case 'preview.update':
+        return actions.previewUpdate(
+          requiredString(params, 'owner'),
+          requiredInteger(params, 'revision'),
+          requiredDocuments(params, 'documents'),
+        );
+      case 'preview.reveal':
+        return actions.previewReveal(
+          requiredString(params, 'owner'),
+          requiredString(params, 'path'),
+          requiredInteger(params, 'line'),
+          optionalInteger(params, 'character') ?? 0,
+          optionalEnum(params, 'align', REVEAL_ALIGNMENTS, 'center'),
+        );
       case 'selection.get':
         return actions.selectionGet();
       case 'selection.copy':
@@ -696,6 +823,51 @@ function paneParameter(params: Record<string, unknown>): ControlPane {
   return optionalEnum(params, 'pane', PANES, 'main');
 }
 
+function requiredDocuments(params: Record<string, unknown>, key: string): ControlPreviewDocument[] {
+  const documents = documentsParameter(params, key);
+  if (!documents) throw new Error(`\`${key}\` must be an array of document overlays.`);
+  return documents;
+}
+
+function optionalDocuments(
+  params: Record<string, unknown>,
+  key: string,
+): ControlPreviewDocument[] | undefined {
+  return documentsParameter(params, key);
+}
+
+function documentsParameter(
+  params: Record<string, unknown>,
+  key: string,
+): ControlPreviewDocument[] | undefined {
+  const value = params[key];
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) throw new Error(`\`${key}\` must be an array.`);
+  if (value.length > MAX_ATTACHMENT_DOCUMENTS)
+    throw new Error(`\`${key}\` accepts at most ${MAX_ATTACHMENT_DOCUMENTS} documents.`);
+  const seen = new Set<string>();
+  const documents = value.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item))
+      throw new Error(`\`${key}[${index}]\` must be an object.`);
+    const document = item as { path?: unknown; text?: unknown };
+    if (typeof document.path !== 'string' || !document.path.trim())
+      throw new Error(`\`${key}[${index}].path\` must be a non-empty string.`);
+    if (typeof document.text !== 'string')
+      throw new Error(`\`${key}[${index}].text\` must be a string.`);
+    if (utf8Encoder.encode(document.text).length > MAX_DOCUMENT_BYTES)
+      throw new Error(`\`${key}[${index}].text\` exceeds the document size limit.`);
+    if (seen.has(document.path))
+      throw new Error(`\`${key}\` contains the same path twice: ${document.path}`);
+    seen.add(document.path);
+    return { path: document.path, text: document.text };
+  });
+  if (utf8Encoder.encode(JSON.stringify(documents)).length > MAX_ATTACHMENT_REQUEST_BYTES)
+    throw new Error(
+      `\`${key}\` exceeds the ${MAX_ATTACHMENT_REQUEST_BYTES / (1024 * 1024)} MiB attachment budget.`,
+    );
+  return documents;
+}
+
 function requestObject(value: unknown): Record<string, unknown> {
   if (value === undefined || value === null) return {};
   if (typeof value !== 'object' || Array.isArray(value))
@@ -715,6 +887,22 @@ function optionalString(params: Record<string, unknown>, key: string): string | 
   if (value === undefined || value === null) return undefined;
   if (typeof value !== 'string') throw new Error(`\`${key}\` must be a string.`);
   return value;
+}
+
+function optionalStringList(params: Record<string, unknown>, key: string): string[] | undefined {
+  const value = params[key];
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) throw new Error(`\`${key}\` must be an array of strings.`);
+  if (value.length > MAX_ATTACHMENT_PATHS)
+    throw new Error(`\`${key}\` accepts at most ${MAX_ATTACHMENT_PATHS} paths.`);
+  const seen = new Set<string>();
+  return value.map((item, index) => {
+    if (typeof item !== 'string' || !item.trim())
+      throw new Error(`\`${key}[${index}]\` must be a non-empty string.`);
+    if (seen.has(item)) throw new Error(`\`${key}\` contains the same path twice: ${item}`);
+    seen.add(item);
+    return item;
+  });
 }
 
 function requiredNumber(params: Record<string, unknown>, key: string): number {
@@ -788,4 +976,189 @@ function optionalEnum<T extends string>(
   if (typeof value !== 'string' || !values.includes(value as T))
     throw new Error(`\`${key}\` must be one of: ${values.join(', ')}.`);
   return value as T;
+}
+
+export type AttachmentKind = 'markdown' | 'typst';
+export type AttachmentLossReason = 'expired' | 'detached' | 'replaced' | 'closed';
+
+/** The externally owned preview document and its last accepted revision. */
+export interface PreviewAttachment {
+  owner: string;
+  kind: AttachmentKind;
+  root: string;
+  paths: string[];
+  revision: number;
+  lastSeen: number;
+}
+
+export interface AttachmentRequest {
+  path: string;
+  kind: AttachmentKind;
+  paths: string[];
+  documents: ControlPreviewDocument[];
+}
+
+/** A Typst path must be the main document or live under its directory. */
+export function typstPathAllowed(root: string, path: string): boolean {
+  if (!isTypst(path)) return false;
+  if (path === root) return true;
+  const directory = dirname(root);
+  if (directory === '/') return false;
+  return path.startsWith(`${directory}/`);
+}
+
+/** True when a path is attached or contains an attached path. */
+export function attachmentCovers(attachment: PreviewAttachment | null, path: string): boolean {
+  if (!attachment) return false;
+  return attachment.paths.some((attached) => attached === path || attached.startsWith(`${path}/`));
+}
+
+export function attachmentControlState(
+  attachment: PreviewAttachment | null,
+  lossReason: AttachmentLossReason | null,
+): ControlAttachmentState {
+  return attachment
+    ? {
+        active: true,
+        owner: attachment.owner,
+        kind: attachment.kind,
+        root: attachment.root,
+        paths: [...attachment.paths],
+        revision: attachment.revision,
+        reason: null,
+      }
+    : { ...emptyAttachment(), reason: lossReason };
+}
+
+export function attachmentOwnershipError(attachment: PreviewAttachment | null): ControlActionError {
+  return attachment
+    ? new ControlActionError('attachment-replaced', 'Another editor owns the preview attachment.')
+    : new ControlActionError('attachment-expired', 'The preview attachment is no longer active.');
+}
+
+/** Refuse an attachment while Papyri has unsaved drafts for any owned path. */
+export function assertNoDirtyDrafts(
+  paths: string[],
+  findDirty: (paths: string[]) => string | null,
+): void {
+  const dirtyPath = findDirty(paths);
+  if (dirtyPath)
+    throw new ControlActionError(
+      'attachment-dirty',
+      `Papyri has unsaved source changes for ${dirtyPath}. Save or discard them before attaching.`,
+    );
+}
+
+export function resolveAttachPlan(
+  attachment: PreviewAttachment | null,
+  request: AttachmentRequest,
+  owner: string,
+  takeover: boolean,
+): { previousPaths: string[]; reuseTypstPane: boolean; replacingOwner: boolean } {
+  const previousPaths = attachment ? [...attachment.paths] : [];
+  const reuseTypstPane =
+    request.kind === 'typst' &&
+    attachment?.kind === 'typst' &&
+    attachment.owner === owner &&
+    attachment.root === request.path;
+  const replacingOwner = !!attachment && attachment.owner !== owner;
+  if (replacingOwner && !takeover)
+    throw new ControlActionError(
+      'attachment-replaced',
+      `The preview is attached to ${attachment.owner}. Take it over to replace it.`,
+    );
+  return { previousPaths, reuseTypstPane, replacingOwner };
+}
+
+/** Validate normalized attach inputs before any side effect. */
+export function validateAttachmentTarget(
+  path: string,
+  kind: AttachmentKind,
+  paths: string[],
+  hasSource: boolean,
+): void {
+  if (!hasSource) throw new Error('No document source is available.');
+  if (kind === 'markdown') {
+    if (!isMarkdown(path)) throw new Error('Only Markdown documents can be attached as text.');
+    if (paths.length !== 1 || paths[0] !== path)
+      throw new Error('A Markdown attachment can only own its document.');
+    return;
+  }
+  if (!isTypst(path)) throw new Error('A Typst attachment needs a .typ main document.');
+  if (!paths.includes(path)) throw new Error('A Typst attachment must include its main document.');
+  for (const attachedPath of paths) {
+    if (!typstPathAllowed(path, attachedPath))
+      throw new Error(`Typst attachments must stay under the main document's directory.`);
+  }
+  if (dirname(path) === '/')
+    throw new ControlActionError(
+      'attachment-path',
+      'Typst attachments cannot use the filesystem root as their project directory.',
+    );
+}
+
+/** Normalize documents and ensure every document belongs to the attachment. */
+export function validateAttachmentDocuments(
+  paths: string[],
+  documents: ControlPreviewDocument[],
+): ControlPreviewDocument[] {
+  const normalized = documents.map((document) => ({
+    path: normalize(document.path),
+    text: document.text,
+  }));
+  for (const document of normalized)
+    if (!paths.includes(document.path)) throw new Error(`Not attached: ${document.path}`);
+  return normalized;
+}
+
+export function assertRevisionForward(attachment: PreviewAttachment, revision: number): void {
+  if (revision <= attachment.revision)
+    throw new ControlActionError('attachment-revision', 'The preview revision must move forward.');
+}
+
+export function resolveMarkdownUpdate(
+  attachment: PreviewAttachment,
+  documents: ControlPreviewDocument[],
+): Map<string, string> {
+  const next = new Map(documents.map((document) => [normalize(document.path), document.text]));
+  for (const path of next.keys())
+    if (!attachment.paths.includes(path))
+      throw new ControlActionError('attachment-path', `Not attached: ${path}`);
+  return next;
+}
+
+export function resolveTypstUpdate(
+  attachment: PreviewAttachment,
+  documents: ControlPreviewDocument[],
+  findDirty: (paths: string[]) => string | null,
+): { next: Map<string, string>; additions: string[] } {
+  const next = new Map(documents.map((document) => [normalize(document.path), document.text]));
+  const additions = [...next.keys()].filter((path) => !attachment.paths.includes(path));
+  if (attachment.paths.length + additions.length > MAX_ATTACHMENT_PATHS)
+    throw new ControlActionError(
+      'attachment-path',
+      `A Typst attachment accepts at most ${MAX_ATTACHMENT_PATHS} source paths.`,
+    );
+  for (const path of next.keys())
+    if (!typstPathAllowed(attachment.root, path))
+      throw new ControlActionError('attachment-path', `Not attached: ${path}`);
+  assertNoDirtyDrafts(additions, findDirty);
+  return { next, additions };
+}
+
+export function mergeTypstDocuments(
+  existing: ControlPreviewDocument[],
+  next: Map<string, string>,
+): ControlPreviewDocument[] {
+  const merged = new Map(existing.map((document) => [normalize(document.path), document.text]));
+  for (const [path, text] of next) merged.set(path, text);
+  return [...merged].map(([path, text]) => ({ path, text }));
+}
+
+export function isAttachmentExpired(
+  attachment: PreviewAttachment,
+  now: number,
+  leaseMs: number,
+): boolean {
+  return now - attachment.lastSeen > leaseMs;
 }

@@ -130,6 +130,15 @@ describe('Markdown and mathematics', () => {
   });
   it('bounds documents', () =>
     expect(() => renderMarkdown('x'.repeat(8 * 1024 * 1024 + 1))).toThrow('8 MiB'));
+  it('maps rendered blocks to zero-based source lines', () => {
+    const result = renderMarkdown('# Title\n\nParagraph\n\n```ts\nconst value = 1;\n```\n');
+    const blocks = [
+      ...result.html.matchAll(/data-source-start="(\d+)"[^>]*data-source-end="(\d+)"/g),
+    ].map((match) => [Number(match[1]), Number(match[2])]);
+    expect(blocks).toContainEqual([0, 1]);
+    expect(blocks).toContainEqual([2, 3]);
+    expect(blocks).toContainEqual([4, 7]);
+  });
 });
 describe('path resolution and security policy', () => {
   it('abbreviates only the current home directory and expands entered paths', () => {

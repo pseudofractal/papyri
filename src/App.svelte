@@ -128,20 +128,48 @@
   import type { LspDiagnostic } from './lib/editor-lsp';
   import { buildFailureFromLspDiagnostics, type BuildFailure } from './lib/build-diagnostics';
   import type { PaletteCommand } from './lib/palette';
-  import { createControlExecutor, type ControlState } from './lib/control';
+  import {
+    ControlActionError,
+    assertNoDirtyDrafts,
+    assertRevisionForward,
+    attachmentControlState as buildAttachmentControlState,
+    attachmentCovers,
+    attachmentOwnershipError,
+    createControlExecutor,
+    isAttachmentExpired,
+    mergeTypstDocuments,
+    resolveAttachPlan,
+    resolveMarkdownUpdate,
+    resolveTypstUpdate,
+    validateAttachmentDocuments,
+    validateAttachmentTarget,
+    type AttachmentLossReason,
+    type AttachmentRequest,
+    type ControlState,
+    type PreviewAttachment,
+  } from './lib/control';
   import type {
+    ControlAttachmentState,
     ControlEditorState,
     ControlEntryKind,
     ControlMenuKind,
     ControlMenuState,
+    ControlPreviewAttachOptions,
+    ControlPreviewDocument,
+    ControlRevealAlign,
     ControlSettingsTab,
     ControlToolName,
     ControlTexliveAction,
   } from './lib/control';
   import { installControl, markControlReady, publishControlEvent } from './lib/control-host';
   import { buildControlState } from './lib/control-state';
-  import { CONTROL_PUBLISH_INTERVAL_MS } from './lib/control-timings';
-  import type { PreviewControls } from './lib/preview-control';
+  import {
+    CONTROL_PUBLISH_INTERVAL_MS,
+    ATTACHMENT_LEASE_MS,
+    ATTACHMENT_SWEEP_MS,
+    VIEWPORT_PUBLISH_MS,
+  } from './lib/control-timings';
+  import { waitForPreview, revealPreview, type PreviewControls } from './lib/preview-control';
   import { createControlActions, type ControlViewState } from './lib/control-actions';
   const workspace = new Workspace();
   const startsDecorationless =
@@ -190,6 +218,7 @@
     updateExplorerState({ workingDirectory: path, expanded });
   }
   async function renameExplorerFile(path: string, name: string, strict = false) {
+    if (rejectAttachmentWrite(path, 'renaming', strict)) return path;
     const source = workspace.source;
     if (!source?.rename || renameBusy) {
       if (strict) throw new Error('This source cannot rename files right now.');
@@ -369,24 +398,33 @@
   let settingsPanel = $state<{ showTab: (tab: ControlSettingsTab) => void }>();
   let typstPreview = $state<{
     updateDocument: (path: string, text: string) => void;
-    reveal: (path: string, line: number, character: number) => void;
+    reveal: (path: string, line: number, character: number) => boolean;
     zoomBy: (action: 'in' | 'out') => void;
     fit: () => void;
   }>();
   let typstPreviewRoot = $state('');
   let latexPreviewRoot = $state('');
   let latexPreview = $state<{ reveal: (path: string, line: number) => void }>();
-  let markdownPreview = $state<{ revealSource: (line: number) => void }>();
+  let markdownPreview = $state<{
+    revealSource: (line: number, align?: 'center' | 'top') => Promise<number>;
+  }>();
   let markdownPreviewText = $state('');
   let markdownPreviewScroll = $state(0);
   let markdownUpdateTimer: ReturnType<typeof setTimeout> | undefined;
   let typstLiveVisible = $state(true);
   let typstSourceShare = $state(50);
+  let typstAttachmentRoot = $state('');
+  let typstAttachmentVisible = $state(true);
+  let typstAttachmentDocuments = $state<ControlPreviewDocument[]>([]);
   const typstPreviewSessions = new Map<string, Set<string>>();
   let typstPreviewPaths = new Set<string>();
   let previewJumpRequest = 0;
+  let lastViewportAt = 0;
+  let viewportTimer: ReturnType<typeof setTimeout> | undefined;
   let editorSource = $state.raw<Source | null>(null);
   let editing = $state(false);
+  let attachment = $state<PreviewAttachment | null>(null);
+  let attachmentLossReason = $state<AttachmentLossReason | null>(null);
   $effect(() => {
     if (!editing) {
       if (editorDiagnostics.length) editorDiagnostics = [];
@@ -507,6 +545,10 @@
     const path = workspace.active;
     if (!source || !path || isPdf(path) || isBibliography(path) || !source.write || editorBusy)
       return;
+    if (attachedPath(path)) {
+      editorError = 'This document is attached to an external editor. Detach to edit it here.';
+      return;
+    }
     editorBusy = true;
     editorError = '';
     editorDiagnostics = [];
@@ -608,7 +650,9 @@
   }
   function syncSourcePosition(line: number, character: number) {
     if (!editorDraft) return;
-    if (editorLanguage === 'markdown') markdownPreview?.revealSource(line);
+    // Cursor following is fire-and-forget; a stale frame will be retried on the
+    // next movement rather than surfacing an error while typing.
+    if (editorLanguage === 'markdown') void markdownPreview?.revealSource(line).catch(() => {});
     else if (editorLanguage === 'latex') latexPreview?.reveal(editorDraft.path, line);
     else typstPreview?.reveal(editorDraft.path, line, character);
   }
@@ -654,6 +698,10 @@
 
   async function reloadEditor(force = false) {
     if (!editorDraft || !editorSource || editorBusy) return;
+    if (attachedPath(editorDraft.path)) {
+      editorError = 'This document is attached to an external editor.';
+      return;
+    }
     if (
       editorDraft.dirty &&
       !force &&
@@ -684,6 +732,10 @@
     const draft = editorDraft;
     const source = editorSource;
     if (!draft || !source?.write || editorBusy || !draft.dirty) return;
+    if (attachedPath(draft.path)) {
+      editorError = 'This document is attached to an external editor.';
+      return;
+    }
     const text = draft.text;
     editorBusy = true;
     editorError = '';
@@ -747,10 +799,11 @@
         bytes: tab.bytes.length,
         pages: pdfPage.path === tab.path ? pdfPage.total : 0,
       };
-    const words = tab.text.trim() ? tab.text.trim().split(/\s+/).filter(Boolean).length : 0;
+    const source = tab.previewText ?? tab.text;
+    const words = source.trim() ? source.trim().split(/\s+/).filter(Boolean).length : 0;
     return {
       words,
-      characters: tab.text.length,
+      characters: source.length,
       minutes: Math.max(1, Math.round(words / 250)),
       bytes: null,
       pages: null,
@@ -1313,6 +1366,7 @@
     }
   }
   async function deleteExplorerFile(path: string, confirmed = false, strict = false) {
+    if (rejectAttachmentWrite(path, 'deleting', strict)) return;
     const source = workspace.source;
     if (!source?.deleteFile || editorBusy) {
       if (strict) throw new Error('This source cannot delete files right now.');
@@ -2550,17 +2604,312 @@
     if (key === '\\' && workspace.active) split();
     if (key === ',') settings = !settings;
   }
+  function attachedPath(path: string | null | undefined): boolean {
+    return !!path && !!attachment && attachment.paths.includes(path);
+  }
+  function rejectAttachmentWrite(path: string, action: string, strict: boolean): boolean {
+    if (!attachmentCovers(attachment, path)) return false;
+    const message = `Detach the external editor before ${action} ${basename(path)}.`;
+    if (strict) throw new ControlActionError('attachment-path', message);
+    workspace.error = message;
+    return true;
+  }
+  function attachmentState(): ControlAttachmentState {
+    return buildAttachmentControlState(attachment, attachmentLossReason);
+  }
+  function setPreviewOverlay(path: string, text: string) {
+    const tab = workspace.tabs.find((item) => item.path === path);
+    if (!tab) return;
+    tab.previewText = text;
+    tab.revision++;
+  }
+  function clearPreviewOverlay(path: string) {
+    const tab = workspace.tabs.find((item) => item.path === path);
+    if (!tab || tab.previewText === undefined) return;
+    tab.previewText = undefined;
+    tab.revision++;
+  }
+  function dropCleanEditorDraft(path: string) {
+    for (const [source, sourceDrafts] of drafts) {
+      const draft = sourceDrafts.get(path);
+      if (!draft || draft.dirty) continue;
+      sourceDrafts.delete(path);
+      if (editorSource === source && editorDraft === draft) {
+        editorDraft = null;
+        editorSource = null;
+        editing = false;
+      }
+    }
+  }
+  function dirtyDraft(paths: string[]): string | null {
+    for (const sourceDrafts of drafts.values()) {
+      for (const path of paths) {
+        if (sourceDrafts.get(path)?.dirty) return path;
+      }
+    }
+    return null;
+  }
+  function requireNoDirtyDrafts(paths: string[]) {
+    assertNoDirtyDrafts(paths, dirtyDraft);
+  }
+  function clearTypstAttachment() {
+    typstAttachmentRoot = '';
+    typstAttachmentDocuments = [];
+    typstAttachmentVisible = true;
+  }
+  function clearAttachment(reason: 'expired' | 'detached' | 'replaced' | 'closed' = 'closed') {
+    if (!attachment) return;
+    for (const path of attachment.paths) {
+      if (attachment.kind === 'markdown') clearPreviewOverlay(path);
+      dropCleanEditorDraft(path);
+    }
+    clearTypstAttachment();
+    attachment = null;
+    attachmentLossReason = reason;
+    if (viewportTimer) clearTimeout(viewportTimer);
+    viewportTimer = undefined;
+    lastViewportAt = 0;
+  }
+  function attachmentLossReasonError(): ControlActionError {
+    return attachmentOwnershipError(attachment);
+  }
+  /** Validate an attach request and resolve its normalized documents. */
+  async function normalizeAttachment(
+    options: ControlPreviewAttachOptions,
+  ): Promise<AttachmentRequest> {
+    const path = normalize(options.path);
+    const kind = options.kind ?? (isTypst(path) ? 'typst' : 'markdown');
+    const paths = (options.paths ?? [path]).map(normalize);
+    validateAttachmentTarget(path, kind, paths, !!workspace.source);
+    if (kind === 'typst') {
+      if (!desktop) throw new Error('Typst live preview requires the desktop app.');
+      TypstLivePreview ??= (await import('./components/TypstLivePreview.svelte')).default;
+      if (!TypstLivePreview) throw new Error('Typst live preview is unavailable in this build.');
+    }
+    const documents = validateAttachmentDocuments(paths, options.documents ?? []);
+    return { path, kind, paths, documents };
+  }
+  /** Install the preview overlays for a validated attachment. */
+  function applyAttachmentOverlays(
+    kind: 'markdown' | 'typst',
+    path: string,
+    documents: ControlPreviewDocument[],
+    reuseTypstPane: boolean,
+  ) {
+    if (kind === 'markdown') {
+      clearTypstAttachment();
+      const overlay = documents[0];
+      if (overlay) setPreviewOverlay(path, overlay.text);
+      else clearPreviewOverlay(path);
+      return;
+    }
+    if (reuseTypstPane) {
+      const merged = new Map(
+        typstAttachmentDocuments.map((document) => [normalize(document.path), document.text]),
+      );
+      for (const document of documents) {
+        merged.set(document.path, document.text);
+        typstPreview?.updateDocument(document.path, document.text);
+      }
+      typstAttachmentRoot = path;
+      typstAttachmentDocuments = [...merged].map(([documentPath, text]) => ({
+        path: documentPath,
+        text,
+      }));
+      return;
+    }
+    clearTypstAttachment();
+    typstAttachmentRoot = path;
+    typstAttachmentDocuments = documents;
+    typstAttachmentVisible = true;
+  }
+  /** Claim a document for an external editor and apply its preview overlays. */
+  async function attachControl(options: ControlPreviewAttachOptions) {
+    const request = await normalizeAttachment(options);
+    const { path, kind, paths, documents } = request;
+    const { previousPaths, reuseTypstPane, replacingOwner } = resolveAttachPlan(
+      attachment,
+      request,
+      options.owner,
+      !!options.takeover,
+    );
+    requireNoDirtyDrafts(paths);
+    await workspace.open(path);
+    if (workspace.active !== path)
+      throw new ControlActionError('attachment-open', `Could not open ${path}.`);
+    if (editorVisible && editorDraft && paths.includes(editorDraft.path)) editing = false;
+    if (replacingOwner) clearAttachment('replaced');
+    for (const previous of previousPaths) {
+      if (previous === path) continue;
+      clearPreviewOverlay(previous);
+      if (workspace.tabs.some((tab) => tab.path === previous)) workspace.close(previous);
+    }
+    for (const attachedPath of paths) dropCleanEditorDraft(attachedPath);
+    applyAttachmentOverlays(kind, path, documents, reuseTypstPane);
+    attachmentLossReason = null;
+    attachment = {
+      owner: options.owner,
+      kind,
+      root: path,
+      paths,
+      revision: 0,
+      lastSeen: Date.now(),
+    };
+    if (window.innerWidth < NARROW_VIEWPORT) sidebar = false;
+  }
+  async function detachControl(owner: string) {
+    if (!attachment) return;
+    if (attachment.owner !== owner)
+      throw new ControlActionError(
+        'attachment-replaced',
+        'This editor does not own the preview attachment.',
+      );
+    clearAttachment('detached');
+  }
+  async function updateControl(
+    owner: string,
+    revision: number,
+    documents: ControlPreviewDocument[],
+  ) {
+    if (!attachment || attachment.owner !== owner) throw attachmentLossReasonError();
+    const current = attachment;
+    assertRevisionForward(current, revision);
+    if (!workspace.tabs.some((tab) => tab.path === current.root)) {
+      clearAttachment();
+      return;
+    }
+    if (current.kind === 'markdown') {
+      const next = resolveMarkdownUpdate(current, documents);
+      for (const path of current.paths) {
+        const text = next.get(path);
+        if (text === undefined) clearPreviewOverlay(path);
+        else setPreviewOverlay(path, text);
+      }
+    } else {
+      const { next, additions } = resolveTypstUpdate(current, documents, dirtyDraft);
+      for (const path of additions) dropCleanEditorDraft(path);
+      if (additions.length > 0) current.paths = [...current.paths, ...additions];
+      for (const [path, text] of next) typstPreview?.updateDocument(path, text);
+      typstAttachmentDocuments = mergeTypstDocuments(typstAttachmentDocuments, next);
+    }
+    current.revision = revision;
+    current.lastSeen = Date.now();
+  }
+  async function heartbeatControl(owner: string) {
+    if (!attachment || attachment.owner !== owner) throw attachmentLossReasonError();
+    attachment.lastSeen = Date.now();
+  }
+  async function revealControl(
+    owner: string,
+    path: string,
+    line: number,
+    character: number,
+    align: ControlRevealAlign,
+  ) {
+    if (!attachment || attachment.owner !== owner) throw attachmentLossReasonError();
+    const target = normalize(path);
+    if (!attachment.paths.includes(target))
+      throw new ControlActionError('attachment-path', `Not attached: ${target}`);
+    attachment.lastSeen = Date.now();
+    if (workspace.active !== attachment.root)
+      return {
+        path: target,
+        line,
+        character,
+        y: 0,
+        skipped: true,
+        reason: 'inactive' as const,
+      };
+    if (attachment.kind === 'typst') {
+      if (!typstAttachmentVisible)
+        return {
+          path: target,
+          line,
+          character,
+          y: 0,
+          skipped: true,
+          reason: 'hidden' as const,
+        };
+      if (!typstPreview)
+        return {
+          path: target,
+          line,
+          character,
+          y: 0,
+          skipped: true,
+          reason: 'starting' as const,
+        };
+      const dispatched = typstPreview.reveal(target, line, character);
+      return {
+        path: target,
+        line,
+        character,
+        y: 0,
+        skipped: !dispatched,
+        ...(dispatched ? {} : { reason: 'starting' as const }),
+      };
+    }
+    const preview = await waitForPreview(
+      () => workspace.active,
+      () => primaryPreview,
+      'No document is open.',
+    );
+    const y = await revealPreview(preview, line, align);
+    return { path: target, line, character, y, skipped: false };
+  }
+  function previewJump(kind: 'markdown' | 'typst', path: string, line: number, character: number) {
+    if (!attachment) return;
+    publishControlEvent('preview.jump', {
+      owner: attachment.owner,
+      kind,
+      path: normalize(path),
+      line,
+      character,
+    });
+  }
+  /** Publish the top mapped Markdown source line, throttled to ~20 Hz. */
+  function previewViewport(path: string, line: number, offset: number) {
+    if (!attachment || attachment.kind !== 'markdown' || path !== attachment.root) return;
+    const publish = () => {
+      if (!attachment || attachment.kind !== 'markdown' || attachment.root !== path) return;
+      publishControlEvent('preview.viewport', {
+        owner: attachment.owner,
+        kind: 'markdown',
+        path,
+        line,
+        offset,
+      });
+    };
+    const wait = VIEWPORT_PUBLISH_MS - (Date.now() - lastViewportAt);
+    if (wait <= 0) {
+      lastViewportAt = Date.now();
+      publish();
+      return;
+    }
+    if (viewportTimer) clearTimeout(viewportTimer);
+    viewportTimer = setTimeout(() => {
+      viewportTimer = undefined;
+      lastViewportAt = Date.now();
+      publish();
+    }, wait);
+  }
+  $effect(() => {
+    if (!attachment) return;
+    const root = attachment.root;
+    if (!workspace.tabs.some((tab) => tab.path === root)) clearAttachment('closed');
+  });
   function editorControlState(): ControlEditorState {
     const state = editorVisible ? sourceEditor?.getState() : null;
+    const attached = attachedPath(workspace.active);
     return {
-      available: !!workspace.source?.write && !isPdf(workspace.active),
+      available: !!workspace.source?.write && !isPdf(workspace.active) && !attached,
       open: editorVisible,
       path: editorDraft?.path ?? (workspace.active || null),
       language: editorLanguage,
       dirty: editorDirty,
       busy: editorBusy,
-      readOnly: !workspace.source?.write,
-      status: editorServerStatus,
+      readOnly: !workspace.source?.write || attached,
+      status: attached ? 'Attached to an external editor.' : editorServerStatus,
       error: editorError || null,
       cursor: state?.cursor ?? null,
       selection: state?.selection ?? null,
@@ -2595,11 +2944,13 @@
     };
   }
   function livePreviewControlState() {
+    const attachedTypst = attachment?.kind === 'typst' && attachment.root === workspace.active;
     return {
       available:
-        editorVisible &&
-        (!!typstPreviewRoot || editorLanguage === 'markdown' || editorLanguage === 'latex'),
-      visible: typstLiveVisible,
+        attachedTypst ||
+        (editorVisible &&
+          (!!typstPreviewRoot || editorLanguage === 'markdown' || editorLanguage === 'latex')),
+      visible: attachedTypst ? typstAttachmentVisible : typstLiveVisible,
       split: typstSourceShare,
     };
   }
@@ -2608,6 +2959,10 @@
     const path = workspace.active;
     if (!source || !path || isPdf(path))
       throw new Error('Open a Markdown, Typst, or LaTeX document first.');
+    if (attachedPath(path))
+      throw new Error(
+        'This document is attached to an external editor. Detach before editing it in Papyri.',
+      );
     if (!source.write) throw new Error('This source is read-only.');
     if (editorVisible) return;
     await openEditor();
@@ -2712,10 +3067,14 @@
   async function setLivePreviewControl(enabled?: boolean) {
     if (!livePreviewControlState().available)
       throw new Error('The live preview is not available in the current view.');
+    if (attachment?.kind === 'typst' && attachment.root === workspace.active) {
+      typstAttachmentVisible = enabled ?? !typstAttachmentVisible;
+      return;
+    }
     typstLiveVisible = enabled ?? !typstLiveVisible;
   }
   async function livePreviewZoomControl(action: 'in' | 'out' | 'reset') {
-    if (typstPreviewRoot && typstPreview) {
+    if (typstPreview && (typstAttachmentRoot || typstPreviewRoot)) {
       if (action === 'reset') typstPreview.fit();
       else typstPreview.zoomBy(action);
     } else if (action === 'reset')
@@ -2723,7 +3082,7 @@
     else zoom({ target: 'document', action });
   }
   async function livePreviewFitControl() {
-    if (typstPreviewRoot && typstPreview) typstPreview.fit();
+    if (typstPreview && (typstAttachmentRoot || typstPreviewRoot)) typstPreview.fit();
     else updatePreferences({ ...preferences, documentZoom: 100, pdfZoom: 100, fitWidth: true });
   }
   async function selectionControl() {
@@ -2795,6 +3154,7 @@
       browser: browserAvailable() ? ($state.snapshot(browser) as BrowserState) : null,
       rightTab,
       livePreview: livePreviewControlState(),
+      attachment: attachmentState(),
       tools: { busy: toolBusy, message: toolMessage, error: toolError },
       stats: documentStats ?? {
         words: null,
@@ -3047,6 +3407,13 @@
       split: async (value) => {
         typstSourceShare = Math.max(10, Math.min(90, value));
       },
+    },
+    attachment: {
+      attach: attachControl,
+      detach: detachControl,
+      heartbeat: heartbeatControl,
+      update: updateControl,
+      reveal: revealControl,
     },
     selection: {
       get: selectionControl,
@@ -3303,15 +3670,21 @@
     const timer = setInterval(() => {
       if (!document.hidden && workspace.source?.live) void refresh();
     }, 2000);
+    const attachmentTimer = setInterval(() => {
+      if (attachment && isAttachmentExpired(attachment, Date.now(), ATTACHMENT_LEASE_MS))
+        clearAttachment('expired');
+    }, ATTACHMENT_SWEEP_MS);
     return () => {
       disposed = true;
       uninstallControl?.();
       unlistenBrowser?.();
       document.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('beforeunload', protectDrafts);
+      clearInterval(timer);
+      clearInterval(attachmentTimer);
+      if (viewportTimer) clearTimeout(viewportTimer);
       if (copyTimer) clearTimeout(copyTimer);
       if (controlPublishTimer) clearTimeout(controlPublishTimer);
-      clearInterval(timer);
     };
   });
 </script>
@@ -3374,8 +3747,15 @@
             class="icon-button"
             class:enabled={editorVisible}
             aria-label={editorVisible ? 'Show preview' : 'Edit source'}
-            title={editorVisible ? 'Show preview' : 'Edit source'}
-            disabled={isPdf(workspace.active) || !workspace.source?.write || editorBusy}
+            title={attachedPath(workspace.active)
+              ? 'Attached to an external editor'
+              : editorVisible
+                ? 'Show preview'
+                : 'Edit source'}
+            disabled={isPdf(workspace.active) ||
+              !workspace.source?.write ||
+              editorBusy ||
+              attachedPath(workspace.active)}
             onclick={() => {
               if (editorVisible) editing = false;
               else void openEditor();
@@ -3783,6 +4163,18 @@
                     {/if}
                   {/if}
                 </div>
+              {:else if attachment?.kind === 'typst' && attachment.root === workspace.active && typstAttachmentVisible && TypstLivePreview}
+                <div class="typst-attachment-preview">
+                  {#key `${typstAttachmentRoot}\0${attachment.owner}\0${preferences.languageServerPaths.typst}`}<TypstLivePreview
+                      bind:this={typstPreview}
+                      path={typstAttachmentRoot}
+                      serverPath={preferences.languageServerPaths.typst}
+                      getDocuments={() => typstAttachmentDocuments}
+                      diagnostics={[]}
+                      onjump={(location) =>
+                        previewJump('typst', location.path, location.line, location.character)}
+                    />{/key}
+                </div>
               {:else if isBibliography(workspace.active)}
                 {#key workspace.active}<BibliographyView
                     path={workspace.active}
@@ -3801,11 +4193,17 @@
                     {preferences}
                     {trusted}
                     {query}
+                    retainDuringUpdate={attachment?.paths.includes(workspace.active) ?? false}
                     anchor={workspace.anchor}
                     onanchorconsumed={(request) => workspace.consumeAnchor(request)}
                     onlink={(href) => follow(href, workspace.activeTab!.path)}
                     oncommand={viewCommand}
+                    onsourcejump={attachment?.kind === 'markdown' &&
+                    attachment.root === workspace.active
+                      ? (line) => previewJump('markdown', workspace.active, line, 0)
+                      : undefined}
                     onscroll={(path, y) => workspace.setScroll(path, y)}
+                    onsourceviewport={previewViewport}
                     onscrollprogress={(path, progress) => {
                       if (path === workspace.active)
                         activeScrollProgress = { path, value: Math.max(0, Math.min(1, progress)) };

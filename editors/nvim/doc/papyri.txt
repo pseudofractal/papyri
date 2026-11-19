@@ -1,0 +1,214 @@
+*papyri.txt*  Papyri preview companion for Neovim
+
+==============================================================================
+CONTENTS                                                    *papyri-contents*
+
+  1. Introduction ................................ |papyri-introduction|
+  2. Setup ....................................... |papyri-setup|
+  3. Commands .................................... |papyri-commands|
+  4. Lua API ..................................... |papyri-api|
+  5. Notes ....................................... |papyri-notes|
+
+==============================================================================
+1. INTRODUCTION                                         *papyri-introduction*
+
+Papyri is a local-first Markdown, PDF, Typst, and LaTeX viewer. This plugin
+keeps Papyri as the preview window and lets Neovim own the text of attached
+Markdown and Typst buffers.
+
+Entering a saved buffer inside the project root attaches it to a single
+companion tab. Unsaved buffer text streams to Papyri as a preview-only overlay.
+Cursor movement reveals the matching block, and clicking the preview moves the
+Neovim cursor to that source location. While attached, Papyri's own source
+editor is disabled for every owned document.
+
+Typst attachments open the resolved main document, keep one live Tinymist
+preview across chapters, streams modified `.typ` buffers, and registers newly
+opened chapters for reveal.
+
+Papyri's Neovim companion supports Markdown and Typst on Linux. Markdown
+mirrors scroll position both ways; Typst follows Neovim's viewport because
+Tinymist does not report preview scroll.
+
+==============================================================================
+2. SETUP                                                       *papyri-setup*
+
+                                                    *papyri.setup()*
+require('papyri').setup(opts)
+
+All options are optional:
+
+  auto_attach     boolean  Attach saved Markdown/Typst buffers on entry. Default true.
+  follow          boolean  Reveal the cursor line. Default true.
+  follow_insert   boolean  Reveal while typing in insert mode. Default false.
+  debounce_ms     number   Coalesce updates and reveals, 0-5000. Default 120.
+  launch          boolean  Launch Papyri when the socket is absent. Default true.
+  decorationless  boolean  Hide Papyri chrome when connecting. Default true.
+  takeover        string   "prompt", "always", or "never". Default "prompt".
+  papyri          string   Executable name or path. Default "papyri".
+  socket          string   Socket path, or a function returning one.
+  root_markers    list     Project markers for |vim.fs.root|.
+  ignore_globs    list     Paths never auto-attached.
+  filetypes       list     Auto-attached filetypes. Default { "markdown", "typst" }.
+  typst_main      string   Main Typst file name. Default "main.typ".
+  typst_root      function Override Typst main resolution: function(bufnr).
+  focus_command   string   Shell command or function run after a preview jump.
+  scroll_sync     boolean  Mirror Markdown viewports both ways. Default true.
+  scroll_debounce_ms number Coalesce viewport sync, 0-5000. Default 80.
+  max_bytes       number   Preview text limit. Default 8 MiB.
+  max_request_bytes number   Encoded request limit. Default 31 MiB.
+  notify          boolean  Enable informational notifications. Default true.
+
+Papyri's control features are advertised in `state.features`. The plugin
+expects `preview.attach`; an older Papyri build gets a warning.
+
+==============================================================================
+3. COMMANDS                                                 *papyri-commands*
+
+                                                              *:Papyri*
+:Papyri {subcommand} [args]
+    Run a Papyri command. Examples: >
+      :Papyri open paper/chapter2.typ
+      :Papyri root
+      :Papyri scroll-sync off
+      :Papyri raw state {}
+<
+    Subcommands: open, root, toggle, close, detach, reveal, follow,
+    scroll-sync, tabs, outline, search, zoom, theme, decorationless,
+    live, takeover, start, refresh, status, focus, quit, raw, help.
+    Unknown names are sent as raw control methods. The capitalized
+    commands below remain available as aliases.
+
+                                                            *:PapyriOpen*
+:PapyriOpen [path]   Attach the current Markdown or Typst buffer, or open
+                      `path` in Papyri.
+
+                                                            *:PapyriRoot*
+:PapyriRoot          Preview the current Typst buffer itself instead of
+                     its resolved main document.
+
+                                                            *:PapyriToggle*
+:PapyriToggle        Open the companion preview or close it.
+
+                                                             *:PapyriClose*
+:PapyriClose         Detach and close the companion tab.
+
+                                                            *:PapyriDetach*
+:PapyriDetach        Release text ownership but leave the tab open.
+
+                                                            *:PapyriReveal*
+:PapyriReveal        Reveal the cursor line in Papyri now.
+
+                                                            *:PapyriFollow*
+:PapyriFollow [on|off|toggle]
+                      Set or toggle cursor following.
+
+                                                        *:PapyriScrollSync*
+:PapyriScrollSync [on|off|toggle]
+                      Set or toggle Markdown viewport mirroring.
+
+                                                             *:PapyriTabs*
+:PapyriTabs          Pick an open Papyri tab.
+
+                                                          *:PapyriOutline*
+:PapyriOutline       Pick a heading from the active document.
+
+                                                           *:PapyriSearch*
+:PapyriSearch [query]
+                      Search Papyri. With no argument, uses the visual
+                      selection or prompts.
+
+                                                             *:PapyriZoom*
+:PapyriZoom [in|out|reset|PERCENT]
+                      Change document zoom.
+
+                                                            *:PapyriTheme*
+:PapyriTheme [latte|mocha|toggle]
+                      Change the Papyri theme.
+
+                                                    *:PapyriDecorationless*
+:PapyriDecorationless [on|off|toggle]
+                      Toggle decoration-less reading mode.
+
+                                                             *:PapyriLive*
+:PapyriLive [on|off|toggle]
+                      Toggle the Typst live pane.
+
+                                                         *:PapyriTakeover*
+:PapyriTakeover      Force a takeover for the current buffer.
+
+                                                            *:PapyriStart*
+:PapyriStart         Connect or launch Papyri without a document.
+
+                                                           *:PapyriRefresh*
+:PapyriRefresh       Request a document refresh.
+
+                                                            *:PapyriStatus*
+:PapyriStatus        Show connection and attachment state.
+
+                                                             *:PapyriFocus*
+:PapyriFocus         Raise the Papyri window.
+
+                                                              *:PapyriQuit*
+:PapyriQuit          Quit Papyri.
+
+                                                                 *:Papyri*
+:Papyri raw {method} [json]
+                      Send a raw control method. Example: >
+                        :Papyri raw scroll.by {"dy":200}
+<
+==============================================================================
+4. LUA API                                                      *papyri-api*
+
+All functions are on the `papyri` module:
+
+  papyri.open([path])       Attach or open a document.
+  papyri.root()             Preview the current Typst buffer as its root.
+  papyri.close()            Detach and close the companion tab.
+  papyri.toggle()           Toggle the preview.
+  papyri.detach()           Release text ownership.
+  papyri.reveal()           Reveal the cursor line.
+  papyri.follow([value])    Set or toggle cursor following.
+  papyri.scroll_sync([value])
+                            Set or toggle Markdown viewport mirroring.
+  papyri.live([value])      Set or toggle the Typst live pane.
+  papyri.tabs()             Pick an open Papyri tab.
+  papyri.outline()          Pick a heading from the active document.
+  papyri.search([value])    Search Papyri.
+  papyri.zoom([value])      Change document zoom.
+  papyri.theme([value])     Change the Papyri theme.
+  papyri.decorationless([value])
+                            Set or toggle decoration-less mode.
+  papyri.takeover()         Force a takeover for the current buffer.
+  papyri.start()            Connect or launch Papyri.
+  papyri.status()           Return a status string.
+  papyri.request(method, params, callback)
+                            Send a control method directly.
+  papyri.raw(method, json)  Send a raw JSON control method.
+
+Run `:checkhealth papyri` to inspect Neovim, the executable, and the socket.
+
+==============================================================================
+5. NOTES                                                       *papyri-notes*
+
+- A five-second heartbeat keeps the attachment alive. Papyri drops the overlay
+  after fifteen seconds without one, so a crashed Neovim cannot leave stale
+  text in the preview.
+- Quitting Neovim detaches but leaves Papyri running. Use |:PapyriQuit| to
+  close the window.
+- Typst root resolution checks `typst_root(bufnr)`, a buffer named
+  `typst_main`, a sibling `typst_main`, a `typst.toml` package entrypoint, a
+  project-root `typst_main`, then the current buffer.
+- Markdown scroll position mirrors both ways, snapped to block starts. Typst
+  follows Neovim's viewport only, because Tinymist does not report preview
+  scroll position.
+- Clicking the preview opens the source buffer and moves the cursor. Typst uses
+  the character reported by Tinymist; Markdown uses the block's first line.
+- Neovim cannot raise its own terminal. Set `focus_command` to a shell command
+  or function to focus it after a preview click.
+- A second Neovim session sees a takeover prompt unless `takeover` is set to
+  "always" or "never".
+- Deleting the attached buffer closes the Papyri tab.
+- The preview overlay is never written to disk.
+
+vim:tw=78:ts=8:noet:ft=help:norl:

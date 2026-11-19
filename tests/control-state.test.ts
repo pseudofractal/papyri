@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONTROL_PROTOCOL } from '../src/lib/control';
+import { CONTROL_PROTOCOL, emptyAttachment } from '../src/lib/control';
 import { buildControlState } from '../src/lib/control-state';
 import { defaults } from '../src/lib/preferences';
 import type { Workspace } from '../src/lib/workspace.svelte';
@@ -43,6 +43,10 @@ describe('control state snapshots', () => {
       preferences: structuredClone(defaults),
     });
     expect(state.protocol).toBe(CONTROL_PROTOCOL);
+    expect(state.features).toContain('preview.attach');
+    expect(state.features).toContain('preview.viewport');
+    expect(state.features).toContain('attachment.typst');
+    expect(state.attachment).toEqual(emptyAttachment());
     expect(state.active).toBe('/notes.md');
     expect(state.tabs.map((tab) => tab.kind)).toEqual(['markdown', 'pdf', 'typst-source']);
     expect(state.tabs[0].scroll).toBe(12);
@@ -130,5 +134,128 @@ describe('control state snapshots', () => {
         preferences: structuredClone(defaults),
       }).pdf,
     ).toBeNull();
+  });
+
+  it('reports an active external attachment', () => {
+    const state = buildControlState({
+      workspace: workspace(),
+      pdfPage: { path: '', page: 0, total: 0 },
+      pagedDocument: false,
+      view,
+      preferences: structuredClone(defaults),
+      attachment: {
+        active: true,
+        owner: 'nvim-1',
+        kind: 'markdown',
+        root: '/notes.md',
+        paths: ['/notes.md'],
+        revision: 4,
+      },
+    });
+    expect(state.attachment).toEqual({
+      active: true,
+      owner: 'nvim-1',
+      kind: 'markdown',
+      root: '/notes.md',
+      paths: ['/notes.md'],
+      revision: 4,
+    });
+  });
+
+  it('labels every supported tab kind', () => {
+    const state = buildControlState({
+      workspace: workspace({
+        tabs: [
+          { path: '/a.md', bytes: undefined, scroll: 0, error: '' },
+          { path: '/b.pdf', bytes: Uint8Array.of(1), scroll: 0, error: '' },
+          { path: '/c.typ', bytes: undefined, scroll: 0, error: '' },
+          { path: '/d.tex', bytes: undefined, scroll: 0, error: '' },
+          { path: '/refs.bib', bytes: undefined, scroll: 0, error: '' },
+        ],
+      }),
+      pdfPage: { path: '', page: 0, total: 0 },
+      pagedDocument: false,
+      view,
+      preferences: structuredClone(defaults),
+    });
+    expect(state.tabs.map((tab) => tab.kind)).toEqual([
+      'markdown',
+      'pdf',
+      'typst-source',
+      'latex-source',
+      'bibliography',
+    ]);
+  });
+
+  it('falls back to an empty editor and reports paged statistics', () => {
+    const tab = {
+      path: '/paper.pdf',
+      text: '',
+      bytes: Uint8Array.of(1, 2, 3),
+      scroll: 0,
+      error: '',
+    };
+    const state = buildControlState({
+      workspace: workspace({ active: '/paper.pdf', tabs: [tab], activeTab: tab }),
+      pdfPage: { path: '/paper.pdf', page: 1, total: 5 },
+      pagedDocument: true,
+      view,
+      preferences: structuredClone(defaults),
+    });
+    expect(state.editor.available).toBe(false);
+    expect(state.editor.open).toBe(false);
+    expect(state.editor.readOnly).toBe(true);
+    expect(state.trust.supported).toBe(false);
+    expect(state.stats).toEqual({
+      words: null,
+      characters: null,
+      minutes: null,
+      bytes: 3,
+      pages: 5,
+    });
+  });
+
+  it('reports a Typst attachment with its owned paths', () => {
+    const state = buildControlState({
+      workspace: workspace({ active: '/paper/main.typ' }),
+      pdfPage: { path: '', page: 0, total: 0 },
+      pagedDocument: false,
+      view,
+      preferences: structuredClone(defaults),
+      attachment: {
+        active: true,
+        owner: 'nvim-1',
+        kind: 'typst',
+        root: '/paper/main.typ',
+        paths: ['/paper/main.typ', '/paper/chapter.typ'],
+        revision: 2,
+      },
+    });
+    expect(state.attachment.kind).toBe('typst');
+    expect(state.attachment.root).toBe('/paper/main.typ');
+    expect(state.attachment.paths).toEqual(['/paper/main.typ', '/paper/chapter.typ']);
+  });
+
+  it('uses preview-only text for statistics', () => {
+    const tab = {
+      path: '/notes.md',
+      text: 'disk words',
+      previewText: 'live preview words',
+      bytes: undefined,
+      scroll: 0,
+      error: '',
+    };
+    const state = buildControlState({
+      workspace: workspace({
+        tabs: [tab],
+        activeTab: tab,
+      }),
+      pdfPage: { path: '', page: 0, total: 0 },
+      pagedDocument: false,
+      view,
+      preferences: structuredClone(defaults),
+    });
+    expect(state.stats.words).toBe(3);
+    expect(state.stats.characters).toBe('live preview words'.length);
   });
 });

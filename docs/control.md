@@ -218,6 +218,8 @@ while work already underway may finish after the client has timed out.
 `papyri ctl raw METHOD '{"key":1}'` sends any method directly, so integrations
 can use new methods without waiting for a CLI update. `papyri ctl socket` and
 `papyri completions <shell>` are CLI-only; they do not send a socket request.
+`preview.attach`, `preview.detach`, `preview.heartbeat`, `preview.update`, and
+`preview.reveal` are described under [Preview attachments](#preview-attachments).
 An `open` with `pane: "secondary"` opens in the split pane when a document is
 already active; with no active document it opens in the main pane so the preview
 is visible. The `anchor` option applies to the main pane only. `tab list --json`
@@ -267,6 +269,128 @@ updates the live preview, and leaves saving to `editor save`. The CLI accepts
 reveal` takes one-based line and column numbers. Undo, redo, select-all, copy,
 cut, and paste are exposed directly so the source editor's native context menu
 is not required for automation.
+
+### Preview attachments
+
+An external editor can own a Markdown or Typst document while Papyri stays the
+preview surface. The overlay text is rendered without being written to disk,
+and Papyri's in-app editor is disabled for every attached path.
+
+| Method              | Parameters                                                                                                | Description                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `preview.attach`    | `owner`, `path`, optional `kind` (`markdown`/`typst`), `paths`, `documents` (`[{path,text}]`), `takeover` | Open the companion document and claim it. For Typst, `path` is the main document.         |
+| `preview.detach`    | `owner`                                                                                                   | Release ownership and return to the normal preview.                                       |
+| `preview.heartbeat` | `owner`                                                                                                   | Extend the attachment lease.                                                              |
+| `preview.update`    | `owner`, `revision`, `documents`                                                                          | Markdown replaces the overlay set; Typst merges the provided documents and may add paths. |
+| `preview.reveal`    | `owner`, `path`, `line`, `character` (optional), `align` (`center`/`top`)                                 | Reveal a zero-based source line. Typst uses the character for included files.             |
+
+`state.features` advertises methods (`preview.attach`, `preview.detach`,
+`preview.heartbeat`, `preview.update`, `preview.reveal`), events
+(`preview.jump`, `preview.viewport`), and capability names (`attachment.markdown`,
+`attachment.typst`), so clients can feature-detect instead of assuming every
+protocol-1 build supports attachments.
+`state.attachment` contains `{active, owner, kind, root, paths, revision,
+reason}`.
+When inactive, its `reason` is `expired` after a lease timeout, `detached`
+after `preview.detach`, `closed` when the root tab closes, or `replaced` during
+a takeover; clients should reattach automatically only after `expired`.
+Attachments expire after 15 seconds without a heartbeat, so a crashed editor
+cannot leave a preview overlay or disable Papyri's source editor indefinitely.
+Send `preview.heartbeat` every few seconds while attached; the Neovim plugin
+uses five seconds. `preview.heartbeat` returns `{ok:true}`;
+`preview.attach`, `preview.detach`, and `preview.update` return the current
+state snapshot, while `preview.reveal` returns a reveal result.
+
+For a Markdown attachment, `path` is the document, `paths` is that one path, and
+`preview.update` replaces the complete overlay set. For a Typst attachment,
+`path` is the main document, `paths` lists the main and any included source
+files the editor owns, and overlays are merged by path. `preview.attach`
+starts a new attachment at revision 0; later updates must move forward.
+Closing a chapter buffer leaves its last overlay in place because updates can
+add or replace Typst documents but cannot remove one; detach to clear all
+overlays. Typst paths must stay under the main document's directory. The live
+Tinymist pane replaces the compiled PDF while the attachment is active;
+`live-preview` toggles it and `live-preview.zoom`/`live-preview.fit` control it.
+Detaching returns to the normal compiled preview.
+
+Attaching refuses to replace another owner unless `takeover: true`. If Papyri's
+in-app editor has unsaved changes for any attached path, attaching fails instead
+of discarding them. While a path is attached, editor methods that open or write
+Papyri's source editor fail with a clear error; `editor.get` and `state.editor`
+still report the saved document. `explorer.rename` and `explorer.delete` also
+fail for attached paths and their parent directories. `preview.attach` opens
+the root path and closes the previous attachment's tabs, which lets an editor
+keep one companion tab. Attachment ownership and path failures carry
+`attachment-replaced`, `attachment-dirty`, `attachment-path`,
+`attachment-revision`, `attachment-open`, or `attachment-expired` error codes
+so a client can respond without parsing messages. Malformed method parameters
+still return `app-error`.
+
+Attachment payloads share the 32 MiB control-request limit. `preview.attach`
+and `preview.update` accept at most 64 `paths` and 64 `documents`; each
+document's UTF-8 text is limited to 8 MiB, and the combined encoded document
+list is limited to 31 MiB. The Neovim plugin uses the same budget and warns
+instead of retrying when a buffer or combined update is too large; an oversized
+initial attach omits overlays and shows saved files.
+
+`preview.reveal` returns `{path, line, character, y, skipped}`. `skipped` is true
+when the attached root is not the active tab, the Typst live pane is hidden, or
+the Typst pane has not finished starting, so background cursor following does
+not steal focus or claim a reveal that was not dispatched. Markdown reveal uses
+the rendered block's source range and falls back to the nearest preceding block
+for blank or unmapped lines. Typst reveal uses Tinymist's source mapping,
+including included files; its `character` is a zero-based UTF-16 column, and
+Markdown ignores `character`, and Typst reveals report `y: 0`. When `skipped`
+is true, `reason` is `inactive`, `hidden`, or `starting` for the three skip
+causes above.
+
+Clicking the preview emits a `preview.jump` event:
+
+```json
+{
+  "event": "preview.jump",
+  "data": {
+    "owner": "editor-1",
+    "kind": "typst",
+    "path": "/home/me/paper/chapter.typ",
+    "line": 12,
+    "character": 4
+  }
+}
+```
+
+Typst reports the character from Tinymist as a UTF-16 column. Markdown reports
+the block's first line with character 0. `line` and `character` are zero-based,
+matching `preview.reveal`.
+
+Markdown attachments also emit `preview.viewport` as the preview scrolls:
+
+```json
+{
+  "event": "preview.viewport",
+  "data": {
+    "owner": "editor-1",
+    "kind": "markdown",
+    "path": "/home/me/notes.md",
+    "line": 42,
+    "offset": 0.35
+  }
+}
+```
+
+`line` is the zero-based source line at the top of the viewport and `offset` is
+progress through that block. Typst does not emit viewport events because
+Tinymist does not report preview scroll position. Document frames with trusted
+scripts enabled do not relay `preview.jump` or `preview.viewport`, matching the
+existing message policy for scripted documents.
+
+```sh
+papyri ctl raw preview.attach '{"owner":"editor-1","path":"/home/me/notes.md","documents":[{"path":"/home/me/notes.md","text":"# Live draft"}]}'
+papyri ctl raw preview.update '{"owner":"editor-1","revision":1,"documents":[{"path":"/home/me/notes.md","text":"# Live draft\n\nEdited in Neovim."}]}'
+papyri ctl raw preview.reveal '{"owner":"editor-1","path":"/home/me/notes.md","line":4,"align":"center"}'
+papyri ctl raw preview.attach '{"owner":"editor-1","kind":"typst","path":"/home/me/paper/main.typ","paths":["/home/me/paper/main.typ","/home/me/paper/chapter.typ"],"documents":[{"path":"/home/me/paper/chapter.typ","text":"= Chapter\n\nLive text."}]}'
+papyri ctl raw preview.detach '{"owner":"editor-1"}'
+```
 
 ### Explorer
 
@@ -468,6 +592,16 @@ is view state rather than a preference, so it is not persisted across restarts.
 ```json
 {
   "protocol": 1,
+  "features": [
+    "preview.attach",
+    "preview.detach",
+    "preview.heartbeat",
+    "preview.update",
+    "preview.reveal",
+    "preview.viewport",
+    "attachment.markdown",
+    "attachment.typst"
+  ],
   "active": "/home/me/notes.md",
   "secondary": null,
   "tabs": [
@@ -517,6 +651,15 @@ is view state rather than a preference, so it is not persisted across restarts.
   "trust": { "supported": true, "enabled": false },
   "browser": null,
   "livePreview": { "available": false, "visible": false },
+  "attachment": {
+    "active": false,
+    "owner": null,
+    "kind": null,
+    "root": null,
+    "paths": [],
+    "revision": 0,
+    "reason": null
+  },
   "tools": { "busy": false, "message": "", "error": "" },
   "stats": {
     "words": 120,
@@ -591,13 +734,13 @@ papyri ctl watch --events state,headings,browser,selection
 ```
 
 Each line is one JSON object. `state` is emitted after the visible state changes
-(at most about ten times per second) and now carries editor, explorer, search,
-note, trust, browser, live-preview, tools, statistics, selection, menu, and
-recent state. `headings` follows the active document's outline, `browser` follows the
-embedded browser state, and `selection` follows the preview's selected word and
-character counts. The initial `state` is printed unless `--no-initial` is used.
-Events are not replayed: use `state` for a one-shot snapshot and `watch` for
-changes.
+(at most about ten times per second) and now carries features, attachment,
+editor, explorer, search, note, trust, browser, live-preview, tools, statistics,
+selection, menu, and recent state. `headings` follows the active document's
+outline, `browser` follows the embedded browser state, and `selection` follows
+the preview's selected word and character counts. The initial `state` is printed
+unless `--no-initial` is used. Events are not replayed: use `state` for a
+one-shot snapshot and `watch` for changes.
 
 Direct socket clients subscribe with:
 
@@ -629,6 +772,11 @@ not part of the JSON envelope. A closed output pipe is treated as a normal end
 of output, not an error.
 
 ## Neovim
+
+The full companion plugin lives in [`editors/nvim`](../editors/nvim/README.md).
+It handles auto-attach, a single companion tab, live unsaved text, cursor
+following, takeover, and the command surface. The snippets below show the
+minimal protocol integration for other editors.
 
 The CLI is the simplest integration point. Open the current buffer and read
 state synchronously:
@@ -682,10 +830,10 @@ The underlying protocol is plain JSONL, so a plugin may also connect directly
 with `vim.uv.new_pipe()` (or the deprecated `vim.loop`) and `pipe:connect()`.
 Use `PAPYRI_CONTROL_SOCKET` to isolate an instance in tests.
 
-A Neovim plugin can map buffer changes to `open` calls, cursor movement to
-`heading`, and its own UI to `state`/`headings` events. Because `open` accepts
-absolute paths and the app stays read-only, the preview can follow the editor
-without adding write access to the viewer.
+For a text editor, `preview.attach` claims the document and `preview.update`
+streams preview-only overlays; `preview.reveal` follows the cursor and
+`preview.jump` moves it in response to preview clicks. `state` and `headings`
+describe the host without granting write access to the document.
 
 ## Security
 

@@ -1,0 +1,6 @@
+return {
+  HEARTBEAT_MS = 5000,
+  MAX_TYPST_PATHS = 64,
+  SUPPRESS_NS = 250 * 1e6,
+  ATTACH_COALESCE_MS = 20,
+}

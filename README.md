@@ -25,6 +25,15 @@ nix profile install github:pseudofractal/papyri
 nix run github:pseudofractal/papyri -- path/to/document.md
 ```
 
+### Neovim plugin
+
+Papyri includes a companion plugin in the source checkout at
+[`editors/nvim`](editors/nvim/README.md). It attaches Markdown and Typst buffers,
+streams unsaved text into the preview, follows the cursor, and supports both
+lazy.nvim and Neovim's built-in `vim.pack`. See the
+[Neovim plugin README](editors/nvim/README.md) for download, install, setup, and
+command details.
+
 ## Build
 
 ```sh
@@ -43,6 +52,7 @@ AI agents can run `papyri skill` for a compact guide to the control API and setu
 - [Platform support](docs/platform.md): capabilities, build instructions, and the Android boundary
 - [Agent guide](docs/agent-guide.md): using Papyri from an AI agent or editor
 - [Control API](docs/control.md): `papyri ctl`, editor integration, screenshots, and native input
+- [Neovim plugin](editors/nvim/README.md): companion preview, live unsaved text, and cursor following
 - [Security](docs/security.md): trust model and isolation boundaries
 - [Release notes](docs/release-notes.md): install formats and known limitations
 

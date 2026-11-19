@@ -1,6 +1,9 @@
 import { isBibliography, isLatex, isMarkdown, isTypst } from './paths';
 import {
+  emptyAttachment,
+  CONTROL_FEATURES,
   CONTROL_PROTOCOL,
+  type ControlAttachmentState,
   type ControlEditorState,
   type ControlExplorerState,
   type ControlLivePreviewState,
@@ -32,6 +35,7 @@ export interface ControlStateInput {
   browser?: BrowserState | null;
   rightTab?: RightTab;
   livePreview?: ControlLivePreviewState;
+  attachment?: ControlAttachmentState;
   tools?: ControlToolsState;
   stats?: ControlStats;
   selection?: { words: number; characters: number } | null;
@@ -82,6 +86,7 @@ export function buildControlState({
   browser = null,
   rightTab = 'outline',
   livePreview,
+  attachment,
   tools,
   stats,
   selection = null,
@@ -91,8 +96,10 @@ export function buildControlState({
 }: ControlStateInput): ControlState {
   const activeTab = workspace.activeTab;
   const markdownActive = isMarkdown(workspace.active);
+  const activeText = activeTab?.previewText ?? activeTab?.text ?? '';
   return {
     protocol: CONTROL_PROTOCOL,
+    features: [...CONTROL_FEATURES],
     active: workspace.active || null,
     secondary: workspace.secondary || null,
     tabs: workspace.tabs.map((tab) => ({
@@ -127,14 +134,15 @@ export function buildControlState({
     trust: trust ?? { supported: markdownActive, enabled: false },
     browser,
     livePreview: livePreview ?? { available: false, visible: false, split: 50 },
+    attachment: attachment ?? emptyAttachment(),
     tools: tools ?? { busy: false, message: '', error: '' },
     stats: stats ?? {
       words: activeTab?.bytes
         ? null
-        : activeTab?.text.trim()
-          ? activeTab.text.trim().split(/\s+/).length
+        : activeText.trim()
+          ? activeText.trim().split(/\s+/).length
           : 0,
-      characters: activeTab?.bytes ? null : (activeTab?.text.length ?? 0),
+      characters: activeTab?.bytes ? null : activeText.length,
       minutes: null,
       bytes: activeTab?.bytes?.length ?? null,
       pages: pdfPage.path === workspace.active ? pdfPage.total : null,

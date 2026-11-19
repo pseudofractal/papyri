@@ -1,10 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createControlExecutor, type ControlActions, type ControlState } from '../src/lib/control';
+import {
+  emptyAttachment,
+  createControlExecutor,
+  type ControlActions,
+  type ControlState,
+} from '../src/lib/control';
 import { defaults } from '../src/lib/preferences';
 
 function sampleState(): ControlState {
   return {
     protocol: 1,
+    features: [],
     active: '/notes.md',
     secondary: null,
     tabs: [
@@ -50,6 +56,7 @@ function sampleState(): ControlState {
     trust: { supported: true, enabled: false },
     browser: null,
     livePreview: { available: false, visible: false, split: 50 },
+    attachment: emptyAttachment(),
     tools: { busy: false, message: '', error: '' },
     stats: { words: 1, characters: 5, minutes: 1, bytes: null, pages: null },
     selection: null,
@@ -146,6 +153,11 @@ function sampleActions(overrides: Partial<ControlActions> = {}): ControlActions 
     livePreviewZoom: stateAction(),
     livePreviewFit: stateAction(),
     livePreviewSplit: stateAction(),
+    previewAttach: stateAction(),
+    previewDetach: stateAction(),
+    previewHeartbeat: stateAction(),
+    previewUpdate: stateAction(),
+    previewReveal: vi.fn(async () => ({})),
     selectionGet: vi.fn(async () => ({ text: '', source: '', preview: '' })),
     selectionCopy: stateAction(),
     selectionSet: stateAction(),
@@ -378,6 +390,181 @@ describe('control executor', () => {
     expect(actions.browserQuote).toHaveBeenCalledWith('chatgpt', 'quote');
     expect(actions.browserSearch).toHaveBeenCalledWith('search');
     await expect(execute('right.tab', { tab: 'drawer' })).rejects.toThrow('`tab`');
+  });
+
+  it('validates and forwards preview attachments', async () => {
+    const actions = sampleActions();
+    const execute = createControlExecutor(actions);
+    await execute('preview.attach', {
+      owner: 'nvim-1',
+      path: '/notes.md',
+      documents: [{ path: '/notes.md', text: '# Hello' }],
+    });
+    expect(actions.previewAttach).toHaveBeenCalledWith({
+      owner: 'nvim-1',
+      path: '/notes.md',
+      documents: [{ path: '/notes.md', text: '# Hello' }],
+      takeover: false,
+    });
+    await execute('preview.detach', { owner: 'nvim-1' });
+    expect(actions.previewDetach).toHaveBeenCalledWith('nvim-1');
+    await execute('preview.heartbeat', { owner: 'nvim-1' });
+    expect(actions.previewHeartbeat).toHaveBeenCalledWith('nvim-1');
+    await execute('preview.attach', {
+      owner: 'nvim-1',
+      path: '/main.typ',
+      kind: 'typst',
+      paths: ['/main.typ', '/chapter.typ'],
+    });
+    expect(actions.previewAttach).toHaveBeenLastCalledWith({
+      owner: 'nvim-1',
+      path: '/main.typ',
+      kind: 'typst',
+      paths: ['/main.typ', '/chapter.typ'],
+      documents: undefined,
+      takeover: false,
+    });
+    await execute('preview.update', {
+      owner: 'nvim-1',
+      revision: 2,
+      documents: [{ path: '/notes.md', text: '# Changed' }],
+    });
+    expect(actions.previewUpdate).toHaveBeenCalledWith('nvim-1', 2, [
+      { path: '/notes.md', text: '# Changed' },
+    ]);
+    await execute('preview.reveal', { owner: 'nvim-1', path: '/notes.md', line: 4 });
+    expect(actions.previewReveal).toHaveBeenCalledWith('nvim-1', '/notes.md', 4, 0, 'center');
+    await execute('preview.reveal', {
+      owner: 'nvim-1',
+      path: '/notes.md',
+      line: 4,
+      character: 2,
+      align: 'top',
+    });
+    expect(actions.previewReveal).toHaveBeenLastCalledWith('nvim-1', '/notes.md', 4, 2, 'top');
+    await expect(execute('preview.attach', { owner: 'nvim-1' })).rejects.toThrow('`path`');
+    await expect(
+      execute('preview.attach', { owner: 'nvim-1', path: '/notes.md', kind: 'html' }),
+    ).rejects.toThrow('`kind`');
+    await expect(
+      execute('preview.attach', { owner: 'nvim-1', path: '/notes.md', paths: 'bad' }),
+    ).rejects.toThrow('`paths`');
+    await expect(
+      execute('preview.attach', {
+        owner: 'nvim-1',
+        path: '/notes.md',
+        paths: ['/a.md', '/a.md'],
+      }),
+    ).rejects.toThrow('same path twice');
+    await expect(
+      execute('preview.attach', {
+        owner: 'nvim-1',
+        path: '/notes.md',
+        paths: Array.from({ length: 65 }, (_, index) => `/part-${index}.md`),
+      }),
+    ).rejects.toThrow('at most 64');
+    await execute('preview.attach', {
+      owner: 'nvim-1',
+      path: '/notes.md',
+      takeover: true,
+    });
+    expect(actions.previewAttach).toHaveBeenLastCalledWith({
+      owner: 'nvim-1',
+      path: '/notes.md',
+      kind: undefined,
+      paths: undefined,
+      documents: undefined,
+      takeover: true,
+    });
+    await expect(execute('preview.update', { owner: 'nvim-1', revision: 1 })).rejects.toThrow(
+      '`documents`',
+    );
+    await expect(
+      execute('preview.update', {
+        owner: 'nvim-1',
+        revision: 1,
+        documents: [{ path: '/notes.md', text: 3 }],
+      }),
+    ).rejects.toThrow('`documents[0].text`');
+    const largestDocument = 'x'.repeat(8 * 1024 * 1024);
+    await expect(
+      execute('preview.attach', {
+        owner: 'nvim-1',
+        path: '/notes.md',
+        documents: Array.from({ length: 4 }, (_, index) => ({
+          path: `/part-${index}.md`,
+          text: largestDocument,
+        })),
+      }),
+    ).rejects.toThrow('attachment budget');
+    await expect(
+      execute('preview.update', {
+        owner: 'nvim-1',
+        revision: 1,
+        documents: [
+          { path: '/a.md', text: 'a' },
+          { path: '/a.md', text: 'b' },
+        ],
+      }),
+    ).rejects.toThrow('same path twice');
+    await expect(
+      execute('preview.reveal', {
+        owner: 'nvim-1',
+        path: '/notes.md',
+        line: 1,
+        align: 'middle',
+      }),
+    ).rejects.toThrow('`align`');
+    await expect(
+      execute('preview.reveal', {
+        owner: 'nvim-1',
+        path: '/notes.md',
+        line: 1,
+        character: -1,
+      }),
+    ).rejects.toThrow('`character`');
+    await expect(execute('preview.heartbeat', {})).rejects.toThrow('`owner`');
+    await expect(
+      execute('preview.reveal', { owner: 'nvim-1', path: '/notes.md', line: -1 }),
+    ).rejects.toThrow('`line`');
+    await expect(
+      execute('preview.reveal', {
+        owner: 'nvim-1',
+        path: '/notes.md',
+        line: 1,
+        character: 1.5,
+      }),
+    ).rejects.toThrow('`character`');
+    await expect(
+      execute('preview.attach', {
+        owner: 'nvim-1',
+        path: '/notes.md',
+        takeover: 'yes',
+      }),
+    ).rejects.toThrow('`takeover`');
+    await expect(
+      execute('preview.attach', {
+        owner: 'nvim-1',
+        path: '/notes.md',
+        paths: [1],
+      }),
+    ).rejects.toThrow('`paths[0]`');
+    await expect(
+      execute('preview.update', { owner: 'nvim-1', revision: -1, documents: [] }),
+    ).rejects.toThrow('`revision`');
+    await expect(
+      execute('preview.update', { owner: 'nvim-1', revision: 1.5, documents: [] }),
+    ).rejects.toThrow('`revision`');
+    await expect(
+      execute('preview.update', {
+        owner: 'nvim-1',
+        revision: 1,
+        documents: Array.from({ length: 65 }, (_, index) => ({
+          path: `/part-${index}.md`,
+          text: 'x',
+        })),
+      }),
+    ).rejects.toThrow('at most 64');
   });
 
   it('dispatches selection, tools, document, and settings actions', async () => {
