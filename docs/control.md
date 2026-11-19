@@ -790,7 +790,7 @@ local function papyri(args)
   return vim.fn.system(vim.list_extend({ 'papyri', 'ctl' }, args))
 end
 
-vim.api.nvim_create_user_command('PapyriOpen', function()
+vim.api.nvim_create_user_command('PapyriPreview', function()
   local path = vim.api.nvim_buf_get_name(0)
   if path == '' then
     vim.notify('Save the buffer before previewing it.', vim.log.levels.WARN)
