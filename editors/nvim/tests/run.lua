@@ -622,34 +622,34 @@ test('first-class commands forward app controls', function()
     debounce_ms = 0,
     takeover = 'never',
   })
-  vim.cmd('PapyriStart')
+  vim.cmd('Papyri start')
   wait_until(function()
     return papyri.client.connected
   end, 'start command')
 
-  vim.cmd('PapyriZoom in')
+  vim.cmd('Papyri zoom in')
   wait_until(function()
     return latest(server, 'zoom') ~= nil
   end, 'zoom command')
   equal(latest(server, 'zoom').params.action, 'in')
-  vim.cmd('PapyriTheme mocha')
+  vim.cmd('Papyri theme mocha')
   wait_until(function()
     return latest(server, 'theme') ~= nil
   end, 'theme command')
   equal(latest(server, 'theme').params.theme, 'mocha')
-  vim.cmd('PapyriDecorationless on')
+  vim.cmd('Papyri decorationless on')
   wait_until(function()
     return latest(server, 'decorationless') ~= nil
   end, 'decorationless command')
   equal(latest(server, 'decorationless').params.enabled, true)
-  vim.cmd('PapyriLive off')
+  vim.cmd('Papyri live off')
   wait_until(function()
     return latest(server, 'live-preview') ~= nil
   end, 'live command')
   equal(latest(server, 'live-preview').params.enabled, false)
-  vim.cmd('PapyriScrollSync off')
+  vim.cmd('Papyri scroll-sync off')
   equal(attach.status().scroll, false)
-  vim.cmd('PapyriScrollSync on')
+  vim.cmd('Papyri scroll-sync on')
   equal(attach.status().scroll, true)
   server:stop()
 end)
@@ -725,7 +725,7 @@ test('forced takeover works even when prompt takeover is disabled', function()
   attach.attach(bufnr, { quiet = true })
   vim.wait(200)
   truthy(not attach.status().attached, 'initial attach was refused')
-  vim.cmd('PapyriTakeover')
+  vim.cmd('Papyri takeover')
   wait_until(function()
     return attach.status().attached
   end, 'forced takeover')
@@ -974,17 +974,17 @@ test('tabs, outline, and search commands use pickers', function()
     table.insert(selected, items)
     callback(items[1])
   end
-  vim.cmd('PapyriTabs')
+  vim.cmd('Papyri tabs')
   wait_until(function()
     return latest(server, 'tab.activate') ~= nil
   end, 'tabs command')
   equal(latest(server, 'tab.activate').params.path, '/a.md')
-  vim.cmd('PapyriOutline')
+  vim.cmd('Papyri outline')
   wait_until(function()
     return latest(server, 'heading') ~= nil
   end, 'outline command')
   equal(latest(server, 'heading').params.id, 'intro')
-  vim.cmd('PapyriSearch needle')
+  vim.cmd('Papyri search needle')
   wait_until(function()
     return latest(server, 'search') ~= nil
   end, 'search command')
@@ -1005,12 +1005,12 @@ test('raw command rejects malformed JSON and zoom accepts a number', function()
     takeover = 'never',
   })
   local before = count(server, 'zoom')
-  vim.cmd('PapyriZoom 125')
+  vim.cmd('Papyri zoom 125')
   wait_until(function()
     return count(server, 'zoom') > before
   end, 'numeric zoom')
   equal(latest(server, 'zoom').params.value, 125)
-  vim.cmd('PapyriTheme not-a-theme')
+  vim.cmd('Papyri theme not-a-theme')
   vim.wait(100)
   truthy(#messages > 0, 'invalid theme notified')
   vim.cmd('Papyri state not-json')
@@ -1182,7 +1182,7 @@ test('close detaches and closes the root, then closes a bare tab', function()
   wait_until(function()
     return attach.status().attached
   end, 'attachment')
-  vim.cmd('PapyriClose')
+  vim.cmd('Papyri close')
   wait_until(function()
     return latest(server, 'preview.detach') ~= nil
   end, 'close detach')
@@ -1192,7 +1192,7 @@ test('close detaches and closes the root, then closes a bare tab', function()
   equal(latest(server, 'close').params.path, notes)
   truthy(not attach.status().attached, 'closed attachment')
   local before = count(server, 'close')
-  vim.cmd('PapyriClose')
+  vim.cmd('Papyri close')
   wait_until(function()
     return count(server, 'close') > before
   end, 'bare close')
@@ -1211,8 +1211,8 @@ test('unnamed buffers cannot open or take over a preview', function()
     takeover = 'never',
   })
   vim.cmd('enew')
-  vim.cmd('PapyriOpen')
-  vim.cmd('PapyriTakeover')
+  vim.cmd('Papyri open')
+  vim.cmd('Papyri takeover')
   vim.wait(150)
   equal(count(server, 'open'), 0)
   equal(count(server, 'preview.attach'), 0)
@@ -1335,8 +1335,8 @@ test('empty tab and outline pickers notify without requests', function()
     debounce_ms = 0,
     takeover = 'never',
   })
-  vim.cmd('PapyriTabs')
-  vim.cmd('PapyriOutline')
+  vim.cmd('Papyri tabs')
+  vim.cmd('Papyri outline')
   vim.wait(200)
   local tabs_notice, outline_notice = false, false
   for _, message in ipairs(messages) do
@@ -1371,7 +1371,7 @@ test('search command uses the visual selection', function()
   edit(notes)
   vim.fn.setpos("'<", { 0, 1, 1, 0 })
   vim.fn.setpos("'>", { 0, 1, 5, 0 })
-  vim.cmd('PapyriSearch')
+  vim.cmd('Papyri search')
   wait_until(function()
     return latest(server, 'search') ~= nil
   end, 'visual search')
@@ -1389,17 +1389,17 @@ test('toggle commands omit enabled for server-side toggling', function()
     debounce_ms = 0,
     takeover = 'never',
   })
-  vim.cmd('PapyriLive')
+  vim.cmd('Papyri live')
   wait_until(function()
     return latest(server, 'live-preview') ~= nil
   end, 'live toggle')
   equal(latest(server, 'live-preview').params.enabled, nil)
-  vim.cmd('PapyriDecorationless')
+  vim.cmd('Papyri decorationless')
   wait_until(function()
     return latest(server, 'decorationless') ~= nil
   end, 'decorationless toggle')
   equal(latest(server, 'decorationless').params.enabled, nil)
-  vim.cmd('PapyriTheme')
+  vim.cmd('Papyri theme')
   wait_until(function()
     return latest(server, 'theme') ~= nil
   end, 'theme toggle')
@@ -1700,7 +1700,7 @@ test('opening an attached buffer reveals it again', function()
   server:stop()
 end)
 
-test(':PapyriRoot previews the active Typst chapter', function()
+test(':Papyri root previews the active Typst chapter', function()
   local server = fake.new():start()
   local directory = root()
   local main = directory .. '/main.typ'
@@ -1745,7 +1745,7 @@ test(':Papyri dispatches subcommands and raw methods', function()
     debounce_ms = 0,
     takeover = 'never',
   })
-  vim.cmd('PapyriStart')
+  vim.cmd('Papyri start')
   wait_until(function()
     return papyri.client.connected
   end, 'start')
@@ -1787,7 +1787,7 @@ test('decorationless is requested on connection by default', function()
     decorationless = true,
     takeover = 'never',
   })
-  vim.cmd('PapyriStart')
+  vim.cmd('Papyri start')
   wait_until(function()
     return latest(server, 'decorationless') ~= nil
   end, 'decorationless request')
@@ -1807,7 +1807,7 @@ test('decorationless is not forced when disabled', function()
     decorationless = false,
     takeover = 'never',
   })
-  vim.cmd('PapyriStart')
+  vim.cmd('Papyri start')
   wait_until(function()
     return papyri.client.connected
   end, 'connection')

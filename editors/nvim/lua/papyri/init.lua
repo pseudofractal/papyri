@@ -154,12 +154,12 @@ end
 function M.root()
   local bufnr = vim.api.nvim_get_current_buf()
   if vim.bo[bufnr].filetype ~= 'typst' then
-    notify('PapyriRoot needs a Typst buffer.', vim.log.levels.WARN)
+    notify(':Papyri root needs a Typst buffer.', vim.log.levels.WARN)
     return
   end
   local path = paths.attachable_path(bufnr, M.config)
   if not path then
-    notify('Save the buffer inside a project before using :PapyriRoot.', vim.log.levels.WARN)
+    notify('Save the buffer inside a project before using :Papyri root.', vim.log.levels.WARN)
     return
   end
   attach.attach(bufnr, { quiet = false, reveal = true, force = true, root = path })
@@ -344,7 +344,7 @@ function M.zoom(value)
   elseif value:match('^%d+$') then
     params.value = tonumber(value)
   else
-    notify('Usage: :PapyriZoom [in|out|reset|PERCENT]', vim.log.levels.WARN)
+    notify('Usage: :Papyri zoom [in|out|reset|PERCENT]', vim.log.levels.WARN)
     return
   end
   M.request('zoom', params)
@@ -353,7 +353,7 @@ end
 function M.theme(value)
   value = (value == nil or value == '') and 'toggle' or value
   if not vim.tbl_contains({ 'latte', 'mocha', 'toggle' }, value) then
-    notify('Usage: :PapyriTheme [latte|mocha|toggle]', vim.log.levels.WARN)
+    notify('Usage: :Papyri theme [latte|mocha|toggle]', vim.log.levels.WARN)
     return
   end
   M.request('theme', { theme = value })
@@ -497,101 +497,6 @@ function M.setup(options)
       M.shutdown()
     end,
   })
-
-  command('PapyriOpen', function(args)
-    M.open(args.args ~= '' and args.args or nil)
-  end, { nargs = '?', complete = 'file' })
-  command('PapyriRoot', function()
-    M.root()
-  end)
-
-  command('PapyriToggle', function()
-    M.toggle()
-  end)
-  command('PapyriClose', function()
-    M.close()
-  end)
-  command('PapyriDetach', function()
-    M.detach()
-  end)
-  command('PapyriReveal', function()
-    M.reveal()
-  end)
-  command('PapyriFollow', function(args)
-    M.follow(args.args)
-  end, {
-    nargs = '?',
-    complete = function()
-      return { 'on', 'off', 'toggle' }
-    end,
-  })
-  command('PapyriScrollSync', function(args)
-    M.scroll_sync(args.args)
-  end, {
-    nargs = '?',
-    complete = function()
-      return { 'on', 'off', 'toggle' }
-    end,
-  })
-  command('PapyriTabs', function()
-    M.tabs()
-  end)
-  command('PapyriOutline', function()
-    M.outline()
-  end)
-  command('PapyriSearch', function(args)
-    M.search(args.args)
-  end, { nargs = '?', range = true })
-  command('PapyriZoom', function(args)
-    M.zoom(args.args)
-  end, {
-    nargs = '?',
-    complete = function()
-      return { 'in', 'out', 'reset' }
-    end,
-  })
-  command('PapyriTheme', function(args)
-    M.theme(args.args)
-  end, {
-    nargs = '?',
-    complete = function()
-      return { 'latte', 'mocha', 'toggle' }
-    end,
-  })
-  command('PapyriDecorationless', function(args)
-    M.decorationless(args.args)
-  end, {
-    nargs = '?',
-    complete = function()
-      return { 'on', 'off', 'toggle' }
-    end,
-  })
-  command('PapyriLive', function(args)
-    M.live(args.args)
-  end, {
-    nargs = '?',
-    complete = function()
-      return { 'on', 'off', 'toggle' }
-    end,
-  })
-  command('PapyriTakeover', function()
-    M.takeover()
-  end)
-  command('PapyriStart', function()
-    M.start()
-  end)
-  command('PapyriRefresh', function()
-    M.request('refresh', {}, nil, false)
-  end)
-  command('PapyriStatus', function()
-    notify(M.status(), vim.log.levels.INFO, true)
-  end)
-  command('PapyriFocus', function()
-    M.request('raise', {}, nil, false)
-  end)
-  command('PapyriQuit', function()
-    M.request('quit', {}, nil, false)
-  end)
 
   local subcommands = {
     'open',
