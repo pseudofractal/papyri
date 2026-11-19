@@ -1878,6 +1878,7 @@ textarea:focus-visible {
 .app-shell.decorationless .secondary-heading,
 .app-shell.decorationless .outline,
 .app-shell.decorationless .side-panel-resize,
+.app-shell.decorationless .typst-preview-heading,
 .app-shell.decorationless .status-bar {
   display: none;
 }
