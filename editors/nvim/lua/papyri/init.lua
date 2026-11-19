@@ -2,6 +2,7 @@ local config_module = require('papyri.config')
 local paths = require('papyri.paths')
 local socket = require('papyri.socket')
 local attach = require('papyri.attach')
+local timer = require('papyri.timer')
 
 --- User-facing commands, Lua API, and control connection lifecycle.
 local M = {}
@@ -28,9 +29,15 @@ local function parse_toggle(value, name)
 end
 
 local function visual_selection()
+  local bufnr = vim.api.nvim_get_current_buf()
   local start = vim.fn.getpos("'<")
   local finish = vim.fn.getpos("'>")
-  if start[2] == 0 or finish[2] == 0 then
+  if
+    (start[1] ~= 0 and start[1] ~= bufnr)
+    or (finish[1] ~= 0 and finish[1] ~= bufnr)
+    or start[2] == 0
+    or finish[2] == 0
+  then
     return ''
   end
   local lines = vim.fn.getline(start[2], finish[2])
@@ -68,6 +75,39 @@ function M.ensure_connection(callback, path, allow_launch)
   end)
 end
 
+local function launch_lock_path()
+  local cache = vim.fn.stdpath('cache')
+  vim.fn.mkdir(cache, 'p')
+  return cache .. '/papyri-launch-' .. vim.fn.sha256(M.client.path):sub(1, 16)
+end
+
+local function acquire_launch_lock()
+  local path = launch_lock_path()
+  local fd = vim.uv.fs_open(path, 'wx', 384)
+  if fd then
+    return fd, path
+  end
+  local stat = vim.uv.fs_stat(path)
+  local stale_after = math.max(60, (M.config.launch_timeout or 15000) / 1000 * 2)
+  if stat and os.time() - stat.mtime.sec > stale_after then
+    vim.uv.fs_unlink(path)
+    fd = vim.uv.fs_open(path, 'wx', 384)
+    if fd then
+      return fd, path
+    end
+  end
+  return nil, path
+end
+
+local function release_launch_lock(fd, path)
+  if fd then
+    pcall(vim.uv.fs_close, fd)
+  end
+  if path then
+    pcall(vim.uv.fs_unlink, path)
+  end
+end
+
 function M.launch(path, callback)
   if M.launching then
     table.insert(M.launch_waiters, callback)
@@ -77,7 +117,15 @@ function M.launch(path, callback)
     callback('`' .. M.config.papyri .. '` was not found on PATH')
     return
   end
+  local lock_fd, lock_path = acquire_launch_lock()
+  local launch_timeout = M.config.launch_timeout
+  local done = false
   local function finish(err)
+    if done then
+      return
+    end
+    done = true
+    release_launch_lock(lock_fd, lock_path)
     M.launching = false
     local waiters = M.launch_waiters
     M.launch_waiters = {}
@@ -90,6 +138,35 @@ function M.launch(path, callback)
     end
   end
   M.launching = true
+  local function connect(deadline)
+    M.client:connect(function(err)
+      if not err then
+        finish(nil)
+        return
+      end
+      if vim.uv.hrtime() >= deadline then
+        finish(err)
+        return
+      end
+      timer.after(100, function()
+        connect(deadline)
+      end)
+    end)
+  end
+  local deadline = vim.uv.hrtime() + launch_timeout * 1e6
+  if not lock_fd then
+    local started = vim.wait(launch_timeout, function()
+      return vim.uv.fs_stat(M.client.path) ~= nil
+    end, 50)
+    if not started then
+      finish(
+        'Another Neovim session is launching Papyri; its control socket did not appear in time.'
+      )
+      return
+    end
+    connect(deadline)
+    return
+  end
   local command = { M.config.papyri }
   if M.config.decorationless then
     table.insert(command, '--decorationless')
@@ -105,14 +182,14 @@ function M.launch(path, callback)
     finish('Could not launch Papyri.')
     return
   end
-  local started = vim.wait(7000, function()
+  local started = vim.wait(launch_timeout, function()
     return vim.uv.fs_stat(M.client.path) ~= nil
   end, 50)
   if not started then
     finish('Papyri did not create its control socket in time.')
     return
   end
-  M.client:connect(finish)
+  connect(deadline)
 end
 
 --- Send one control method, connecting or launching Papyri when allowed.
@@ -211,6 +288,15 @@ function M.status()
   end
   table.insert(parts, 'follow=' .. (state.follow and 'on' or 'off'))
   table.insert(parts, 'scroll=' .. (state.scroll and 'on' or 'off'))
+  local attach_supported = vim.tbl_contains(M.app_features or {}, 'preview.attach')
+  table.insert(parts, 'attach=' .. (attach_supported and 'yes' or 'no'))
+  if M.app_version then
+    local identity = M.app_version
+    if M.app_build and M.app_build ~= 'unknown' then
+      identity = identity .. '+' .. M.app_build
+    end
+    table.insert(parts, 'app=' .. identity)
+  end
   if state.owner then
     table.insert(parts, 'owner=' .. state.owner)
   end
@@ -383,6 +469,9 @@ function M.setup(options)
   M.launching = false
   M.launch_waiters = {}
   M.disconnect_notified = false
+  M.app_features = {}
+  M.app_version = nil
+  M.app_build = nil
   M.client = socket.new({
     path = paths.socket_path(M.config),
     notify = notify,
@@ -406,6 +495,11 @@ function M.setup(options)
             end
           end
         end
+        if type(features) == 'table' then
+          M.app_features = features
+        end
+        M.app_version = result.state.version
+        M.app_build = result.state.build
         if not supported then
           notify(
             'This Papyri build does not support preview attachments; update Papyri.',
