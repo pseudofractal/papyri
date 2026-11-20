@@ -135,7 +135,8 @@ All functions are on the `papyri` module:
                             Send a control method directly.
   papyri.raw(method, json)  Send a raw JSON control method.
 
-Run `:checkhealth papyri` to inspect Neovim, the executable, and the socket.
+Run `:checkhealth papyri` to inspect Neovim, the executable, the running
+app build and preview features, and the Typst/Markdown LSPs.
 
 ==============================================================================
 5. NOTES                                                       *papyri-notes*
