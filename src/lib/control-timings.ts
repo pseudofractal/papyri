@@ -7,6 +7,8 @@ export const PREVIEW_RETRY_TIMEOUT_MS = 10_000;
 export const PREVIEW_RETRY_DELAY_MS = 100;
 export const PREVIEW_FRAME_WAIT_MS = 2_000;
 export const PREVIEW_ACK_TIMEOUT_MS = 2_000;
+/** Maximum time a control reveal waits for a preview acknowledgement. */
+export const CONTROL_REVEAL_WAIT_MS = 250;
 export const CONTROL_PUBLISH_INTERVAL_MS = 100;
 /** Minimum interval between Markdown viewport events. */
 export const VIEWPORT_PUBLISH_MS = 50;

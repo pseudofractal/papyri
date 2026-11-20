@@ -167,9 +167,10 @@
     CONTROL_PUBLISH_INTERVAL_MS,
     ATTACHMENT_LEASE_MS,
     ATTACHMENT_SWEEP_MS,
+    CONTROL_REVEAL_WAIT_MS,
     VIEWPORT_PUBLISH_MS,
   } from './lib/control-timings';
-  import { waitForPreview, revealPreview, type PreviewControls } from './lib/preview-control';
+  import { PreviewNotReadyError, type PreviewControls } from './lib/preview-control';
   import { createControlActions, type ControlViewState } from './lib/control-actions';
   const workspace = new Workspace();
   const startsDecorationless =
@@ -2860,13 +2861,29 @@
         ...(dispatched ? {} : { reason: 'starting' as const }),
       };
     }
-    const preview = await waitForPreview(
-      () => workspace.active,
-      () => primaryPreview,
-      'No document is open.',
-    );
-    const y = await revealPreview(preview, line, align);
-    return { path: target, line, character, y, skipped: false };
+    const preview = primaryPreview;
+    if (!preview || preview.documentPath() !== workspace.active)
+      return { path: target, line, character, y: 0, skipped: true, reason: 'starting' as const };
+    try {
+      const y = await new Promise<number>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new PreviewNotReadyError()), CONTROL_REVEAL_WAIT_MS);
+        preview.revealSource(line, align).then(
+          (value) => {
+            clearTimeout(timer);
+            resolve(value);
+          },
+          (error: unknown) => {
+            clearTimeout(timer);
+            reject(error);
+          },
+        );
+      });
+      return { path: target, line, character, y, skipped: false };
+    } catch (error) {
+      if (error instanceof PreviewNotReadyError)
+        return { path: target, line, character, y: 0, skipped: true, reason: 'starting' as const };
+      throw error;
+    }
   }
   function previewJump(kind: 'markdown' | 'typst', path: string, line: number, character: number) {
     if (!attachment) return;
