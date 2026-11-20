@@ -463,6 +463,8 @@ test('health check reports without raising', function()
   local calls = { ok = 0, warn = 0, error = 0 }
   local saved_health = vim.health
   local saved_executable = vim.fn.executable
+  local saved_socket = vim.env.PAPYRI_CONTROL_SOCKET
+  vim.env.PAPYRI_CONTROL_SOCKET = vim.fn.tempname() .. '.sock'
   vim.health = {
     start = function() end,
     ok = function()
@@ -482,6 +484,7 @@ test('health check reports without raising', function()
   local ok, err = pcall(health.check)
   vim.health = saved_health
   vim.fn.executable = saved_executable
+  vim.env.PAPYRI_CONTROL_SOCKET = saved_socket
   if not ok then
     error(err)
   end

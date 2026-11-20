@@ -575,7 +575,8 @@ textarea:focus-visible {
   padding: 14px;
   font-size: 12px;
 }
-.latex-preview-wait {
+.latex-preview-wait,
+.typst-preview-loading {
   display: flex;
   flex: 1;
   min-width: 0;

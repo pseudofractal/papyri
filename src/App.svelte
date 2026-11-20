@@ -359,6 +359,16 @@
   let SourceEditor = $state.raw<typeof import('./components/SourceEditor.svelte').default>();
   let TypstLivePreview =
     $state.raw<typeof import('./components/TypstLivePreview.svelte').default>();
+  let typstPreviewError = $state('');
+  async function loadTypstPreview() {
+    if (TypstLivePreview) return;
+    try {
+      TypstLivePreview = (await import('./components/TypstLivePreview.svelte')).default;
+      typstPreviewError = '';
+    } catch (error) {
+      typstPreviewError = `Live preview unavailable: ${String(error)}`;
+    }
+  }
   let sourceEditor = $state<{
     reveal: (line: number, character: number) => void;
     getState: () => {
@@ -2685,8 +2695,7 @@
     validateAttachmentTarget(path, kind, paths, !!workspace.source);
     if (kind === 'typst') {
       if (!desktop) throw new Error('Typst live preview requires the desktop app.');
-      TypstLivePreview ??= (await import('./components/TypstLivePreview.svelte')).default;
-      if (!TypstLivePreview) throw new Error('Typst live preview is unavailable in this build.');
+      void loadTypstPreview();
     }
     const documents = validateAttachmentDocuments(paths, options.documents ?? []);
     return { path, kind, paths, documents };
@@ -4165,17 +4174,28 @@
                     {/if}
                   {/if}
                 </div>
-              {:else if attachment?.kind === 'typst' && attachment.root === workspace.active && typstAttachmentVisible && TypstLivePreview}
+              {:else if attachment?.kind === 'typst' && attachment.root === workspace.active && typstAttachmentVisible}
                 <div class="typst-attachment-preview">
-                  {#key `${typstAttachmentRoot}\0${attachment.owner}\0${preferences.languageServerPaths.typst}`}<TypstLivePreview
-                      bind:this={typstPreview}
-                      path={typstAttachmentRoot}
-                      serverPath={preferences.languageServerPaths.typst}
-                      getDocuments={() => typstAttachmentDocuments}
-                      diagnostics={[]}
-                      onjump={(location) =>
-                        previewJump('typst', location.path, location.line, location.character)}
-                    />{/key}
+                  {#if TypstLivePreview}
+                    {#key `${typstAttachmentRoot}\0${attachment.owner}\0${preferences.languageServerPaths.typst}`}<TypstLivePreview
+                        bind:this={typstPreview}
+                        path={typstAttachmentRoot}
+                        serverPath={preferences.languageServerPaths.typst}
+                        getDocuments={() => typstAttachmentDocuments}
+                        diagnostics={[]}
+                        onjump={(location) =>
+                          previewJump('typst', location.path, location.line, location.character)}
+                      />{/key}
+                  {:else}
+                    <div class="typst-preview-loading" role="status">
+                      {#if typstPreviewError}
+                        {typstPreviewError}
+                      {:else}
+                        <span class="loading loading-spinner loading-sm"></span>
+                        Loading live preview…
+                      {/if}
+                    </div>
+                  {/if}
                 </div>
               {:else if isBibliography(workspace.active)}
                 {#key workspace.active}<BibliographyView
