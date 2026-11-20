@@ -51,7 +51,7 @@
             src = webSource;
             nodejs = pkgs.nodejs_24;
             PAPYRI_BUILD_COMMIT = buildCommit;
-            npmDepsHash = "sha256-qfo3MX11o1oZaC9ciFIGbLJMsXXrqeYNQnmYVnCNmrE=";
+            npmDepsHash = "sha256-kJb2msipV9fYReU6MHrY1yCVGxtX1o1AIge+o6uzR1Y=";
             npmFlags = [ "--ignore-scripts" ];
             installPhase = ''
               runHook preInstall

@@ -2,6 +2,16 @@
 
 Papyri is a Markdown, PDF, Typst, and LaTeX viewer and source editor. Releases include native builds for Linux, macOS, and Windows. The browser build runs from source.
 
+## What's new in v0.3.0
+
+- Added the **Neovim companion plugin** in `editors/nvim`: Markdown and Typst overlays for unsaved buffer text, cursor follow, preview clicks that return to the source, a single companion tab, and a `:Papyri {subcommand}` command surface. The plugin is published to the `nvim-plugin` branch for lazy.nvim and `vim.pack`.
+- Added the preview-attachment control API: `preview.attach`, `preview.detach`, `preview.heartbeat`, `preview.update`, `preview.reveal`, and `preview.viewport`, including ownership leases and takeover handling.
+- Typst attachments no longer compile a PDF before switching. Source text is opened directly, so Markdown ↔ Typst switches avoid the old 10-second stall; attached Typst panes show a loading state while Tinymist starts.
+- Decoration-less mode now hides the Typst live-preview heading and zoom controls as well as the rest of the application chrome.
+- Preview changes use a short midpoint-peaked transition, disabled when reduced motion is requested.
+- Build identity is now visible in `papyri --version`, `papyri ctl --version`, `ping`, and `state`, including the commit that produced the binary.
+- Neovim launch handling now takes a cross-process launch lock, retries the control connection, and supports a configurable `launch_timeout`; health checks probe the running app, preview features, and Tinymist/Marksman.
+
 ## What's new in v0.2.2
 
 - Fixed the Nix npm dependency hash so flake checks and the release verification pass. The v0.2.1 tag was not published.
