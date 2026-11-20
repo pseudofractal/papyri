@@ -487,6 +487,31 @@ textarea:focus-visible {
   min-width: 0;
   min-height: 0;
 }
+@keyframes preview-switch-in {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.994);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.003);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.typst-attachment-preview,
+.preview-pane {
+  animation: preview-switch-in 500ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .typst-attachment-preview,
+  .preview-pane {
+    animation: none;
+  }
+}
 .compile-loading {
   position: absolute;
   z-index: 4;
