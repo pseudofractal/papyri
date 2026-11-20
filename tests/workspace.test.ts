@@ -72,6 +72,27 @@ describe('workspace navigation and live updates', () => {
     expect(reads).toBe(1);
     expect(workspace.tabs).toHaveLength(1);
   });
+  it('opens source text without compiling a PDF', async () => {
+    const { source, files } = memorySource();
+    files.set('/paper.typ', { text: '= Hello', stamp: '1' });
+    let compiled = 0;
+    let sourceReads = 0;
+    source.read = async (path) => {
+      if (path === '/paper.typ') compiled++;
+      return { ...files.get(path)! };
+    };
+    source.readSource = async (path) => {
+      sourceReads++;
+      return { ...files.get(path)! };
+    };
+    const workspace = new Workspace();
+    workspace.changeSource(source);
+    await workspace.openSource('/paper.typ');
+    expect(sourceReads).toBe(1);
+    expect(compiled).toBe(0);
+    expect(workspace.activeTab?.text).toBe('= Hello');
+    expect(workspace.activeTab?.bytes).toBeUndefined();
+  });
   it('keeps recently opened files in order and clears them when the source changes', async () => {
     const workspace = new Workspace();
     workspace.changeSource(memorySource().source);

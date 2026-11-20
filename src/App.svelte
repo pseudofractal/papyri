@@ -2659,6 +2659,7 @@
   }
   function clearAttachment(reason: 'expired' | 'detached' | 'replaced' | 'closed' = 'closed') {
     if (!attachment) return;
+    const kind = attachment.kind;
     for (const path of attachment.paths) {
       if (attachment.kind === 'markdown') clearPreviewOverlay(path);
       dropCleanEditorDraft(path);
@@ -2666,6 +2667,7 @@
     clearTypstAttachment();
     attachment = null;
     attachmentLossReason = reason;
+    if (kind === 'typst' && reason === 'detached') void workspace.refresh();
     if (viewportTimer) clearTimeout(viewportTimer);
     viewportTimer = undefined;
     lastViewportAt = 0;
@@ -2734,7 +2736,7 @@
       !!options.takeover,
     );
     requireNoDirtyDrafts(paths);
-    await workspace.open(path);
+    await workspace.openSource(path);
     if (workspace.active !== path)
       throw new ControlActionError('attachment-open', `Could not open ${path}.`);
     if (editorVisible && editorDraft && paths.includes(editorDraft.path)) editing = false;

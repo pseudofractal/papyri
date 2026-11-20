@@ -87,7 +87,7 @@ export class Workspace {
       if (request === this.navigation && source === this.source) this.error = String(error);
     }
   }
-  async open(path: string, anchor = '') {
+  async open(path: string, anchor = '', sourceOnly = false) {
     path = normalize(path);
     if (!isDocument(path)) {
       this.error = 'Open a Markdown, PDF, Typst, or LaTeX document.';
@@ -108,7 +108,10 @@ export class Workspace {
     this.busy = true;
     this.openingPath = path;
     try {
-      const file = await this.readFile(source, path);
+      const file =
+        sourceOnly && source.readSource
+          ? await source.readSource(path)
+          : await this.readFile(source, path);
       if (request !== this.navigation || source !== this.source) return;
       const loaded = this.tabs.find((tab) => tab.path === path);
       if (!loaded) {
@@ -133,6 +136,10 @@ export class Workspace {
     } finally {
       if (request === this.navigation) this.busy = false;
     }
+  }
+  /** Open text without compiling a PDF, for preview attachments. */
+  async openSource(path: string, anchor = '') {
+    await this.open(path, anchor, true);
   }
   private rememberFile(path: string) {
     this.recentFiles = [path, ...this.recentFiles.filter((item) => item !== path)].slice(0, 20);
